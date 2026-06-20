@@ -95,3 +95,18 @@ export async function getUsers(): Promise<UserRow[]> {
     };
   }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 }
+
+export type AppstoreRow = {
+  day: string;
+  units: number;
+  downloads: number;
+  redownloads: number;
+  updates: number;
+  proceeds: number;
+};
+
+export async function getAppstore(days = 30): Promise<AppstoreRow[]> {
+  const { data, error } = await admin().rpc("admin_appstore", { days });
+  if (error) throw error;
+  return (data ?? []) as AppstoreRow[];
+}
