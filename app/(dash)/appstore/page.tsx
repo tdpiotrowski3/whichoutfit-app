@@ -21,6 +21,12 @@ export default async function AppStorePage() {
   const totalProceeds = rows.reduce((a, r) => a + Number(r.proceeds), 0);
   const maxDl = Math.max(1, ...rows.map((r) => r.downloads));
 
+  // Tier 2 — present only once Apple's analytics reports have generated.
+  const totalImpr = rows.reduce((a, r) => a + (r.impressions ?? 0), 0);
+  const totalViews = rows.reduce((a, r) => a + (r.product_page_views ?? 0), 0);
+  const hasAnalytics = totalImpr > 0 || totalViews > 0;
+  const conversion = totalImpr > 0 ? (totalDownloads / totalImpr) * 100 : null;
+
   return (
     <div className="space-y-6">
       <div>
@@ -36,6 +42,20 @@ export default async function AppStorePage() {
         <Stat label="Updates · 30d" value={totalUpdates} accent="muted" />
         <Stat label="Proceeds · 30d" value={`$${totalProceeds.toFixed(2)}`} accent="green" />
       </div>
+
+      <Card title="Conversion (Tier 2 · App Store Analytics)">
+        {hasAnalytics ? (
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+            <Stat label="Impressions · 30d" value={totalImpr.toLocaleString()} />
+            <Stat label="Product page views · 30d" value={totalViews.toLocaleString()} />
+            <Stat label="Impression → install" value={conversion != null ? `${conversion.toFixed(1)}%` : "—"} accent="blue" />
+          </div>
+        ) : (
+          <p className="text-sm text-[var(--wo-muted)]">
+            Analytics initialized — Apple generates the first impressions/conversion data ~1–2 days after setup, then it fills in here daily.
+          </p>
+        )}
+      </Card>
 
       <Card title="Daily downloads">
         {rows.length === 0 ? (

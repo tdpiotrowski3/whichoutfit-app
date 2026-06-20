@@ -103,6 +103,9 @@ export type AppstoreRow = {
   redownloads: number;
   updates: number;
   proceeds: number;
+  impressions: number | null;
+  product_page_views: number | null;
+  conversion_rate: number | null;
 };
 
 export async function getAppstore(days = 30): Promise<AppstoreRow[]> {

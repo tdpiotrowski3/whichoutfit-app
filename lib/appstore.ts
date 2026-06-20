@@ -16,7 +16,7 @@ function privateKey(): string {
   return k.trim();
 }
 
-function makeJwt(): string {
+export function makeJwt(): string {
   const keyId = process.env.APPLE_ASC_KEY_ID || "";
   const issuer = process.env.APPLE_ASC_ISSUER_ID || "";
   const now = Math.floor(Date.now() / 1000);
