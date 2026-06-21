@@ -23,6 +23,18 @@ npm run dev
 | `ADMIN_PASSWORD` | password to log in | choose a strong one |
 | `SESSION_SECRET` | random string for cookie signing | e.g. `openssl rand -hex 32` |
 
+**Consumer webapp (app.whichoutfit.app).** Browser-side, RLS-protected — these are
+safe to expose (unlike the service-role key):
+
+| Var | What | Where to get it |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | `https://irfzsyzhoxxtzuugdtef.supabase.co` | Supabase → Project Settings → API |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | publishable/anon key | Supabase → Project Settings → API (publishable) |
+
+> Also in Supabase → Authentication → URL Configuration, add the redirect URLs
+> `https://app.whichoutfit.app/auth/callback` (and `http://localhost:3000/auth/callback`
+> for dev). Google is already enabled as a provider (the iOS app uses it).
+
 > The service-role key bypasses RLS — it lives ONLY in server env, never shipped to the browser. All Supabase reads happen in Server Components / Route Handlers.
 
 ## Deploy to Vercel

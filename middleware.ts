@@ -14,14 +14,21 @@ import type { NextRequest } from "next/server";
 // directly from public/ and need no rewrite.
 
 const MARKETING_HOSTS = new Set(["whichoutfit.app", "www.whichoutfit.app"]);
+const CONSUMER_HOSTS = new Set(["app.whichoutfit.app"]);
 
 export function middleware(req: NextRequest) {
   const host = (req.headers.get("host") ?? "").toLowerCase().split(":")[0];
-  if (!MARKETING_HOSTS.has(host)) return NextResponse.next();
+  if (req.nextUrl.pathname !== "/") return NextResponse.next();
 
-  if (req.nextUrl.pathname === "/") {
+  // Each surface owns "/" on its own host; the dashboard keeps "/" everywhere else.
+  if (MARKETING_HOSTS.has(host)) {
     const url = req.nextUrl.clone();
     url.pathname = "/index.html";
+    return NextResponse.rewrite(url);
+  }
+  if (CONSUMER_HOSTS.has(host)) {
+    const url = req.nextUrl.clone();
+    url.pathname = "/closet";
     return NextResponse.rewrite(url);
   }
   return NextResponse.next();
