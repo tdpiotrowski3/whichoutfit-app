@@ -30,12 +30,12 @@ export default function ClosetPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const sb = consumerClient();
-    if (!sb) {
-      setError("Not configured");
-      return;
-    }
     (async () => {
+      const sb = consumerClient();
+      if (!sb) {
+        setError("Not configured");
+        return;
+      }
       const {
         data: { session },
       } = await sb.auth.getSession();
@@ -73,19 +73,10 @@ export default function ClosetPage() {
     })();
   }, [router]);
 
-  async function signOut() {
-    const sb = consumerClient();
-    await sb?.auth.signOut();
-    router.replace("/signin");
-  }
-
   return (
     <main style={{ maxWidth: 960, margin: "0 auto", padding: "32px 24px" }}>
-      <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
+      <header style={{ marginBottom: 24 }}>
         <h1 style={{ fontSize: 24, fontWeight: 700, color: "var(--wo-text, #10141b)" }}>My Closet</h1>
-        <button onClick={signOut} style={{ background: "none", border: "none", color: "var(--wo-text-secondary, #5c6b7a)", cursor: "pointer", fontSize: 14 }}>
-          Sign out
-        </button>
       </header>
 
       {error ? (
