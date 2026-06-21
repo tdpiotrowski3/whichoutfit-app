@@ -28,8 +28,8 @@ export function consumerClient(): SupabaseClient | null {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
-        detectSessionInUrl: false, // we exchange the code explicitly in /auth/callback
-        flowType: "pkce",
+        detectSessionInUrl: true, // implicit flow: the session comes back in the URL hash
+        flowType: "implicit",
         storageKey: "wo-consumer-auth",
       },
     });

@@ -4,8 +4,9 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { consumerClient } from "@/lib/consumer";
 
-// OAuth return target. Exchanges the PKCE code for a session, then sends the
-// user to their closet. Client-side so it works with the browser Supabase client.
+// OAuth return target. With the implicit flow + detectSessionInUrl, the client
+// parses the session from the URL hash automatically on load — we just wait for
+// it and route to the closet. (No PKCE code-exchange, so no "flow state" errors.)
 export default function AuthCallbackPage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -16,10 +17,39 @@ export default function AuthCallbackPage() {
       setError("Not configured");
       return;
     }
-    sb.auth.exchangeCodeForSession(window.location.href).then(({ error }) => {
-      if (error) setError(error.message);
-      else router.replace("/closet");
+
+    // Surface any error the provider returned in the URL hash.
+    const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    const providerError = hash.get("error_description") ?? hash.get("error");
+    if (providerError) {
+      setError(providerError);
+      return;
+    }
+
+    let done = false;
+    const go = () => {
+      if (!done) {
+        done = true;
+        router.replace("/closet");
+      }
+    };
+
+    const { data: sub } = sb.auth.onAuthStateChange((_event, session) => {
+      if (session) go();
     });
+    // Covers the case where the session was set before we subscribed.
+    sb.auth.getSession().then(({ data }) => {
+      if (data.session) go();
+    });
+
+    const timeout = setTimeout(() => {
+      if (!done) setError("Sign-in timed out — please try again.");
+    }, 10000);
+
+    return () => {
+      sub.subscription.unsubscribe();
+      clearTimeout(timeout);
+    };
   }, [router]);
 
   return (
