@@ -1,0 +1,47 @@
+.wo-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--wo-space-xs);
+  font-family: var(--wo-font-sans);
+}
+
+.wo-field__label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--wo-text-secondary);
+}
+
+.wo-input {
+  font-family: var(--wo-font-sans);
+  font-size: 16px;
+  color: var(--wo-text);
+  background: var(--wo-surface);
+  border: 1px solid var(--wo-separator);
+  border-radius: var(--wo-radius-sm);
+  padding: var(--wo-space-md) var(--wo-space-lg);
+  outline: none;
+  transition: border-color 0.12s ease-out, box-shadow 0.12s ease-out;
+}
+
+.wo-input::placeholder {
+  color: var(--wo-text-secondary);
+  opacity: 0.7;
+}
+
+.wo-input:focus {
+  border-color: var(--wo-brand-blue);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--wo-brand-blue) 20%, transparent);
+}
+
+.wo-field--invalid .wo-input {
+  border-color: var(--wo-danger);
+}
+
+.wo-field__hint {
+  font-size: 12px;
+  color: var(--wo-text-secondary);
+}
+
+.wo-field--invalid .wo-field__hint {
+  color: var(--wo-danger);
+}

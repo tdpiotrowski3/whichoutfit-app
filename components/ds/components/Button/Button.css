@@ -1,0 +1,49 @@
+.wo-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--wo-space-sm);
+  font-family: var(--wo-font-sans);
+  font-weight: 600;
+  font-size: 16px;
+  line-height: 1.2;
+  border: none;
+  border-radius: var(--wo-radius-md);
+  padding: 14px var(--wo-space-xl);
+  cursor: pointer;
+  transition: opacity 0.15s ease-out, transform 0.15s ease-out;
+}
+
+.wo-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.wo-btn:active:not(:disabled) {
+  transform: scale(0.98);
+  opacity: 0.9;
+}
+
+.wo-btn--full {
+  width: 100%;
+}
+
+/* Primary — brand gradient CTA */
+.wo-btn--primary {
+  background: var(--wo-gradient);
+  color: #ffffff;
+}
+
+/* Secondary — quiet surface button with brand text */
+.wo-btn--secondary {
+  background: var(--wo-surface-muted);
+  color: var(--wo-brand-blue);
+}
+
+/* Ghost — text-only */
+.wo-btn--ghost {
+  background: transparent;
+  color: var(--wo-brand-blue);
+  padding-left: var(--wo-space-md);
+  padding-right: var(--wo-space-md);
+}

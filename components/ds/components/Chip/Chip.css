@@ -1,0 +1,26 @@
+.wo-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--wo-space-xs);
+  font-family: var(--wo-font-sans);
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 1;
+  padding: var(--wo-space-sm) var(--wo-space-md);
+  border-radius: var(--wo-radius-pill);
+  border: 1px solid var(--wo-separator);
+  background: var(--wo-surface);
+  color: var(--wo-text);
+  cursor: pointer;
+  transition: background 0.12s ease-out, border-color 0.12s ease-out;
+}
+
+.wo-chip:hover:not(.wo-chip--selected) {
+  background: var(--wo-surface-muted);
+}
+
+.wo-chip--selected {
+  background: var(--wo-gradient);
+  border-color: transparent;
+  color: #ffffff;
+}

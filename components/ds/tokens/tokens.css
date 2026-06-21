@@ -1,0 +1,83 @@
+/* WhichOutfit design tokens — mirrored from the iOS app's Theme.swift.
+   Light values on :root; dark values via prefers-color-scheme and [data-theme]. */
+
+:root {
+  /* Brand */
+  --wo-brand-blue: #2e6bff;
+  --wo-brand-green: #16b981;
+  --wo-brand-teal: #0fa3a3;
+
+  /* Semantic state */
+  --wo-danger: #e5484d;
+  --wo-warning: #e0892b;
+
+  /* Surfaces */
+  --wo-bg: #f5f7fb;
+  --wo-surface: #ffffff;
+  --wo-surface-muted: #eef2f8;
+
+  /* Text */
+  --wo-text: #10141b;
+  --wo-text-secondary: #5c6b7a;
+
+  /* Lines */
+  --wo-separator: #e2e8f0;
+
+  /* Primary CTA gradient (top-leading -> bottom-trailing) */
+  --wo-gradient: linear-gradient(135deg, var(--wo-brand-blue), var(--wo-brand-teal));
+
+  /* Spacing scale */
+  --wo-space-xs: 4px;
+  --wo-space-sm: 8px;
+  --wo-space-md: 12px;
+  --wo-space-lg: 16px;
+  --wo-space-xl: 24px;
+  --wo-space-xxl: 32px;
+
+  /* Corner radii */
+  --wo-radius-sm: 10px;
+  --wo-radius-md: 14px;
+  --wo-radius-lg: 20px;
+  --wo-radius-pill: 999px;
+
+  /* Typography */
+  --wo-font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter",
+    system-ui, sans-serif;
+
+  /* Elevation */
+  --wo-shadow-card: 0 6px 10px rgba(0, 0, 0, 0.06);
+}
+
+/* Dark theme — explicit opt-in */
+[data-theme="dark"] {
+  --wo-brand-blue: #6f9bff;
+  --wo-brand-green: #3fd7a6;
+  --wo-brand-teal: #39c9c9;
+  --wo-danger: #ff6166;
+  --wo-warning: #ffa53d;
+  --wo-bg: #0d1117;
+  --wo-surface: #1a2029;
+  --wo-surface-muted: #232b36;
+  --wo-text: #f3f6fb;
+  --wo-text-secondary: #9aa7b6;
+  --wo-separator: #2a323d;
+  --wo-shadow-card: 0 6px 14px rgba(0, 0, 0, 0.4);
+}
+
+/* Dark theme — system preference (when not explicitly set to light) */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --wo-brand-blue: #6f9bff;
+    --wo-brand-green: #3fd7a6;
+    --wo-brand-teal: #39c9c9;
+    --wo-danger: #ff6166;
+    --wo-warning: #ffa53d;
+    --wo-bg: #0d1117;
+    --wo-surface: #1a2029;
+    --wo-surface-muted: #232b36;
+    --wo-text: #f3f6fb;
+    --wo-text-secondary: #9aa7b6;
+    --wo-separator: #2a323d;
+    --wo-shadow-card: 0 6px 14px rgba(0, 0, 0, 0.4);
+  }
+}

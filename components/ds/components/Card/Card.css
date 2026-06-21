@@ -1,0 +1,14 @@
+.wo-card {
+  background: var(--wo-surface);
+  border: 0.5px solid var(--wo-separator);
+  border-radius: var(--wo-radius-lg);
+  box-shadow: var(--wo-shadow-card);
+  padding: var(--wo-space-lg);
+  color: var(--wo-text);
+  font-family: var(--wo-font-sans);
+}
+
+.wo-card--flush {
+  padding: 0;
+  overflow: hidden;
+}

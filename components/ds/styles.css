@@ -1,0 +1,7 @@
+/* Aggregate stylesheet — import this (or dist/index.css) once at your app root. */
+
+/* Inter via Google Fonts (loaded at runtime) */
+@import url("https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;1,400&display=swap");
+
+/* Design tokens */
+@import "./tokens/tokens.css";
