@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { getUsageFeatures, getFeatureSegment, type FeatureSegmentRow } from "@/lib/data";
 import { Card, Stat } from "@/components/ui";
+import { isEmailConfigured } from "@/lib/email";
+import { SendNudgePanel } from "./SendNudgePanel";
 
 export const dynamic = "force-dynamic";
 
@@ -107,6 +109,15 @@ export default async function MarketingPage({
         />
         <Stat label="Not opted in" value={rows.length - emailable.length} accent="muted" />
       </div>
+
+      <Card title="Send a nudge" right={<span className="text-xs text-[var(--wo-muted)]">{label(selected)} non-users</span>}>
+        <SendNudgePanel
+          feature={selected}
+          featureLabel={label(selected)}
+          emailableCount={emailable.length}
+          configured={isEmailConfigured()}
+        />
+      </Card>
 
       <Card title={`Users who haven't used ${label(selected)}`} right={<span className="text-xs text-[var(--wo-muted)]">opted-in first</span>}>
         <p className="mb-4 text-xs text-[var(--wo-muted)]">
