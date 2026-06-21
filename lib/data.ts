@@ -144,6 +144,8 @@ export async function getFeatureSegment(feature: string): Promise<FeatureSegment
   const { data, error } = await admin().rpc("admin_feature_segment", { feature });
   if (error) throw error;
   return (data ?? []) as FeatureSegmentRow[];
+}
+
 // --- Social & ads metrics ---
 
 export type SocialMetricDbRow = {
