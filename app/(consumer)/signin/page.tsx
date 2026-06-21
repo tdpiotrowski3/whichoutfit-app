@@ -44,20 +44,20 @@ export default function SignInPage() {
     }
   }
 
-  async function signInWithGoogle() {
+  async function oauth(provider: "google" | "apple") {
     const sb = consumerClient();
     if (!sb) return;
     setBusy(true);
     setError(null);
     const { error } = await sb.auth.signInWithOAuth({
-      provider: "google",
+      provider,
       options: { redirectTo: `${window.location.origin}/auth/callback` },
     });
     if (error) {
       setError(error.message);
       setBusy(false);
     }
-    // On success the browser redirects to Google.
+    // On success the browser redirects to the provider.
   }
 
   const input: React.CSSProperties = {
@@ -86,8 +86,12 @@ export default function SignInPage() {
         </p>
       ) : stage === "email" ? (
         <>
-          <Button variant="primary" fullWidth onClick={signInWithGoogle} disabled={busy}>
+          <Button variant="primary" fullWidth onClick={() => oauth("google")} disabled={busy}>
             Continue with Google
+          </Button>
+          <div style={{ height: 10 }} />
+          <Button variant="secondary" fullWidth onClick={() => oauth("apple")} disabled={busy}>
+            Continue with Apple
           </Button>
           <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "18px 0" }}>
             <span style={{ flex: 1, height: 1, background: "var(--wo-separator, #e2e8f0)" }} />
