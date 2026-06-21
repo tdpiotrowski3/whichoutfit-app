@@ -144,4 +144,30 @@ export async function getFeatureSegment(feature: string): Promise<FeatureSegment
   const { data, error } = await admin().rpc("admin_feature_segment", { feature });
   if (error) throw error;
   return (data ?? []) as FeatureSegmentRow[];
+// --- Social & ads metrics ---
+
+export type SocialMetricDbRow = {
+  day: string;
+  platform: string;
+  followers: number | null;
+  impressions: number | null;
+  reach: number | null;
+  profile_views: number | null;
+  video_views: number | null;
+  engagements: number | null;
+  spend: number | null;
+  ad_impressions: number | null;
+  clicks: number | null;
+  conversions: number | null;
+};
+
+export async function getSocialMetrics(days = 30): Promise<SocialMetricDbRow[]> {
+  const since = new Date(Date.now() - days * 86_400_000).toISOString().slice(0, 10);
+  const { data, error } = await admin()
+    .from("social_metrics")
+    .select("*")
+    .gte("day", since)
+    .order("day", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as SocialMetricDbRow[];
 }
