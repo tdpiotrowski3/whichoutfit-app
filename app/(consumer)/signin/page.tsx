@@ -44,6 +44,22 @@ export default function SignInPage() {
     }
   }
 
+  async function signInWithGoogle() {
+    const sb = consumerClient();
+    if (!sb) return;
+    setBusy(true);
+    setError(null);
+    const { error } = await sb.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
+    });
+    if (error) {
+      setError(error.message);
+      setBusy(false);
+    }
+    // On success the browser redirects to Google.
+  }
+
   const input: React.CSSProperties = {
     width: "100%",
     boxSizing: "border-box",
@@ -70,6 +86,14 @@ export default function SignInPage() {
         </p>
       ) : stage === "email" ? (
         <>
+          <Button variant="primary" fullWidth onClick={signInWithGoogle} disabled={busy}>
+            Continue with Google
+          </Button>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "18px 0" }}>
+            <span style={{ flex: 1, height: 1, background: "var(--wo-separator, #e2e8f0)" }} />
+            <span style={{ fontSize: 12, color: "var(--wo-text-secondary, #5c6b7a)" }}>or</span>
+            <span style={{ flex: 1, height: 1, background: "var(--wo-separator, #e2e8f0)" }} />
+          </div>
           <input
             type="email"
             inputMode="email"
@@ -80,7 +104,7 @@ export default function SignInPage() {
             onKeyDown={(e) => e.key === "Enter" && sendCode()}
             style={input}
           />
-          <Button variant="primary" fullWidth onClick={sendCode} disabled={busy || !email.trim()}>
+          <Button variant="secondary" fullWidth onClick={sendCode} disabled={busy || !email.trim()}>
             {busy ? "Sending…" : "Email me a code"}
           </Button>
         </>
