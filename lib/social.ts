@@ -33,3 +33,23 @@ export function num(v: unknown): number | null {
   const n = typeof v === "string" ? Number(v) : (v as number);
   return Number.isFinite(n) ? n : null;
 }
+
+/**
+ * Combine rows that share a day (e.g. organic + ads for the same platform/day)
+ * into one row, preferring non-null values. Assumes a single platform.
+ */
+export function mergeByDay(rows: SocialMetricRow[]): SocialMetricRow[] {
+  const byDay = new Map<string, SocialMetricRow>();
+  for (const r of rows) {
+    const existing = byDay.get(r.day);
+    if (!existing) {
+      byDay.set(r.day, { ...r });
+      continue;
+    }
+    for (const [k, v] of Object.entries(r)) {
+      if (k === "day" || k === "platform" || v == null) continue;
+      (existing as Record<string, unknown>)[k] = v;
+    }
+  }
+  return [...byDay.values()];
+}

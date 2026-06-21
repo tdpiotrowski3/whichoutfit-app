@@ -88,6 +88,7 @@ export default async function SocialPage() {
                         <th className="py-2 pr-4 font-medium text-right">Impressions</th>
                         <th className="py-2 pr-4 font-medium text-right">Engagements</th>
                         {hasAds ? <th className="py-2 pr-4 font-medium text-right">Spend</th> : null}
+                        {hasAds ? <th className="py-2 pr-4 font-medium text-right">Conv.</th> : null}
                       </tr>
                     </thead>
                     <tbody>
@@ -99,6 +100,7 @@ export default async function SocialPage() {
                           <td className="py-2.5 pr-4 text-right">{fmt(r.impressions)}</td>
                           <td className="py-2.5 pr-4 text-right">{fmt(r.engagements)}</td>
                           {hasAds ? <td className="py-2.5 pr-4 text-right">{fmtMoney(r.spend)}</td> : null}
+                          {hasAds ? <td className="py-2.5 pr-4 text-right">{fmt(r.conversions)}</td> : null}
                         </tr>
                       ))}
                     </tbody>

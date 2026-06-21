@@ -1,4 +1,4 @@
-import { num, utcDay, type SocialMetricRow } from "./social";
+import { mergeByDay, num, utcDay, type SocialMetricRow } from "./social";
 
 // TikTok metrics via the TikTok Business API (organic) + Marketing API (ads).
 //
@@ -48,7 +48,7 @@ async function getJson(url: string, token: string): Promise<Record<string, unkno
  * Organic account insights for the last `days` days, one row per day.
  * Returns [] (never throws) when unconfigured or on any API error.
  */
-export async function fetchTikTokDaily(days: number): Promise<SocialMetricRow[]> {
+async function fetchOrganic(days: number): Promise<SocialMetricRow[]> {
   const e = env();
   if (!e || !e.businessId) return [];
   try {
@@ -90,4 +90,51 @@ export async function fetchTikTokDaily(days: number): Promise<SocialMetricRow[]>
   } catch {
     return [];
   }
+}
+
+/**
+ * Ads performance (spend / impressions / clicks / conversions) via the TikTok
+ * Marketing API report endpoint, one row per day. Needs TIKTOK_ADVERTISER_ID;
+ * returns [] when that or the token is missing, or on any error.
+ */
+async function fetchAds(days: number): Promise<SocialMetricRow[]> {
+  const e = env();
+  if (!e || !e.advertiserId) return [];
+  try {
+    const params = new URLSearchParams({
+      advertiser_id: e.advertiserId,
+      report_type: "BASIC",
+      data_level: "AUCTION_ADVERTISER",
+      dimensions: JSON.stringify(["stat_time_day"]),
+      metrics: JSON.stringify(["spend", "impressions", "clicks", "conversion"]),
+      start_date: utcDay(days),
+      end_date: utcDay(1),
+      page_size: "365",
+    });
+    const data = await getJson(`${BASE}/report/integrated/get/?${params}`, e.token);
+    const list = (data?.list as { dimensions?: Record<string, unknown>; metrics?: Record<string, unknown> }[]) ?? [];
+    return list
+      .map((item): SocialMetricRow | null => {
+        const day = String(item.dimensions?.stat_time_day ?? "").slice(0, 10);
+        if (!day) return null;
+        const m = item.metrics ?? {};
+        return {
+          day,
+          platform: "tiktok",
+          spend: num(m.spend),
+          ad_impressions: num(m.impressions),
+          clicks: num(m.clicks),
+          conversions: num(m.conversion),
+        };
+      })
+      .filter((r): r is SocialMetricRow => r !== null);
+  } catch {
+    return [];
+  }
+}
+
+/** Organic + ads merged into one row per day. Never throws. */
+export async function fetchTikTokDaily(days: number): Promise<SocialMetricRow[]> {
+  const [organic, ads] = await Promise.all([fetchOrganic(days), fetchAds(days)]);
+  return mergeByDay([...organic, ...ads]);
 }

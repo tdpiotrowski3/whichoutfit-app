@@ -1,4 +1,4 @@
-import { num, type SocialMetricRow } from "./social";
+import { mergeByDay, num, utcDay, type SocialMetricRow } from "./social";
 
 // Instagram metrics via the Meta Graph API (IG Business/Creator account linked
 // to a Facebook Page). Env-var token model, same as TikTok — inert until set.
@@ -42,7 +42,7 @@ async function getJson(url: string): Promise<Record<string, unknown> | null> {
  * follower count, normalized to one row per day. Returns [] (never throws) when
  * unconfigured or on any API error.
  */
-export async function fetchInstagramDaily(days: number): Promise<SocialMetricRow[]> {
+async function fetchOrganic(days: number): Promise<SocialMetricRow[]> {
   const e = env();
   if (!e || !e.igUserId) return [];
   try {
@@ -84,4 +84,57 @@ export async function fetchInstagramDaily(days: number): Promise<SocialMetricRow
   } catch {
     return [];
   }
+}
+
+/**
+ * Meta Ads daily performance (spend / impressions / clicks / conversions) via
+ * the ad account's insights edge. Needs META_AD_ACCOUNT_ID; returns [] when
+ * that or the token is missing, or on any error.
+ */
+async function fetchAds(days: number): Promise<SocialMetricRow[]> {
+  const e = env();
+  if (!e || !e.adAccountId) return [];
+  try {
+    const acct = e.adAccountId.startsWith("act_") ? e.adAccountId : `act_${e.adAccountId}`;
+    const params = new URLSearchParams({
+      fields: "spend,impressions,clicks,actions",
+      time_increment: "1",
+      time_range: JSON.stringify({ since: utcDay(days), until: utcDay(1) }),
+      access_token: e.token,
+    });
+    const data = await getJson(`${BASE}/${acct}/insights?${params}`);
+    const series = (data?.data as {
+      date_start?: string;
+      spend?: unknown;
+      impressions?: unknown;
+      clicks?: unknown;
+      actions?: { action_type?: string; value?: unknown }[];
+    }[]) ?? [];
+    return series
+      .map((d): SocialMetricRow | null => {
+        const day = (d.date_start ?? "").slice(0, 10);
+        if (!day) return null;
+        // Conversions = sum of purchase-type actions, when present.
+        const conversions = (d.actions ?? [])
+          .filter((a) => (a.action_type ?? "").includes("purchase"))
+          .reduce((sum, a) => sum + (num(a.value) ?? 0), 0);
+        return {
+          day,
+          platform: "instagram",
+          spend: num(d.spend),
+          ad_impressions: num(d.impressions),
+          clicks: num(d.clicks),
+          conversions: conversions || null,
+        };
+      })
+      .filter((r): r is SocialMetricRow => r !== null);
+  } catch {
+    return [];
+  }
+}
+
+/** Organic + ads merged into one row per day. Never throws. */
+export async function fetchInstagramDaily(days: number): Promise<SocialMetricRow[]> {
+  const [organic, ads] = await Promise.all([fetchOrganic(days), fetchAds(days)]);
+  return mergeByDay([...organic, ...ads]);
 }
