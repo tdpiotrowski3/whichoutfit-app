@@ -6,7 +6,8 @@ import { Badge, Card } from "@/components/ds";
 import { consumerClient } from "@/lib/consumer";
 
 // One closet item. The row's `data` jsonb mirrors the iOS ClothingItem Codable;
-// we read the fields the web cares about (images come from Storage — a follow-up).
+// `imageRef` points at the cutout in the private `closet-images` bucket
+// (path `{uid}/{imageRef}.img`), which we resolve to a short-lived signed URL.
 type ClosetItem = {
   id: string;
   data: {
@@ -15,12 +16,17 @@ type ClosetItem = {
     colorName?: string;
     brand?: string;
     tags?: string[];
+    imageRef?: string;
   };
 };
+
+const BUCKET = "closet-images";
+const SIGNED_URL_TTL = 3600; // 1h
 
 export default function ClosetPage() {
   const router = useRouter();
   const [items, setItems] = useState<ClosetItem[] | null>(null);
+  const [imageUrls, setImageUrls] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -43,8 +49,27 @@ export default function ClosetPage() {
         .select("id, data")
         .is("deleted_at", null)
         .order("updated_at", { ascending: false });
-      if (error) setError(error.message);
-      else setItems((data as ClosetItem[]) ?? []);
+      if (error) {
+        setError(error.message);
+        return;
+      }
+      const rows = (data as ClosetItem[]) ?? [];
+      setItems(rows);
+
+      // Batch-sign the cutout images. Storage RLS lets the owner read their own
+      // `{uid}/*` objects; path matches the iOS uploader (lowercased uid).
+      const uid = session.user.id.toLowerCase();
+      const withRefs = rows.filter((r) => r.data.imageRef);
+      if (withRefs.length === 0) return;
+      const paths = withRefs.map((r) => `${uid}/${r.data.imageRef}.img`);
+      const { data: signed } = await sb.storage.from(BUCKET).createSignedUrls(paths, SIGNED_URL_TTL);
+      if (!signed) return;
+      const urls: Record<string, string> = {};
+      withRefs.forEach((r, i) => {
+        const s = signed[i];
+        if (s?.signedUrl && !s.error) urls[r.id] = s.signedUrl;
+      });
+      setImageUrls(urls);
     })();
   }, [router]);
 
@@ -73,6 +98,15 @@ export default function ClosetPage() {
         <div style={{ display: "grid", gap: 16, gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))" }}>
           {items.map((it) => (
             <Card key={it.id}>
+              {imageUrls[it.id] ? (
+                // Cutouts can be transparent; a neutral tile keeps them legible.
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={imageUrls[it.id]}
+                  alt={it.data.name || "Closet item"}
+                  style={{ width: "100%", aspectRatio: "1 / 1", objectFit: "contain", background: "var(--wo-surface-muted, #eef2f8)", borderRadius: 12, marginBottom: 10 }}
+                />
+              ) : null}
               <div style={{ fontWeight: 600, color: "var(--wo-text, #10141b)" }}>{it.data.name || "Untitled"}</div>
               <div style={{ fontSize: 13, color: "var(--wo-text-secondary, #5c6b7a)", margin: "4px 0 10px" }}>
                 {[it.data.colorName, it.data.category].filter(Boolean).join(" · ") || "—"}
