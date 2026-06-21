@@ -8,6 +8,7 @@ const TABS = [
   { href: "/ai", label: "AI Consumption" },
   { href: "/appstore", label: "App Store" },
   { href: "/users", label: "Users" },
+  { href: "/marketing", label: "Marketing" },
 ];
 
 export function Nav() {

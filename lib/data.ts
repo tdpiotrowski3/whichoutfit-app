@@ -113,3 +113,35 @@ export async function getAppstore(days = 30): Promise<AppstoreRow[]> {
   if (error) throw error;
   return (data ?? []) as AppstoreRow[];
 }
+
+// --- Marketing segmentation (underused-feature nudges) ---
+
+export type UsageFeature = { kind: string; users: number };
+
+/** Distinct usage_events features (kinds) + how many users have used each. */
+export async function getUsageFeatures(): Promise<UsageFeature[]> {
+  const { data, error } = await admin().rpc("admin_usage_features");
+  if (error) throw error;
+  return ((data ?? []) as { kind: string; users: number }[]).map((r) => ({
+    kind: r.kind,
+    users: Number(r.users),
+  }));
+}
+
+export type FeatureSegmentRow = {
+  user_id: string;
+  email: string | null;
+  created_at: string;
+  last_sign_in_at: string | null;
+  opted_in: boolean;
+  /** Deliverable email captured at consent time (may differ from the auth email). */
+  consent_email: string | null;
+  consent_at: string | null;
+};
+
+/** Users who have NOT used `feature`, joined to marketing_consent (opted-in first). */
+export async function getFeatureSegment(feature: string): Promise<FeatureSegmentRow[]> {
+  const { data, error } = await admin().rpc("admin_feature_segment", { feature });
+  if (error) throw error;
+  return (data ?? []) as FeatureSegmentRow[];
+}
