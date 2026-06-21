@@ -1,30 +1,47 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ds";
 import { consumerClient, isConsumerConfigured } from "@/lib/consumer";
 
 export default function SignInPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
+  const [stage, setStage] = useState<"email" | "code">("email");
   const [busy, setBusy] = useState(false);
-  const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const configured = isConsumerConfigured();
 
-  async function sendMagicLink() {
+  async function sendCode() {
     const sb = consumerClient();
     if (!sb || !email.trim()) return;
     setBusy(true);
     setError(null);
-    // Email magic link — no OAuth provider/secret needed. The link returns to
-    // /auth/callback, which exchanges the code for a session.
+    // No emailRedirectTo → an OTP code email (verified with verifyOtp), which
+    // works across devices: request on one device, type the code on another.
     const { error } = await sb.auth.signInWithOtp({
       email: email.trim(),
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      options: { shouldCreateUser: true },
     });
     if (error) setError(error.message);
-    else setSent(true);
+    else setStage("code");
     setBusy(false);
+  }
+
+  async function verify() {
+    const sb = consumerClient();
+    if (!sb || code.trim().length < 6) return;
+    setBusy(true);
+    setError(null);
+    const { error } = await sb.auth.verifyOtp({ email: email.trim(), token: code.trim(), type: "email" });
+    if (error) {
+      setError(error.message);
+      setBusy(false);
+    } else {
+      router.replace("/closet");
+    }
   }
 
   const input: React.CSSProperties = {
@@ -51,12 +68,7 @@ export default function SignInPage() {
           Sign-in isn&apos;t configured yet — set <code>NEXT_PUBLIC_SUPABASE_URL</code> and{" "}
           <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code>.
         </p>
-      ) : sent ? (
-        <p style={{ color: "var(--wo-text, #10141b)", lineHeight: 1.6 }}>
-          Check your email — we sent a sign-in link to <strong>{email}</strong>. Open it on this device to
-          continue.
-        </p>
-      ) : (
+      ) : stage === "email" ? (
         <>
           <input
             type="email"
@@ -65,14 +77,41 @@ export default function SignInPage() {
             placeholder="you@example.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") sendMagicLink();
-            }}
+            onKeyDown={(e) => e.key === "Enter" && sendCode()}
             style={input}
           />
-          <Button variant="primary" fullWidth onClick={sendMagicLink} disabled={busy || !email.trim()}>
-            {busy ? "Sending…" : "Email me a sign-in link"}
+          <Button variant="primary" fullWidth onClick={sendCode} disabled={busy || !email.trim()}>
+            {busy ? "Sending…" : "Email me a code"}
           </Button>
+        </>
+      ) : (
+        <>
+          <p style={{ color: "var(--wo-text-secondary, #5c6b7a)", marginBottom: 12, fontSize: 14 }}>
+            Enter the 6-digit code we emailed to <strong>{email}</strong>.
+          </p>
+          <input
+            type="text"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            placeholder="123456"
+            value={code}
+            onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+            onKeyDown={(e) => e.key === "Enter" && verify()}
+            style={{ ...input, textAlign: "center", letterSpacing: "0.3em", fontSize: 20 }}
+          />
+          <Button variant="primary" fullWidth onClick={verify} disabled={busy || code.trim().length < 6}>
+            {busy ? "Verifying…" : "Verify & sign in"}
+          </Button>
+          <button
+            onClick={() => {
+              setStage("email");
+              setCode("");
+              setError(null);
+            }}
+            style={{ background: "none", border: "none", color: "var(--wo-text-secondary, #5c6b7a)", cursor: "pointer", fontSize: 13, marginTop: 14 }}
+          >
+            Use a different email
+          </button>
         </>
       )}
 
