@@ -21,7 +21,18 @@ npm run dev
 | `SUPABASE_URL` | `https://irfzsyzhoxxtzuugdtef.supabase.co` | Supabase → Project Settings → API |
 | `SUPABASE_SERVICE_ROLE_KEY` | **secret** service-role key | Supabase → Project Settings → API → `service_role` |
 | `ADMIN_PASSWORD` | password to log in | choose a strong one |
-| `SESSION_SECRET` | random string for cookie signing | e.g. `openssl rand -hex 32` |
+| `SESSION_SECRET` | random string for cookie signing (also signs unsubscribe tokens) | e.g. `openssl rand -hex 32` |
+| `CRON_SECRET` | bearer secret for the daily Vercel cron | e.g. `openssl rand -hex 32` |
+
+**Marketing email (Resend) — required only for the Marketing tab's bulk-send.** The
+feature is inert until all four are set:
+
+| Var | What | Where to get it |
+|---|---|---|
+| `RESEND_API_KEY` | Resend API key | Resend → API Keys |
+| `EMAIL_FROM` | verified sender, e.g. `WhichOutfit <hello@whichoutfit.app>` | domain must be verified in Resend |
+| `MARKETING_PHYSICAL_ADDRESS` | postal address shown in every marketing email | required by CAN-SPAM |
+| `PUBLIC_BASE_URL` | stable https origin that serves `/api/unsubscribe`, e.g. `https://admin.whichoutfit.app` | your deployed dashboard URL |
 
 > The service-role key bypasses RLS — it lives ONLY in server env, never shipped to the browser. All Supabase reads happen in Server Components / Route Handlers.
 
