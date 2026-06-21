@@ -87,7 +87,7 @@ export default function SignInPage() {
       ) : (
         <>
           <p style={{ color: "var(--wo-text-secondary, #5c6b7a)", marginBottom: 12, fontSize: 14 }}>
-            Enter the 6-digit code we emailed to <strong>{email}</strong>.
+            Enter the code we emailed to <strong>{email}</strong>.
           </p>
           <input
             type="text"
@@ -95,7 +95,7 @@ export default function SignInPage() {
             autoComplete="one-time-code"
             placeholder="123456"
             value={code}
-            onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+            onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 10))}
             onKeyDown={(e) => e.key === "Enter" && verify()}
             style={{ ...input, textAlign: "center", letterSpacing: "0.3em", fontSize: 20 }}
           />
