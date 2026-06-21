@@ -1,0 +1,37 @@
+.wo-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--wo-space-xs);
+  font-family: var(--wo-font-sans);
+  font-weight: 600;
+  font-size: 12px;
+  line-height: 1;
+  padding: 5px var(--wo-space-sm);
+  border-radius: var(--wo-radius-pill);
+  white-space: nowrap;
+}
+
+.wo-badge--neutral {
+  background: var(--wo-surface-muted);
+  color: var(--wo-text-secondary);
+}
+
+.wo-badge--brand {
+  background: color-mix(in srgb, var(--wo-brand-blue) 16%, transparent);
+  color: var(--wo-brand-blue);
+}
+
+.wo-badge--success {
+  background: color-mix(in srgb, var(--wo-brand-green) 16%, transparent);
+  color: var(--wo-brand-green);
+}
+
+.wo-badge--warning {
+  background: color-mix(in srgb, var(--wo-warning) 18%, transparent);
+  color: var(--wo-warning);
+}
+
+.wo-badge--danger {
+  background: color-mix(in srgb, var(--wo-danger) 16%, transparent);
+  color: var(--wo-danger);
+}

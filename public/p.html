@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>WhichOutfit — Which fit? 👀</title>
+<meta name="description" content="Help me pick — vote on my outfit. No app needed."/>
+
+<!-- Link preview (iMessage / social). Generic branded card — served as real text/html
+     from whichoutfit.app so it renders as a rich link, not a downloaded document. -->
+<meta property="og:type" content="website"/>
+<meta property="og:site_name" content="WhichOutfit"/>
+<meta property="og:title" content="Which fit? 👀"/>
+<meta property="og:description" content="Help me pick — tap to vote. No app needed."/>
+<meta property="og:image" content="https://whichoutfit.app/poll-og.png"/>
+<meta property="og:image:width" content="1200"/>
+<meta property="og:image:height" content="1200"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="Which fit? 👀"/>
+<meta name="twitter:description" content="Help me pick — tap to vote. No app needed."/>
+<meta name="twitter:image" content="https://whichoutfit.app/poll-og.png"/>
+
+<link rel="icon" type="image/svg+xml" href="favicon.svg"/>
+<style>
+:root{--blue:#3b82f6;--ink:#0f172a;--muted:#64748b;--bg:#f8fafc;--card:#fff;--line:#e2e8f0}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+header{padding:18px;text-align:center}
+.brand{font-weight:800;color:#2563eb;font-size:18px;text-decoration:none}
+main{max-width:520px;margin:0 auto;padding:0 18px 48px}
+h1{font-size:26px;font-weight:800;text-align:center;margin:8px 0 22px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;overflow:hidden;box-shadow:0 6px 24px rgba(15,23,42,.06)}
+.card img{display:block;width:100%;height:auto}
+.btns{display:flex;gap:12px;margin-top:18px}
+.vote{flex:1;border:0;border-radius:16px;padding:18px;font-size:18px;font-weight:700;cursor:pointer;color:#fff}
+.vote.yes{background:#22c55e}.vote.no{background:#ef4444}
+.vote.pick{width:100%;background:#2563eb;margin-top:10px;padding:12px;font-size:15px}
+.vote:disabled{opacity:.55}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.opt{position:relative;background:var(--card);border:2px solid var(--line);border-radius:18px;overflow:hidden;padding:8px}
+.opt.win{border-color:#22c55e}
+.opt img{display:block;width:100%;height:auto;border-radius:12px}
+.badge{position:absolute;top:12px;left:12px;background:rgba(15,23,42,.78);color:#fff;width:26px;height:26px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px}
+.optres{text-align:center;font-weight:800;padding:8px 0 4px}
+.res{margin-top:20px}
+.row{display:flex;align-items:center;gap:10px;margin:10px 0}
+.lbl{width:78px;font-weight:700}
+.track{flex:1;height:14px;background:#e2e8f0;border-radius:7px;overflow:hidden}
+.fill{display:block;height:100%}.fill.up{background:#22c55e}.fill.down{background:#ef4444}
+.num{width:42px;text-align:right;font-weight:700}
+.tot{text-align:center;color:var(--muted);margin-top:16px}
+.state{text-align:center;color:var(--muted);padding:48px 12px;font-size:16px}
+
+/* comments */
+.sec-title{font-size:15px;font-weight:800;margin:30px 0 12px;color:var(--ink)}
+.comments{display:flex;flex-direction:column;gap:10px}
+.comment{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+.comment .who{font-weight:700;font-size:13px;color:var(--ink);margin-bottom:2px}
+.comment .body{font-size:15px;color:#1f2937;white-space:pre-wrap;word-break:break-word}
+.comments-empty{color:var(--muted);font-size:14px;padding:4px 2px 8px}
+.cform{margin-top:14px;display:flex;flex-direction:column;gap:8px}
+.cform input,.cform textarea{width:100%;border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:15px;font-family:inherit;background:#fff;color:var(--ink)}
+.cform textarea{resize:vertical;min-height:48px}
+.cform .post{align-self:flex-end;background:#2563eb;color:#fff;border:0;border-radius:12px;padding:11px 20px;font-weight:700;font-size:15px;cursor:pointer}
+.cform .post:disabled{opacity:.55}
+
+/* referral CTA */
+.cta{margin-top:30px;border-radius:20px;padding:22px;text-align:center;color:#fff;background:linear-gradient(135deg,#2E6BFF 0%,#0FA3A3 100%)}
+.cta .k{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;opacity:.9}
+.cta .h{font-size:21px;font-weight:800;margin:6px 0 4px}
+.cta .p{font-size:14px;opacity:.92;margin-bottom:16px}
+.cta a{display:inline-block;background:#fff;color:#1f2937;font-weight:800;font-size:15px;text-decoration:none;padding:13px 26px;border-radius:14px}
+
+footer{text-align:center;color:var(--muted);margin-top:30px;font-size:14px}
+footer a{color:#2563eb;text-decoration:none;font-weight:600}
+</style>
+</head>
+<body>
+<header><a class="brand" href="https://whichoutfit.app">👕 WhichOutfit</a></header>
+<main>
+  <h1 id="title">Which fit? 👀</h1>
+  <div id="poll"><div class="state">Loading…</div></div>
+
+  <div id="extra" style="display:none">
+    <!-- friend comments -->
+    <div class="sec-title">💬 Comments</div>
+    <div id="comments" class="comments"></div>
+    <form id="cform" class="cform" autocomplete="off">
+      <input id="cname" type="text" maxlength="40" placeholder="Your name (optional)"/>
+      <textarea id="cbody" maxlength="280" placeholder="Add a comment — e.g. love the top, swap the shoes"></textarea>
+      <button id="cpost" class="post" type="submit">Post comment</button>
+    </form>
+
+    <!-- referral vector -->
+    <div class="cta">
+      <div class="k">Psst — you've got taste</div>
+      <div class="h">Get WhichOutfit free for a month</div>
+      <div class="p">Your AI stylist for the wardrobe you already own. First month of Premium on us.</div>
+      <a id="redeem" href="#" target="_blank" rel="noopener">Claim a month free →</a>
+    </div>
+  </div>
+
+  <footer>Make your own — <a href="https://whichoutfit.app">get WhichOutfit</a></footer>
+</main>
+
+<script>
+(function () {
+  var API = 'https://irfzsyzhoxxtzuugdtef.supabase.co/functions/v1/poll';
+
+  // Referral target. Swap to an Apple Offer Code redemption URL to grant a literal
+  // free month, e.g.:
+  //   https://apps.apple.com/redeem?ctx=offercodes&id=6778094125&code=FRIEND
+  // Until an offer code exists, this drives installs to the App Store listing.
+  var REDEEM_URL = 'https://apps.apple.com/us/app/whichoutfit/id6778094125';
+
+  var params = new URLSearchParams(location.search);
+  var id = params.get('id');
+  var root = document.getElementById('poll');
+  var extra = document.getElementById('extra');
+  var titleEl = document.getElementById('title');
+  var commentsEl = document.getElementById('comments');
+  var data = null;
+
+  document.getElementById('redeem').href = REDEEM_URL;
+
+  if (!id) { root.innerHTML = '<div class="state">This poll link looks incomplete.</div>'; return; }
+
+  var voter = localStorage.getItem('wo_voter');
+  if (!voter) { voter = Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem('wo_voter', voter); }
+
+  function esc(s) { return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function pct(n, t) { return t > 0 ? Math.round(n * 100 / t) : 0; }
+  function bar(label, n, t, cls) {
+    var p = pct(n, t);
+    return '<div class="row"><span class="lbl">' + label + '</span><span class="track"><span class="fill ' + cls + '" style="width:' + p + '%"></span></span><span class="num">' + p + '%</span></div>';
+  }
+
+  function renderComments() {
+    var list = (data && data.comments) || [];
+    if (!list.length) {
+      commentsEl.innerHTML = '<div class="comments-empty">No comments yet — be the first to weigh in.</div>';
+      return;
+    }
+    var html = '';
+    for (var i = 0; i < list.length; i++) {
+      var c = list[i];
+      var who = c.name && c.name.trim() ? esc(c.name) : 'Friend';
+      html += '<div class="comment"><div class="who">' + who + '</div><div class="body">' + esc(c.body) + '</div></div>';
+    }
+    commentsEl.innerHTML = html;
+  }
+
+  function render(showResults) {
+    if (data.question && data.question.trim()) { titleEl.textContent = data.question; }
+    var html = '';
+    if (data.kind === 'binary') {
+      var o = data.options[0]; var t = o.up + o.down;
+      html += '<div class="card"><img src="' + o.image_url + '" alt="outfit"/></div>';
+      if (showResults) {
+        html += '<div class="res">' + bar('👍 Yes', o.up, t, 'up') + bar('👎 No', o.down, t, 'down') + '</div><p class="tot">' + t + ' vote' + (t === 1 ? '' : 's') + '</p>';
+      } else {
+        html += '<div class="btns"><button class="vote yes" data-opt="' + o.id + '" data-val="up">👍 Yes</button><button class="vote no" data-opt="' + o.id + '" data-val="down">👎 No</button></div>';
+      }
+    } else {
+      var total = 0; for (var i = 0; i < data.options.length; i++) { total += data.options[i].picks; }
+      var top = -1; for (var m = 0; m < data.options.length; m++) { if (data.options[m].picks > top) top = data.options[m].picks; }
+      html += '<div class="grid">';
+      for (var j = 0; j < data.options.length; j++) {
+        var op = data.options[j];
+        var win = showResults && total > 0 && op.picks === top ? ' win' : '';
+        html += '<div class="opt' + win + '"><div class="badge">' + (j + 1) + '</div><img src="' + op.image_url + '" alt="option"/>';
+        if (showResults) { html += '<div class="optres">' + pct(op.picks, total) + '% · ' + op.picks + '</div>'; }
+        else { html += '<button class="vote pick" data-opt="' + op.id + '" data-val="pick">Pick this</button>'; }
+        html += '</div>';
+      }
+      html += '</div>';
+      if (showResults) { html += '<p class="tot">' + total + ' vote' + (total === 1 ? '' : 's') + '</p>'; }
+    }
+    root.innerHTML = html;
+    if (!showResults) {
+      var bs = root.querySelectorAll('.vote');
+      for (var k = 0; k < bs.length; k++) { bs[k].addEventListener('click', onVote); }
+    }
+    extra.style.display = '';
+    renderComments();
+  }
+
+  function onVote(e) {
+    var b = e.currentTarget, opt = b.getAttribute('data-opt'), val = b.getAttribute('data-val');
+    var all = root.querySelectorAll('.vote');
+    for (var i = 0; i < all.length; i++) { all[i].disabled = true; }
+    fetch(API + '?id=' + encodeURIComponent(id), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ option_id: opt, value: val, voter: voter })
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (res) { data = res; localStorage.setItem('wo_voted_' + data.id, '1'); render(true); })
+      .catch(function () { for (var i = 0; i < all.length; i++) { all[i].disabled = false; } });
+  }
+
+  document.getElementById('cform').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var bodyEl = document.getElementById('cbody');
+    var nameEl = document.getElementById('cname');
+    var postBtn = document.getElementById('cpost');
+    var text = bodyEl.value.trim();
+    if (!text) return;
+    postBtn.disabled = true;
+    fetch(API + '?id=' + encodeURIComponent(id), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ comment: text, name: nameEl.value.trim(), voter: voter })
+    })
+      .then(function (r) { if (!r.ok) throw new Error('post failed'); return r.json(); })
+      .then(function (res) { data = res; bodyEl.value = ''; renderComments(); postBtn.disabled = false; })
+      .catch(function () { postBtn.disabled = false; });
+  });
+
+  fetch(API + '?id=' + encodeURIComponent(id) + '&format=json')
+    .then(function (r) { if (!r.ok) throw new Error('not found'); return r.json(); })
+    .then(function (res) {
+      data = res;
+      var voted = localStorage.getItem('wo_voted_' + data.id);
+      render(!!voted || data.closed);
+    })
+    .catch(function () {
+      root.innerHTML = '<div class="state">This poll isn’t available anymore.</div>';
+    });
+})();
+</script>
+</body>
+</html>
