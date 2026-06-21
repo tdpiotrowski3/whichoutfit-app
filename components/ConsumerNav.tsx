@@ -10,6 +10,7 @@ import { consumerClient } from "@/lib/consumer";
 const LINKS = [
   { href: "/closet", label: "Closet" },
   { href: "/outfits", label: "Outfits" },
+  { href: "/rate", label: "Rate" },
   { href: "/stylist", label: "Stylist" },
   { href: "/profile", label: "Profile" },
 ];
