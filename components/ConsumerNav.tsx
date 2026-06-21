@@ -10,6 +10,8 @@ import { consumerClient } from "@/lib/consumer";
 const LINKS = [
   { href: "/closet", label: "Closet" },
   { href: "/outfits", label: "Outfits" },
+  { href: "/worn", label: "Worn" },
+  { href: "/insights", label: "Insights" },
   { href: "/rate", label: "Rate" },
   { href: "/stylist", label: "Stylist" },
   { href: "/profile", label: "Profile" },
@@ -41,11 +43,12 @@ export function ConsumerNav() {
         style={{
           maxWidth: 960,
           margin: "0 auto",
-          padding: "0 24px",
-          height: 56,
+          padding: "10px 24px",
+          minHeight: 56,
           display: "flex",
           alignItems: "center",
-          gap: 20,
+          flexWrap: "wrap",
+          gap: "8px 18px",
         }}
       >
         <Link
