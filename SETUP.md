@@ -52,6 +52,18 @@ data flows; the sandbox token works against sandbox data in the meantime.
 > mint/refresh tokens out-of-band — they are NOT needed by the running app and
 > must never be committed.
 
+**Consumer webapp (app.whichoutfit.app).** Browser-side, RLS-protected — these are
+safe to expose (unlike the service-role key):
+
+| Var | What | Where to get it |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | `https://irfzsyzhoxxtzuugdtef.supabase.co` | Supabase → Project Settings → API |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | publishable/anon key | Supabase → Project Settings → API (publishable) |
+
+> Also in Supabase → Authentication → URL Configuration, add the redirect URLs
+> `https://app.whichoutfit.app/auth/callback` (and `http://localhost:3000/auth/callback`
+> for dev). Google is already enabled as a provider (the iOS app uses it).
+
 > The service-role key bypasses RLS — it lives ONLY in server env, never shipped to the browser. All Supabase reads happen in Server Components / Route Handlers.
 
 ## Deploy to Vercel
