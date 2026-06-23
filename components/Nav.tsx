@@ -7,6 +7,7 @@ const TABS = [
   { href: "/", label: "Overview" },
   { href: "/ai", label: "AI Consumption" },
   { href: "/appstore", label: "App Store" },
+  { href: "/finance", label: "Finance" },
   { href: "/users", label: "Users" },
   { href: "/marketing", label: "Marketing" },
   { href: "/social", label: "Social & Ads" },

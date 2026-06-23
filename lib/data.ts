@@ -173,3 +173,68 @@ export async function getSocialMetrics(days = 30): Promise<SocialMetricDbRow[]> 
   if (error) throw error;
   return (data ?? []) as SocialMetricDbRow[];
 }
+
+// --- Finance (expense ledger, ROI, runway) ---
+// Backed by the public.expenses table + the admin_finance_overview /
+// admin_spend_by_category views (RLS-on, service-role-only). Amounts stored as
+// integer cents; entry_type 'cash' = real charge, 'memo' = non-cash (Meta ad
+// spend drawn from already-funded prepaid balance, excluded from cash totals).
+
+export type FinanceOverview = {
+  revenue_usd: number;
+  cash_spend_usd: number;
+  memo_spend_usd: number;
+  marketing_spend_usd: number;
+  net_usd: number;
+  roi_ratio: number | null;
+};
+
+export async function getFinanceOverview(): Promise<FinanceOverview> {
+  const { data, error } = await admin().from("admin_finance_overview").select("*").single();
+  if (error) throw error;
+  const d = data as Record<string, string | number | null>;
+  return {
+    revenue_usd: Number(d.revenue_usd ?? 0),
+    cash_spend_usd: Number(d.cash_spend_usd ?? 0),
+    memo_spend_usd: Number(d.memo_spend_usd ?? 0),
+    marketing_spend_usd: Number(d.marketing_spend_usd ?? 0),
+    net_usd: Number(d.net_usd ?? 0),
+    roi_ratio: d.roi_ratio == null ? null : Number(d.roi_ratio),
+  };
+}
+
+export type SpendCategory = { category: string; cash_usd: number; cash_count: number };
+
+export async function getSpendByCategory(): Promise<SpendCategory[]> {
+  const { data, error } = await admin().from("admin_spend_by_category").select("*");
+  if (error) throw error;
+  return ((data ?? []) as Record<string, string | number | null>[]).map((r) => ({
+    category: String(r.category),
+    cash_usd: Number(r.cash_usd ?? 0),
+    cash_count: Number(r.cash_count ?? 0),
+  }));
+}
+
+export type ExpenseRow = {
+  id: string;
+  txn_date: string;
+  vendor: string;
+  description: string | null;
+  category: string;
+  amount_cents: number;
+  payment_method: string | null;
+  entry_type: "cash" | "memo";
+  receipt_ref: string | null;
+  deductible: boolean;
+  source: string;
+  notes: string | null;
+};
+
+export async function getExpenses(): Promise<ExpenseRow[]> {
+  const { data, error } = await admin()
+    .from("expenses")
+    .select("id,txn_date,vendor,description,category,amount_cents,payment_method,entry_type,receipt_ref,deductible,source,notes")
+    .order("txn_date", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as ExpenseRow[];
+}
