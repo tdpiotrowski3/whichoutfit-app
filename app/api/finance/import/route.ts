@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { isAuthed } from "@/lib/session";
 import { admin } from "@/lib/supabase";
+import { isRoiCost } from "@/lib/finance";
 
 export const runtime = "nodejs";
 
@@ -65,14 +66,16 @@ export async function POST(req: Request) {
     const key = `${txn_date}|${amount_cents}|${vendor}`;
     if (seen.has(key)) { skipped++; continue; }
     seen.add(key);
+    const category = (ci >= 0 ? r[ci]?.trim() : "") || "Uncategorized";
     toInsert.push({
       txn_date,
       vendor,
       description: vendor,
-      category: (ci >= 0 ? r[ci]?.trim() : "") || "Uncategorized",
+      category,
       amount_cents,
       payment_method: "Mercury",
       entry_type: "cash",
+      roi_impacting: isRoiCost(vendor, category),
       source: "mercury",
       deductible: true,
     });
