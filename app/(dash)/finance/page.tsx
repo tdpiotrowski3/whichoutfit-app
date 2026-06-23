@@ -27,8 +27,8 @@ export default async function FinancePage() {
 
   const maxCat = Math.max(1, ...cats.map((c) => c.cash_usd));
   const roiPct = overview.roi_ratio == null ? null : overview.roi_ratio * 100;
-  const cashRows = rows.filter((r) => r.entry_type === "cash");
-  const memoRows = rows.filter((r) => r.entry_type === "memo");
+  const countedRows = rows.filter((r) => !r.excluded);
+  const ignoredRows = rows.filter((r) => r.excluded);
 
   return (
     <div className="space-y-6">
@@ -56,7 +56,7 @@ export default async function FinancePage() {
         <Stat label="Overhead · tax write-off" value={usd(overview.overhead_usd)} sub="excluded from ROI" accent="muted" />
         <Stat label="Total cash spend" value={usd(overview.cash_spend_usd)} accent="blue" />
         <Stat label="Marketing spend" value={usd(overview.marketing_spend_usd)} accent="teal" />
-        <Stat label="Meta prepaid · memo" value={usd(overview.memo_spend_usd)} sub="non-cash" accent="muted" />
+        <Stat label="Ignored" value={usd(overview.excluded_usd)} sub="excluded from all totals" accent="muted" />
       </div>
 
       <Card title="Spend by category (cash)">
@@ -84,11 +84,11 @@ export default async function FinancePage() {
       </Card>
 
       <p className="text-xs text-[var(--wo-muted)]">
-        <strong>ROI</strong> = (revenue − ROI cost) ÷ ROI cost, where ROI cost = marketing + Claude only.
-        Click a row&apos;s <strong>classification</strong> chip to move it between ROI and Overhead.
-        <strong> Overhead</strong> = deductible costs excluded from ROI (LLC fee, infra, furniture, …).
-        <strong> Memo</strong> = Meta ad spend from already-funded prepaid balance ({memoRows.length}), excluded from cash totals.
-        {" "}Cash transactions: {cashRows.length}.
+        Each row&apos;s <strong>Classification</strong> dropdown sets how it&apos;s counted:
+        <strong> ROI</strong> = marketing + AI + product infra (drives the ROI metric) ·
+        <strong> Overhead</strong> = deductible but excluded from ROI (LLC fee, furniture, …) ·
+        <strong> Ignore</strong> = excluded from every total (Meta prepaid draws, transfers, personal mischarges).
+        ROI = (revenue − ROI cost) ÷ ROI cost. Counted rows: {countedRows.length} · ignored: {ignoredRows.length}.
       </p>
     </div>
   );

@@ -1,4 +1,5 @@
 import { admin } from "./supabase";
+import { isRoiCost } from "./finance";
 
 // Mercury banking API — read-only pull of bank transactions into the expense
 // ledger. Docs: https://docs.mercury.com/reference . All secrets via env.
@@ -101,14 +102,17 @@ export async function syncMercury(opts?: { start?: string }): Promise<MercurySyn
       const ref = `mercury:${t.id}`;
       if (seen.has(ref)) continue;          // already imported
       seen.add(ref);
+      const vendor = (t.counterpartyName || t.bankDescription || "Unknown").trim();
+      const description = t.externalMemo || t.note || null;
       toInsert.push({
         txn_date: (t.postedAt || t.createdAt).slice(0, 10),
-        vendor: (t.counterpartyName || t.bankDescription || "Unknown").trim(),
-        description: t.externalMemo || t.note || null,
+        vendor,
+        description,
         category: t.mercuryCategory || "Uncategorized",
         amount_cents: Math.round(Math.abs(t.amount) * 100),
         payment_method: "Mercury",
         entry_type: "cash",
+        roi_impacting: isRoiCost(vendor, t.mercuryCategory, description),
         receipt_ref: ref,
         deductible: true,
         source: "mercury",
