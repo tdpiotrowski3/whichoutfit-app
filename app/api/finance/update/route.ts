@@ -7,7 +7,7 @@ export const runtime = "nodejs";
 // Whitelisted editable columns. Anything else in the body is ignored.
 const EDITABLE = new Set([
   "txn_date", "vendor", "description", "category",
-  "amount_cents", "payment_method", "roi_impacting", "deductible", "notes",
+  "amount_cents", "payment_method", "roi_impacting", "excluded", "deductible", "notes",
 ]);
 
 // Patch one expense. Accepts { id, ...fields } — used both by the ROI toggle

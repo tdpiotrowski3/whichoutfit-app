@@ -185,7 +185,7 @@ export type FinanceOverview = {
   cash_spend_usd: number;
   roi_cost_usd: number;
   overhead_usd: number;
-  memo_spend_usd: number;
+  excluded_usd: number;
   marketing_spend_usd: number;
   net_usd: number;
   roi_ratio: number | null;
@@ -200,7 +200,7 @@ export async function getFinanceOverview(): Promise<FinanceOverview> {
     cash_spend_usd: Number(d.cash_spend_usd ?? 0),
     roi_cost_usd: Number(d.roi_cost_usd ?? 0),
     overhead_usd: Number(d.overhead_usd ?? 0),
-    memo_spend_usd: Number(d.memo_spend_usd ?? 0),
+    excluded_usd: Number(d.excluded_usd ?? 0),
     marketing_spend_usd: Number(d.marketing_spend_usd ?? 0),
     net_usd: Number(d.net_usd ?? 0),
     roi_ratio: d.roi_ratio == null ? null : Number(d.roi_ratio),
@@ -229,6 +229,7 @@ export type ExpenseRow = {
   payment_method: string | null;
   entry_type: "cash" | "memo";
   roi_impacting: boolean;
+  excluded: boolean;
   receipt_ref: string | null;
   receipt_path: string | null;
   deductible: boolean;
@@ -239,7 +240,7 @@ export type ExpenseRow = {
 export async function getExpenses(): Promise<ExpenseRow[]> {
   const { data, error } = await admin()
     .from("expenses")
-    .select("id,txn_date,vendor,description,category,amount_cents,payment_method,entry_type,roi_impacting,receipt_ref,receipt_path,deductible,source,notes")
+    .select("id,txn_date,vendor,description,category,amount_cents,payment_method,entry_type,roi_impacting,excluded,receipt_ref,receipt_path,deductible,source,notes")
     .order("txn_date", { ascending: false });
   if (error) throw error;
   return (data ?? []) as ExpenseRow[];
