@@ -1,6 +1,8 @@
 import { getFinanceOverview, getSpendByCategory, getExpenses } from "@/lib/data";
 import { Card, Stat, Bar } from "@/components/ui";
 import { FinanceActions } from "./FinanceActions";
+import { AddExpenseForm } from "./AddExpenseForm";
+import { LedgerTable } from "./LedgerTable";
 
 export const dynamic = "force-dynamic";
 
@@ -34,25 +36,27 @@ export default async function FinancePage() {
         <div>
           <h1 className="text-2xl font-semibold">Finance</h1>
           <p className="text-sm text-[var(--wo-muted)]">
-            Expense ledger, ROI &amp; runway · cash basis. Revenue pulls from App Store proceeds;
-            append your Mercury export to keep one continuous ledger.
+            Expense ledger, ROI &amp; runway · cash basis. ROI runs on marketing + Claude only; everything
+            else is deductible <strong>overhead</strong> (excluded from ROI). Revenue pulls from App Store proceeds.
           </p>
         </div>
         <FinanceActions rows={rows} />
       </div>
 
+      <AddExpenseForm />
+
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <Stat label="Revenue · to date" value={usd(overview.revenue_usd)} accent="green" />
-        <Stat label="Cash spend · to date" value={usd(overview.cash_spend_usd)} accent="blue" />
-        <Stat label="Net" value={usd(overview.net_usd)} accent={overview.net_usd >= 0 ? "green" : "muted"} />
+        <Stat label="ROI cost · mktg + Claude" value={usd(overview.roi_cost_usd)} accent="teal" />
         <Stat label="ROI" value={roiPct == null ? "—" : `${roiPct.toFixed(0)}%`} accent={roiPct != null && roiPct >= 0 ? "green" : "muted"} />
+        <Stat label="Net · revenue − all spend" value={usd(overview.net_usd)} accent={overview.net_usd >= 0 ? "green" : "muted"} />
       </div>
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        <Stat label="Overhead · tax write-off" value={usd(overview.overhead_usd)} sub="excluded from ROI" accent="muted" />
+        <Stat label="Total cash spend" value={usd(overview.cash_spend_usd)} accent="blue" />
         <Stat label="Marketing spend" value={usd(overview.marketing_spend_usd)} accent="teal" />
-        <Stat label="Meta prepaid (memo)" value={usd(overview.memo_spend_usd)} sub="not counted as cash" accent="muted" />
-        <Stat label="Cash transactions" value={cashRows.length} accent="muted" />
-        <Stat label="Avg / transaction" value={cashRows.length ? usd(overview.cash_spend_usd / cashRows.length) : "—"} accent="muted" />
+        <Stat label="Meta prepaid · memo" value={usd(overview.memo_spend_usd)} sub="non-cash" accent="muted" />
       </div>
 
       <Card title="Spend by category (cash)">
@@ -76,44 +80,15 @@ export default async function FinancePage() {
       </Card>
 
       <Card title={`Ledger · ${rows.length} entries`}>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-[var(--wo-border)] text-left text-[var(--wo-muted)]">
-                <th className="py-2 pr-3 font-medium">Date</th>
-                <th className="py-2 pr-3 font-medium">Vendor</th>
-                <th className="py-2 pr-3 font-medium">Category</th>
-                <th className="py-2 pr-3 text-right font-medium">Amount</th>
-                <th className="py-2 pr-3 font-medium">Type</th>
-                <th className="py-2 pr-3 font-medium">Source</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => {
-                const memo = r.entry_type === "memo";
-                return (
-                  <tr key={r.id} className={`border-b border-[var(--wo-border)]/50 ${memo ? "italic text-[var(--wo-muted)]" : ""}`}>
-                    <td className="whitespace-nowrap py-2 pr-3">{r.txn_date}</td>
-                    <td className="py-2 pr-3">
-                      {r.vendor}
-                      {r.description ? <div className="text-xs text-[var(--wo-muted)]">{r.description}</div> : null}
-                    </td>
-                    <td className="py-2 pr-3">{r.category}</td>
-                    <td className="whitespace-nowrap py-2 pr-3 text-right">{usd(r.amount_cents / 100)}</td>
-                    <td className="py-2 pr-3">{memo ? "memo" : "cash"}</td>
-                    <td className="whitespace-nowrap py-2 pr-3">{r.source}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <LedgerTable rows={rows} />
       </Card>
 
       <p className="text-xs text-[var(--wo-muted)]">
-        Cash = real charges ({cashRows.length}). Memo = Meta ad spend drawn from an already-funded
-        prepaid balance ({memoRows.length}); shown for completeness but excluded from cash totals to
-        avoid double-counting. ROI = (revenue − cash spend) ÷ cash spend.
+        <strong>ROI</strong> = (revenue − ROI cost) ÷ ROI cost, where ROI cost = marketing + Claude only.
+        Click a row&apos;s <strong>classification</strong> chip to move it between ROI and Overhead.
+        <strong> Overhead</strong> = deductible costs excluded from ROI (LLC fee, infra, furniture, …).
+        <strong> Memo</strong> = Meta ad spend from already-funded prepaid balance ({memoRows.length}), excluded from cash totals.
+        {" "}Cash transactions: {cashRows.length}.
       </p>
     </div>
   );
