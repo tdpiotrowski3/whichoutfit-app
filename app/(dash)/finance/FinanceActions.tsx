@@ -7,7 +7,7 @@ import type { ExpenseRow } from "@/lib/data";
 export function FinanceActions({ rows }: { rows: ExpenseRow[] }) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<null | "import" | "sync">(null);
   const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
 
   function exportCsv() {
@@ -39,10 +39,26 @@ export function FinanceActions({ rows }: { rows: ExpenseRow[] }) {
     URL.revokeObjectURL(url);
   }
 
+  async function syncMercury() {
+    setBusy("sync");
+    setStatus(null);
+    try {
+      const res = await fetch("/api/mercury/sync", { method: "POST" });
+      const j = await res.json();
+      if (!res.ok || j.ok === false) throw new Error(j.error || "Sync failed");
+      setStatus({ ok: true, text: `Synced ${j.inserted} new transaction${j.inserted === 1 ? "" : "s"} from Mercury (${j.accounts} account${j.accounts === 1 ? "" : "s"}).` });
+      router.refresh();
+    } catch (err) {
+      setStatus({ ok: false, text: err instanceof Error ? err.message : "Sync failed" });
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function onFile(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    setBusy(true);
+    setBusy("import");
     setStatus(null);
     try {
       const text = await file.text();
@@ -58,14 +74,21 @@ export function FinanceActions({ rows }: { rows: ExpenseRow[] }) {
     } catch (err) {
       setStatus({ ok: false, text: err instanceof Error ? err.message : "Import failed" });
     } finally {
-      setBusy(false);
+      setBusy(null);
       if (fileRef.current) fileRef.current.value = "";
     }
   }
 
   return (
     <div className="flex flex-col items-end gap-2">
-      <div className="flex gap-2">
+      <div className="flex flex-wrap justify-end gap-2">
+        <button
+          onClick={syncMercury}
+          disabled={busy !== null}
+          className="rounded-lg bg-[var(--wo-green)] px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+        >
+          {busy === "sync" ? "Syncing…" : "Sync Mercury"}
+        </button>
         <button
           onClick={exportCsv}
           className="rounded-lg border border-[var(--wo-border)] px-3 py-1.5 text-sm font-medium hover:bg-[var(--wo-bg)]"
@@ -74,15 +97,15 @@ export function FinanceActions({ rows }: { rows: ExpenseRow[] }) {
         </button>
         <button
           onClick={() => fileRef.current?.click()}
-          disabled={busy}
-          className="rounded-lg bg-[var(--wo-blue)] px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+          disabled={busy !== null}
+          className="rounded-lg border border-[var(--wo-border)] px-3 py-1.5 text-sm font-medium hover:bg-[var(--wo-bg)] disabled:opacity-50"
         >
-          {busy ? "Importing…" : "Import Mercury CSV"}
+          {busy === "import" ? "Importing…" : "Import CSV"}
         </button>
         <input ref={fileRef} type="file" accept=".csv,text/csv" className="hidden" onChange={onFile} />
       </div>
       {status ? (
-        <span className={`text-xs ${status.ok ? "text-[var(--wo-green)]" : "text-red-500"}`}>{status.text}</span>
+        <span className={`max-w-[320px] text-right text-xs ${status.ok ? "text-[var(--wo-green)]" : "text-red-500"}`}>{status.text}</span>
       ) : null}
     </div>
   );
