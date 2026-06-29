@@ -17,6 +17,24 @@
   <meta name="theme-color" content="#0D1117">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="stylesheet" href="style.css">
+  <style>
+    /* Ensures the 3-tier pricing grid is perfectly responsive */
+    @media (max-width: 991px) {
+      .price-grid {
+        grid-template-columns: 1fr !important; /* Stack into 1 column on mobile/tablet */
+        max-width: 420px;
+        margin-left: auto;
+        margin-right: auto;
+        gap: 24px;
+      }
+    }
+    @media (min-width: 992px) {
+      .price-grid {
+        grid-template-columns: repeat(3, 1fr) !important; /* 3 columns side-by-side on desktop */
+        align-items: stretch;
+      }
+    }
+  </style>
 </head>
 <body>
 
@@ -410,7 +428,7 @@
         <ul class="price-feats">
           <li class="price-feat"><span class="pfchk pfchk-b">✓</span>Everything in Free</li>
           <li class="price-feat"><span class="pfchk pfchk-b">✓</span><strong>Unlimited</strong> styling calls</li>
-          <li class="price-feat"><span class="pfchk pfchk-b">✓</span><strong>Unlimited</strong> auto-tagging</li>
+          <li class="price-feat"><span class="pfchk pfchk-b">✓</span><strong>30 Photo Studio credits</strong> / month</li>
           <li class="price-feat"><span class="pfchk pfchk-b">✓</span>Automatic cloud backup</li>
           <li class="price-feat"><span class="pfchk pfchk-b">✓</span>Sync across all your devices</li>
         </ul>
@@ -427,7 +445,7 @@
         <ul class="price-feats">
           <li class="price-feat"><span class="pfchk pfchk-b">✓</span>Everything in Free</li>
           <li class="price-feat"><span class="pfchk pfchk-b">✓</span><strong>Unlimited</strong> styling calls</li>
-          <li class="price-feat"><span class="pfchk pfchk-b">✓</span><strong>Annual Plan:</strong> 75 Photo Studio credits</li>
+          <li class="price-feat"><span class="pfchk pfchk-b">✓</span><strong>30 credits/mo</strong> + <strong>75 bonus</strong></li>
           <li class="price-feat"><span class="pfchk pfchk-b">✓</span>Automatic cloud backup</li>
           <li class="price-feat"><span class="pfchk pfchk-b">✓</span>Sync across all your devices</li>
         </ul>
