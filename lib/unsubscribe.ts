@@ -1,14 +1,11 @@
 import crypto from "crypto";
+import { sessionSecret as secret } from "./secret";
 
 // Marketing unsubscribe tokens: an HMAC-signed user id embedded in every
 // outgoing email's unsubscribe link + List-Unsubscribe header. Domain-separated
 // from the admin session token (which signs "admin", see lib/session.ts) by the
 // "unsub:" prefix, so the two token types share SESSION_SECRET but can never be
 // swapped for one another.
-
-function secret(): string {
-  return process.env.SESSION_SECRET || "insecure-dev-secret-change-me";
-}
 
 function mac(userId: string): string {
   return crypto.createHmac("sha256", secret()).update("unsub:" + userId).digest("hex");

@@ -1,15 +1,12 @@
 import { cookies } from "next/headers";
 import crypto from "crypto";
+import { sessionSecret as secret } from "./secret";
 
 // Minimal HMAC-signed cookie auth for the single admin (you). No DB sessions.
 // Runs in the Node runtime (server components + route handlers), not edge
 // middleware — so node:crypto is available.
 export const COOKIE_NAME = "wo_admin";
 const PAYLOAD = "admin";
-
-function secret(): string {
-  return process.env.SESSION_SECRET || "insecure-dev-secret-change-me";
-}
 
 export function signToken(): string {
   const mac = crypto.createHmac("sha256", secret()).update(PAYLOAD).digest("hex");
