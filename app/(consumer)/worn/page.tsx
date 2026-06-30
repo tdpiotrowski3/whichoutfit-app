@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ds";
 import { consumerClient } from "@/lib/consumer";
+import { createSignedImageUrls } from "@/lib/storageImages";
 
 // Day-by-day worn history. The row's `data` jsonb mirrors the iOS WornOutfit.
 type WornRow = {
@@ -66,7 +67,7 @@ export default function WornPage() {
       }
       const refList = [...refs];
       if (refList.length === 0) return;
-      const { data: signed } = await sb.storage.from(BUCKET).createSignedUrls(refList.map((r) => `${uid}/${r}.img`), SIGNED_URL_TTL);
+      const signed = await createSignedImageUrls(sb, BUCKET, refList.map((r) => `${uid}/${r}.img`), SIGNED_URL_TTL);
       if (!signed) return;
       const urls: Record<string, string> = {};
       refList.forEach((r, i) => {

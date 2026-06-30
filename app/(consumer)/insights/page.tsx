@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/ds";
 import { consumerClient } from "@/lib/consumer";
+import { createSignedImageUrls } from "@/lib/storageImages";
 
 // Mirrors the iOS InsightsView: analytics from the synced closet + worn log.
 // No AI — wear counts/recency from worn_outfits, cost-per-wear/value from price.
@@ -73,7 +74,7 @@ export default function InsightsPage() {
       const uid = session.user.id.toLowerCase();
       const refs = closet.map((r) => r.data.imageRef).filter(Boolean) as string[];
       if (refs.length === 0) return;
-      const { data: signed } = await sb.storage.from(BUCKET).createSignedUrls(refs.map((r) => `${uid}/${r}.img`), SIGNED_URL_TTL);
+      const signed = await createSignedImageUrls(sb, BUCKET, refs.map((r) => `${uid}/${r}.img`), SIGNED_URL_TTL);
       if (!signed) return;
       const urls: Record<string, string> = {};
       refs.forEach((r, i) => {

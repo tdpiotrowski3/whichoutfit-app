@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Badge, Card } from "@/components/ds";
 import { consumerClient } from "@/lib/consumer";
+import { createSignedImageUrls } from "@/lib/storageImages";
 
 // One closet item. The row's `data` jsonb mirrors the iOS ClothingItem Codable;
 // `imageRef` points at the cutout in the private `closet-images` bucket
@@ -62,7 +63,7 @@ export default function ClosetPage() {
       const withRefs = rows.filter((r) => r.data.imageRef);
       if (withRefs.length === 0) return;
       const paths = withRefs.map((r) => `${uid}/${r.data.imageRef}.img`);
-      const { data: signed } = await sb.storage.from(BUCKET).createSignedUrls(paths, SIGNED_URL_TTL);
+      const signed = await createSignedImageUrls(sb, BUCKET, paths, SIGNED_URL_TTL);
       if (!signed) return;
       const urls: Record<string, string> = {};
       withRefs.forEach((r, i) => {
