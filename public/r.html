@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>WhichOutfit — Your free 2 weeks of Premium 🎁</title>
+<meta name="description" content="A friend invited you to WhichOutfit. Redeem their code for 2 weeks of Premium + 15 free photo cleanups."/>
+
+<!-- Link preview (iMessage / social) -->
+<meta property="og:type" content="website"/>
+<meta property="og:site_name" content="WhichOutfit"/>
+<meta property="og:title" content="You've got 2 weeks of WhichOutfit Premium 🎁"/>
+<meta property="og:description" content="A friend invited you — redeem the code for 2 weeks of Premium + 15 free photo cleanups."/>
+<meta property="og:image" content="https://whichoutfit.app/poll-og.png"/>
+<meta property="og:image:width" content="1200"/>
+<meta property="og:image:height" content="1200"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="You've got 2 weeks of WhichOutfit Premium 🎁"/>
+<meta name="twitter:description" content="A friend invited you — redeem the code for 2 weeks of Premium + 15 free photo cleanups."/>
+<meta name="twitter:image" content="https://whichoutfit.app/poll-og.png"/>
+
+<link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
+<style>
+:root{--blue:#2E6BFF;--teal:#0FA3A3;--ink:#0f172a;--muted:#64748b;--bg:#f8fafc;--card:#fff;--line:#e2e8f0}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+header{padding:18px;text-align:center}
+.brand{font-weight:800;color:#2563eb;font-size:18px;text-decoration:none}
+main{max-width:520px;margin:0 auto;padding:0 18px 48px}
+.hero{margin-top:8px;border-radius:24px;padding:30px 22px;text-align:center;color:#fff;background:linear-gradient(135deg,var(--blue) 0%,var(--teal) 100%);box-shadow:0 10px 30px rgba(46,107,255,.25)}
+.hero .gift{font-size:46px;line-height:1}
+.hero h1{font-size:26px;font-weight:800;margin:12px 0 6px}
+.hero p{font-size:15px;opacity:.95;margin:0}
+.codewrap{margin:24px 0 8px;text-align:center}
+.codelabel{font-size:12px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.code{margin-top:8px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:34px;font-weight:800;letter-spacing:.06em;color:var(--ink)}
+.copy{margin-top:10px;background:#eef2ff;color:#2563eb;border:0;border-radius:12px;padding:10px 18px;font-weight:700;font-size:14px;cursor:pointer}
+.copy:active{transform:scale(.97)}
+.cta{display:block;width:100%;margin-top:20px;background:#2563eb;color:#fff;font-weight:800;font-size:17px;text-decoration:none;text-align:center;padding:16px;border-radius:16px;border:0;cursor:pointer}
+.cta.alt{background:#fff;color:#1f2937;border:1px solid var(--line);margin-top:12px;font-size:15px;font-weight:700}
+.steps{margin-top:28px;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px 20px}
+.steps h2{font-size:15px;font-weight:800;margin:0 0 12px}
+.step{display:flex;gap:12px;align-items:flex-start;margin:12px 0;font-size:15px;color:#1f2937}
+.num{flex:0 0 auto;width:24px;height:24px;border-radius:12px;color:#fff;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--blue),var(--teal))}
+footer{text-align:center;color:var(--muted);margin-top:30px;font-size:14px}
+footer a{color:#2563eb;text-decoration:none;font-weight:600}
+</style>
+</head>
+<body>
+<header><a class="brand" href="https://whichoutfit.app">👕 WhichOutfit</a></header>
+<main>
+  <section class="hero">
+    <div class="gift">🎁</div>
+    <h1>You've got a gift</h1>
+    <p>A friend invited you to WhichOutfit — redeem their code for <strong>2 weeks of Premium + 15 free photo cleanups</strong>.</p>
+  </section>
+
+  <div class="codewrap" id="codewrap" hidden>
+    <div class="codelabel">Your code</div>
+    <div class="code" id="code">—</div>
+    <button class="copy" id="copy" type="button">Copy code</button>
+  </div>
+
+  <a class="cta" id="getApp" href="https://apps.apple.com/us/app/whichoutfit/id6778094125">Get WhichOutfit — free</a>
+  <button class="cta alt" id="openApp" type="button" hidden>Already have the app? Open it</button>
+
+  <section class="steps">
+    <h2>How to redeem</h2>
+    <div class="step"><span class="num">1</span><span>Download WhichOutfit and create your account.</span></div>
+    <div class="step"><span class="num">2</span><span>On the last onboarding screen (or <strong>More → Redeem a Code</strong>), tap <strong>Have a code?</strong></span></div>
+    <div class="step"><span class="num">3</span><span>Your code is copied to your clipboard — just paste it and tap Redeem. Premium unlocks instantly. 🎉</span></div>
+  </section>
+
+  <footer>
+    <a href="https://whichoutfit.app">whichoutfit.app</a> ·
+    <a href="https://whichoutfit.app/privacy.html">Privacy</a> ·
+    <a href="https://whichoutfit.app/terms.html">Terms</a>
+  </footer>
+</main>
+
+<script>
+(function(){
+  // Code can arrive as ?code=ABC123 or as a path segment /r/ABC123 (Next rewrite).
+  var code = new URLSearchParams(location.search).get('code') || '';
+  if(!code){ var m = location.pathname.match(/\/r\/([^\/?#]+)/); if(m){ code = decodeURIComponent(m[1]); } }
+  code = (code || '').trim().toUpperCase();
+
+  var wrap = document.getElementById('codewrap');
+  var codeEl = document.getElementById('code');
+  var copyBtn = document.getElementById('copy');
+  var openApp = document.getElementById('openApp');
+
+  if(code){
+    codeEl.textContent = code;
+    wrap.hidden = false;
+    openApp.hidden = false;
+    // Pre-copy so it's ready to paste after install (pairs with the app's redeem field).
+    try { navigator.clipboard && navigator.clipboard.writeText(code); } catch(e){}
+    openApp.addEventListener('click', function(){
+      // Opens the app straight to the pre-filled redeem screen when installed.
+      window.location = 'mycloset://redeem?code=' + encodeURIComponent(code);
+    });
+  }
+
+  copyBtn.addEventListener('click', function(){
+    var done = function(){ copyBtn.textContent = 'Copied!'; setTimeout(function(){ copyBtn.textContent = 'Copy code'; }, 1500); };
+    if(navigator.clipboard){ navigator.clipboard.writeText(code).then(done, done); }
+    else { done(); }
+  });
+})();
+</script>
+</body>
+</html>
