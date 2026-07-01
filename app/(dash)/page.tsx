@@ -22,7 +22,10 @@ export default async function OverviewPage() {
     );
   }
 
-  const mbPerUser = o.users_with_closet > 0 ? o.storage_mb / o.users_with_closet : 0;
+  // Projection excludes seed/test accounts (see admin_overview: proj_*), so a
+  // couple of dev accounts hoarding hundreds of items don't skew the per-user
+  // average. The Storage bar below still shows true total usage.
+  const mbPerUser = o.proj_users > 0 ? o.proj_storage_mb / o.proj_users : 0;
   const usersToStorageCap = mbPerUser > 0 ? Math.floor(FREE_STORAGE_MB / mbPerUser) : null;
 
   return (
@@ -79,7 +82,7 @@ export default async function OverviewPage() {
           <p className="text-sm text-[var(--wo-muted)]">
             {usersToStorageCap != null ? (
               <>
-                At ~{mbPerUser.toFixed(1)} MB/user, the free 1&nbsp;GB storage tier covers about{" "}
+                At ~{mbPerUser.toFixed(1)} MB/user <span className="text-xs">(real users only — seed accounts excluded)</span>, the free 1&nbsp;GB storage tier covers about{" "}
                 <strong className="text-[var(--wo-text)]">{usersToStorageCap} users</strong>. Budget ~$25/mo for Supabase Pro (100&nbsp;GB storage, 8&nbsp;GB database) beyond that — storage is your first paid trigger.
               </>
             ) : (

@@ -19,6 +19,9 @@ export type Overview = {
   storage_mb: number;
   storage_objects: number;
   db_size_mb: number;
+  /** Projection basis: real users only (seed/test accounts excluded). */
+  proj_users: number;
+  proj_storage_mb: number;
 };
 
 export async function getOverview(): Promise<Overview> {
