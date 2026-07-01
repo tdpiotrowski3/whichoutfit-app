@@ -80,7 +80,7 @@ export default async function OverviewPage() {
             {usersToStorageCap != null ? (
               <>
                 At ~{mbPerUser.toFixed(1)} MB/user, the free 1&nbsp;GB storage tier covers about{" "}
-                <strong className="text-[var(--wo-text)]">{usersToStorageCap} users</strong>. Budget ~$25/mo for Supabase Pro (8&nbsp;GB) beyond that — storage is your first paid trigger.
+                <strong className="text-[var(--wo-text)]">{usersToStorageCap} users</strong>. Budget ~$25/mo for Supabase Pro (100&nbsp;GB storage, 8&nbsp;GB database) beyond that — storage is your first paid trigger.
               </>
             ) : (
               "Add users with closets to project the storage ceiling."

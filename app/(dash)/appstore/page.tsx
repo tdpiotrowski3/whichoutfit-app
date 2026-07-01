@@ -27,14 +27,31 @@ export default async function AppStorePage() {
   const hasAnalytics = totalImpr > 0 || totalViews > 0;
   const conversion = totalImpr > 0 ? (totalDownloads / totalImpr) * 100 : null;
 
+  // Freshness — Apple restates ~1 day late, so up to 2 days stale is normal.
+  // Anything older means the daily sync cron has stopped and these totals are wrong.
+  const latestDay = rows.reduce<string | null>((max, r) => (max == null || r.day > max ? r.day : max), null);
+  const daysStale = latestDay
+    ? Math.floor((Date.now() - new Date(`${latestDay}T00:00:00Z`).getTime()) / 86_400_000)
+    : null;
+  const isStale = daysStale != null && daysStale > 2;
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold">App Store</h1>
         <p className="text-sm text-[var(--wo-muted)]">
           From the App Store Connect API · last 30 days. Syncs daily (~1 day Apple latency). Conversion &amp; impressions coming in Tier 2.
+          {latestDay && <> Data through <strong className="text-[var(--wo-text)]">{latestDay}</strong>.</>}
         </p>
       </div>
+
+      {isStale && (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <strong>Stale data.</strong> The latest synced day is {latestDay} ({daysStale} days ago) — the daily{" "}
+          <code>appstore-sync</code> cron has stopped, so these totals are behind App Store Connect. Check the Vercel
+          cron logs and re-run <code>/api/cron/appstore-sync</code>.
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <Stat label="Downloads · 30d" value={totalDownloads} accent="blue" />
