@@ -72,9 +72,9 @@
 
 <section class="section section-surface">
   <div class="legal-body">
-    <span class="legal-date">Last Updated: June 16, 2026</span>
+    <span class="legal-date">Last Updated: July 2, 2026</span>
 
-    <p>WhichOutfit ("we", "us", or "our") respects your privacy. This Privacy Policy explains what data WhichOutfit collects, how it is used, and your rights, specifically in compliance with Apple's App Store Review Guidelines.</p>
+    <p>WhichOutfit ("we", "us", or "our") respects your privacy. This Privacy Policy explains what data WhichOutfit collects, how it is used, and your rights. It applies to WhichOutfit on the Apple App Store, the Google Play Store, and our website, and is written to comply with Apple's App Store Review Guidelines and Google Play's Developer Program Policies.</p>
 
     <h2>1. Data We Collect</h2>
     <p>To provide the core functionality of WhichOutfit, we collect the following data:</p>
@@ -82,7 +82,7 @@
       <li><strong>Account Identifiers:</strong> Your email address or Apple/Google account identifier used to sign in and secure your account.</li>
       <li><strong>User Content (Photos):</strong> Images of clothing and accessories you upload to build your digital closet.</li>
       <li><strong>Closet & Profile Data:</strong> Item metadata (category, color, brand, tags), your style profile responses, worn-outfit log entries, trip plans, and saved looks.</li>
-      <li><strong>Purchase History:</strong> Anonymized transaction IDs provided by Apple to verify your subscription status and credit balances.</li>
+      <li><strong>Purchase History:</strong> Transaction identifiers and subscription status provided by Apple, Google Play, or our web payment processor (Paddle) to verify your entitlements and credit balances. We do not receive your full payment card details.</li>
     </ul>
 
     <h2>2. Artificial Intelligence and Cloud Processing</h2>
@@ -94,7 +94,12 @@
     </ul>
 
     <h2>3. Financial Information</h2>
-    <p>All payments, subscriptions, and credit pack purchases are processed entirely by Apple via StoreKit. We do not collect, process, or store your credit card information, billing address, or personal financial data. We only receive an anonymous digital receipt from Apple to unlock your features.</p>
+    <p>We never collect or store your full payment card number. Depending on how you subscribe or buy credits, your payment is processed by one of the following:</p>
+    <ul>
+      <li><strong>Apple (iOS):</strong> In-app purchases and subscriptions are processed by Apple via StoreKit. We receive only an anonymous digital receipt to unlock your features.</li>
+      <li><strong>Google Play (Android):</strong> In-app purchases and subscriptions are processed by Google Play Billing. We receive only a purchase token and order identifier to verify and unlock your features.</li>
+      <li><strong>Paddle (Web):</strong> Purchases made through our website are processed by Paddle.com Market Limited, which acts as the <strong>Merchant of Record</strong> for those transactions. This means Paddle — not WhichOutfit — collects and processes your payment method, billing address, and any tax-related information (such as your country and VAT/sales-tax location) to complete the sale, handle refunds, and meet tax obligations. Paddle shares with us only the information needed to activate and manage your subscription (such as your email, subscription status, and an order identifier). Paddle handles this data as an independent controller under its own <a href="https://www.paddle.com/legal/privacy" target="_blank" rel="noopener" style="color:var(--teal-l)">Privacy Policy</a>.</li>
+    </ul>
 
     <h2>4. Data Sharing and Third Parties</h2>
     <p>We do not sell your personal data. We share data only with:</p>
@@ -102,6 +107,7 @@
       <li><strong>Cloud Infrastructure:</strong> Our secure database provider (Supabase) to store your digital closet, worn log, style profile, and cloud backup. All data is scoped to your user ID with row-level security.</li>
       <li><strong>AI Providers:</strong> Securely transmitted purely for the fulfillment of styling features, as outlined in Section 2.</li>
       <li><strong>Authentication Providers:</strong> Apple or Google receive only the minimum information required to verify your identity during sign-in. We do not receive or store your Apple or Google password.</li>
+      <li><strong>Payment Processors:</strong> Apple, Google Play, or Paddle process your purchases as described in Section 3. We share only the information needed to associate a valid purchase with your account.</li>
     </ul>
 
     <h2>5. Friend Voting Polls</h2>
