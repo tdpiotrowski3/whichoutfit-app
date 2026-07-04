@@ -14,6 +14,7 @@ export default function AuthCallbackPage() {
   useEffect(() => {
     const sb = consumerClient();
     if (!sb) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot config check before paint; no cascade possible
       setError("Not configured");
       return;
     }
