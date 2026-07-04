@@ -31,7 +31,8 @@ export default async function AppStorePage() {
   // Anything older means the daily sync cron has stopped and these totals are wrong.
   const latestDay = rows.reduce<string | null>((max, r) => (max == null || r.day > max ? r.day : max), null);
   const daysStale = latestDay
-    ? Math.floor((Date.now() - new Date(`${latestDay}T00:00:00Z`).getTime()) / 86_400_000)
+    ? // eslint-disable-next-line react-hooks/purity -- server page rendered on demand; "now" is part of this render's input
+      Math.floor((Date.now() - new Date(`${latestDay}T00:00:00Z`).getTime()) / 86_400_000)
     : null;
   const isStale = daysStale != null && daysStale > 2;
 
