@@ -7,30 +7,34 @@ import crypto from "crypto";
 export const COOKIE_NAME = "wo_admin";
 const PAYLOAD = "admin";
 
-function secret(): string {
+// Fail closed in production: a missing secret must never silently fall back
+// to a value anyone can read in this repo and use to forge the admin cookie.
+// Missing secret => no session can be signed or verified (login shows an
+// error, dashboard pages treat everyone as signed out — no crash loop).
+function secret(): string | null {
   const s = process.env.SESSION_SECRET;
   if (s) return s;
-  // Fail closed in production: a missing secret must never silently fall back
-  // to a value anyone can read in this repo and use to forge the admin cookie.
-  if (process.env.NODE_ENV === "production") {
-    throw new Error("SESSION_SECRET is not set");
-  }
-  return "insecure-dev-secret-change-me";
+  if (process.env.NODE_ENV !== "production") return "insecure-dev-secret-change-me";
+  return null;
 }
 
 export function signToken(): string {
-  const mac = crypto.createHmac("sha256", secret()).update(PAYLOAD).digest("hex");
+  const key = secret();
+  if (!key) throw new Error("SESSION_SECRET is not set");
+  const mac = crypto.createHmac("sha256", key).update(PAYLOAD).digest("hex");
   return `${PAYLOAD}.${mac}`;
 }
 
 export function verifyToken(token?: string | null): boolean {
   if (!token) return false;
+  const key = secret();
+  if (!key) return false;
   const idx = token.lastIndexOf(".");
   if (idx < 0) return false;
   const value = token.slice(0, idx);
   const mac = token.slice(idx + 1);
   if (value !== PAYLOAD) return false;
-  const expected = crypto.createHmac("sha256", secret()).update(value).digest("hex");
+  const expected = crypto.createHmac("sha256", key).update(value).digest("hex");
   const a = Buffer.from(mac);
   const b = Buffer.from(expected);
   return a.length === b.length && crypto.timingSafeEqual(a, b);
