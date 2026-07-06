@@ -41,7 +41,7 @@ export default async function SocialPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">Social &amp; Ads</h1>
           <p className="text-sm text-[var(--wo-muted)]">Organic reach &amp; ad spend by platform, last 30 days. Synced daily.</p>

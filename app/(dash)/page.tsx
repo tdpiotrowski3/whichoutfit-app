@@ -1,5 +1,6 @@
-import { getOverview } from "@/lib/data";
+import { getOverview, getAppstoreFreshness, type AppstoreFreshness } from "@/lib/data";
 import { Stat, Card, Bar } from "@/components/ui";
+import { StaleDataBanner } from "@/components/StaleDataBanner";
 
 export const dynamic = "force-dynamic";
 
@@ -29,12 +30,23 @@ export default async function OverviewPage() {
   const mbPerUser = o.proj_users > 0 ? o.proj_storage_mb / o.proj_users : 0;
   const usersToStorageCap = mbPerUser > 0 ? Math.floor(STORAGE_CAP_MB / mbPerUser) : null;
 
+  // Surface a stale App Store sync right on the landing page — best-effort, never
+  // let a freshness probe failure take down the Overview.
+  let freshness: AppstoreFreshness | null = null;
+  try {
+    freshness = await getAppstoreFreshness();
+  } catch {
+    freshness = null;
+  }
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold">Overview</h1>
         <p className="text-sm text-[var(--wo-muted)]">Live from Supabase. Downloads &amp; conversion live in App Store Connect.</p>
       </div>
+
+      {freshness && <StaleDataBanner latestDay={freshness.latestDay} daysStale={freshness.daysStale} />}
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <Stat label="Signups" value={o.total_signups} accent="blue" sub={`${o.profiles} with synced data`} />
