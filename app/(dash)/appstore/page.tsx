@@ -1,5 +1,6 @@
-import { getAppstore } from "@/lib/data";
+import { getAppstore, daysStaleSince } from "@/lib/data";
 import { Card, Stat } from "@/components/ui";
+import { StaleDataBanner } from "@/components/StaleDataBanner";
 
 export const dynamic = "force-dynamic";
 
@@ -27,14 +28,10 @@ export default async function AppStorePage() {
   const hasAnalytics = totalImpr > 0 || totalViews > 0;
   const conversion = totalImpr > 0 ? (totalDownloads / totalImpr) * 100 : null;
 
-  // Freshness — Apple restates ~1 day late, so up to 2 days stale is normal.
-  // Anything older means the daily sync cron has stopped and these totals are wrong.
+  // Freshness — the shared banner tolerates Apple's ~1-day restatement lag and
+  // only warns once the daily sync has genuinely stopped landing data.
   const latestDay = rows.reduce<string | null>((max, r) => (max == null || r.day > max ? r.day : max), null);
-  const daysStale = latestDay
-    ? // eslint-disable-next-line react-hooks/purity -- server page rendered on demand; "now" is part of this render's input
-      Math.floor((Date.now() - new Date(`${latestDay}T00:00:00Z`).getTime()) / 86_400_000)
-    : null;
-  const isStale = daysStale != null && daysStale > 2;
+  const daysStale = daysStaleSince(latestDay);
 
   return (
     <div className="space-y-6">
@@ -46,13 +43,7 @@ export default async function AppStorePage() {
         </p>
       </div>
 
-      {isStale && (
-        <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          <strong>Stale data.</strong> The latest synced day is {latestDay} ({daysStale} days ago) — the daily{" "}
-          <code>appstore-sync</code> cron has stopped, so these totals are behind App Store Connect. Check the Vercel
-          cron logs and re-run <code>/api/cron/appstore-sync</code>.
-        </div>
-      )}
+      <StaleDataBanner latestDay={latestDay} daysStale={daysStale} />
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <Stat label="Downloads · 30d" value={totalDownloads} accent="blue" />

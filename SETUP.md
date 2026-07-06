@@ -34,6 +34,15 @@ feature is inert until all four are set:
 | `MARKETING_PHYSICAL_ADDRESS` | postal address shown in every marketing email | required by CAN-SPAM |
 | `PUBLIC_BASE_URL` | stable https origin that serves `/api/unsubscribe`, e.g. `https://admin.whichoutfit.app` | your deployed dashboard URL |
 
+**Ops alerts (optional).** If set, the daily `appstore-sync` cron emails this address
+when the App Store data goes stale (>2 days old) — so a silently failing sync can't
+rot unnoticed. Reuses `RESEND_API_KEY` + `EMAIL_FROM`; inert until `ADMIN_ALERT_EMAIL`
+is set (the in-app stale banner still shows regardless).
+
+| Var | What | Where to get it |
+|---|---|---|
+| `ADMIN_ALERT_EMAIL` | inbox for ops alerts (stale-data notifications) | your own email |
+
 **Social & ads metrics (optional).** Each platform's sync is inert until its token
 + account id are set. Use a long-lived / system-user token (no in-app OAuth). The
 TikTok app must be built in **sandbox** and submitted/published before production

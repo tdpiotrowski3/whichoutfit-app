@@ -117,6 +117,33 @@ export async function getAppstore(days = 30): Promise<AppstoreRow[]> {
   return (data ?? []) as AppstoreRow[];
 }
 
+// Apple restates ~1 day late, so up to 2 days stale is normal. Anything older
+// means the daily appstore-sync cron has stopped landing data (e.g. Apple auth
+// revoked) and the App Store totals are silently wrong.
+export const APPSTORE_STALE_AFTER_DAYS = 2;
+
+export type AppstoreFreshness = { latestDay: string | null; daysStale: number | null; isStale: boolean };
+
+/** Whole-days between an ISO `YYYY-MM-DD` day and now (UTC). */
+export function daysStaleSince(latestDay: string | null): number | null {
+  if (!latestDay) return null;
+  return Math.floor((Date.now() - new Date(`${latestDay}T00:00:00Z`).getTime()) / 86_400_000);
+}
+
+/** Cheap freshness probe: the most recent App Store day we have, and how stale it is. */
+export async function getAppstoreFreshness(): Promise<AppstoreFreshness> {
+  const { data, error } = await admin()
+    .from("appstore_metrics")
+    .select("day")
+    .order("day", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  const latestDay = (data?.day as string | undefined) ?? null;
+  const daysStale = daysStaleSince(latestDay);
+  return { latestDay, daysStale, isStale: daysStale != null && daysStale > APPSTORE_STALE_AFTER_DAYS };
+}
+
 // --- Marketing segmentation (underused-feature nudges) ---
 
 export type UsageFeature = { kind: string; users: number };
