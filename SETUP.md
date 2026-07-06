@@ -1,7 +1,9 @@
-# WhichOutfit — Admin Dashboard
+# WhichOutfit — Web app setup
 
-Internal reporting dashboard (Next.js, App Router). Reads live from the WhichOutfit
-Supabase project, server-side only. Becomes the consumer webapp later (same app).
+One Next.js (App Router) app on Vercel serving the marketing site, the admin
+dashboard, and the (currently hidden) consumer webapp — see `README.md` for the
+architecture and platform status. The admin dashboard reads live from the
+WhichOutfit Supabase project, server-side only.
 
 ## What it shows
 - **Overview** — signups, premium, AI calls (30d + all-time), content counts, IAP counts, storage/DB usage + free-tier projections.
@@ -61,11 +63,15 @@ data flows; the sandbox token works against sandbox data in the meantime.
 > mint/refresh tokens out-of-band — they are NOT needed by the running app and
 > must never be committed.
 
-**Consumer webapp (app.whichoutfit.app).** Browser-side, RLS-protected — these are
-safe to expose (unlike the service-role key):
+**Consumer webapp (app.whichoutfit.app) — currently HIDDEN.** While the focus is on
+iOS, every consumer route (and `/auth/callback`) renders the "coming soon" page
+(`components/ComingSoon.tsx`). The webapp code stays intact and building; flip the
+flag and redeploy to bring it back. Browser-side, RLS-protected — the two
+`NEXT_PUBLIC_` vars are safe to expose (unlike the service-role key):
 
 | Var | What | Where to get it |
 |---|---|---|
+| `CONSUMER_WEBAPP_ENABLED` | set to `true` to un-hide the webapp; unset = coming-soon page. Read at build time (`lib/flags.ts`), so redeploy after changing it. | — |
 | `NEXT_PUBLIC_SUPABASE_URL` | `https://irfzsyzhoxxtzuugdtef.supabase.co` | Supabase → Project Settings → API |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | publishable/anon key | Supabase → Project Settings → API (publishable) |
 
