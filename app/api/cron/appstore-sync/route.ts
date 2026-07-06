@@ -83,11 +83,17 @@ export async function GET(req: Request) {
     payload = { ok: true, sales_days: rows.length, ...totals, analytics };
   } catch (e) {
     syncError = e instanceof Error ? e.message : "sync failed";
+    // Log to Vercel runtime logs so the real cause (e.g. "ASC 401 for 2026-07-05")
+    // is readable from the scheduled run without needing the cron secret.
+    console.error("[appstore-sync] sync failed:", syncError);
   }
 
   // Runs whether or not the sync above succeeded — a silently-failing sync is
   // exactly the case we most want to catch.
   const freshness = await checkFreshnessAndAlert();
+  if (freshness.stale) {
+    console.error(`[appstore-sync] data is ${freshness.daysStale} days stale (latest ${freshness.latestDay}); alerted=${freshness.alerted}${freshness.note ? ` note=${freshness.note}` : ""}`);
+  }
 
   if (syncError) {
     return NextResponse.json({ ok: false, error: syncError, freshness }, { status: 500 });

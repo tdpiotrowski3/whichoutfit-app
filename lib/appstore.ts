@@ -82,6 +82,7 @@ async function fetchDay(date: string): Promise<DayMetric | null> {
 // restates). Returns only days with data plus zero-filled no-sale days.
 export async function fetchSalesRange(days = 10): Promise<DayMetric[]> {
   const out: DayMetric[] = [];
+  let lastError: Error | null = null;
   const now = new Date();
   for (let i = 1; i <= days; i++) {
     const d = new Date(now);
@@ -90,9 +91,16 @@ export async function fetchSalesRange(days = 10): Promise<DayMetric[]> {
     try {
       const m = await fetchDay(ds);
       if (m) out.push(m);
-    } catch {
-      // skip a transient failure; next run backfills.
+    } catch (e) {
+      // One bad day is genuinely transient (Apple's report not ready yet) and the
+      // next run backfills — so tolerate partial failure. But remember the reason.
+      lastError = e instanceof Error ? e : new Error(String(e));
     }
   }
+  // A 404 day still yields a zero-filled row, so `out` is only empty when EVERY
+  // day threw — i.e. a systemic failure (revoked ASC key, wrong vendor number,
+  // network), never a quiet-sales period. Surface it instead of returning a
+  // clean empty result that the caller would silently persist as a flatline.
+  if (out.length === 0 && lastError) throw lastError;
   return out;
 }
