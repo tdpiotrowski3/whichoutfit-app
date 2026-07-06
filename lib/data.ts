@@ -275,3 +275,29 @@ export async function getExpenses(): Promise<ExpenseRow[]> {
   if (error) throw error;
   return (data ?? []) as ExpenseRow[];
 }
+
+// ── Growth (activation funnel) ────────────────────────────────────────────────
+
+export type Growth = {
+  days: number;
+  signups_window: number;
+  signups_by_day: { day: string; signups: number }[];
+  /** Real signups that hit an AI moment within 24h (the 40% day-1 target). */
+  activated_day1: number;
+  activated_ever: number;
+  /** Came back on a later calendar day (needs app_open events — flows from
+   *  builds that include the track client; 0 until then is expected). */
+  second_session_users: number;
+  /** Which onboarding start-screen card new users pick. */
+  start_choices: Record<string, number>;
+  onboarding_steps: Record<string, number>;
+  referral_redemptions: number;
+  premium_real: number;
+  product_searches: number;
+};
+
+export async function getGrowth(days = 30): Promise<Growth> {
+  const { data, error } = await admin().rpc("admin_growth", { days });
+  if (error) throw error;
+  return data as Growth;
+}
