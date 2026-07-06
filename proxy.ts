@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-// Hostname-based routing for the consolidated app:
+// Hostname-based routing for the consolidated app (Next 16 renamed the
+// deprecated middleware.ts convention to proxy.ts — same behavior):
 //   whichoutfit.app (apex/www) → marketing site (static files in public/)
 //   admin.whichoutfit.app      → admin dashboard (the App Router pages)
-//   (future) app.whichoutfit.app → consumer webapp
+//   app.whichoutfit.app        → consumer webapp (currently gated behind
+//                                CONSUMER_WEBAPP_ENABLED — see lib/flags.ts —
+//                                so it renders a "coming soon" page)
 //
 // Defensive by design: anything that ISN'T the marketing host (admin domain,
 // Vercel preview URLs, localhost) passes straight through, so the live
@@ -16,7 +19,7 @@ import type { NextRequest } from "next/server";
 const MARKETING_HOSTS = new Set(["whichoutfit.app", "www.whichoutfit.app"]);
 const CONSUMER_HOSTS = new Set(["app.whichoutfit.app"]);
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const host = (req.headers.get("host") ?? "").toLowerCase().split(":")[0];
   if (req.nextUrl.pathname !== "/") return NextResponse.next();
 
@@ -27,6 +30,8 @@ export function middleware(req: NextRequest) {
     return NextResponse.rewrite(url);
   }
   if (CONSUMER_HOSTS.has(host)) {
+    // The (consumer) layout decides what /closet shows: the real webapp when
+    // CONSUMER_WEBAPP_ENABLED is on, the ComingSoon page otherwise.
     const url = req.nextUrl.clone();
     url.pathname = "/closet";
     return NextResponse.rewrite(url);
