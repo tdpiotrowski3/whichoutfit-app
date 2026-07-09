@@ -63,6 +63,34 @@ data flows; the sandbox token works against sandbox data in the meantime.
 > mint/refresh tokens out-of-band — they are NOT needed by the running app and
 > must never be committed.
 
+**Receipt ingestion (Gemini extraction + Gmail auto-import).** Powers the "Drop a
+receipt to autofill" box on the Add-expense form and the "Sync Gmail" button /
+daily `gmail-sync` cron. Uses the SAME model backend the app already runs on
+(gemini-2.5-flash). Receipt parsing is inert until `GEMINI_API_KEY` is set;
+Gmail import is inert until all four `GMAIL_*` vars are set.
+
+| Var | What | Where to get it |
+|---|---|---|
+| `GEMINI_API_KEY` | Gemini API key for receipt (PDF/image) extraction — **same value already used by the Supabase `ai` edge function**, just add it to Vercel too (edge-function secrets are separate) | Google AI Studio → API Keys |
+| `GEMINI_MODEL` | (optional) override model; default `gemini-2.5-flash` | — |
+| `GMAIL_CLIENT_ID` | Google OAuth client id | Google Cloud Console → APIs & Services → Credentials |
+| `GMAIL_CLIENT_SECRET` | Google OAuth client secret | same |
+| `GMAIL_REFRESH_TOKEN` | offline refresh token for your Gmail account | OAuth consent once with scope `gmail.readonly` (see below) |
+| `GMAIL_LABEL` | label to scan, e.g. `Receipts` (name) or a `Label_…` id | the Gmail label you file receipts into |
+| `GMAIL_QUERY` | (optional) Gmail search to bound the scan; default `newer_than:180d` | — |
+| `GMAIL_MAX_PER_RUN` | (optional) max new receipts imported per run; default `25` | — |
+
+**Getting a `GMAIL_REFRESH_TOKEN` (one-time):** In Google Cloud Console, enable the
+**Gmail API**, create an OAuth client, and add your Google account as a **Test user**
+on the consent screen. Then run the OAuth flow once with scope
+`https://www.googleapis.com/auth/gmail.readonly` and `access_type=offline` (the
+OAuth Playground at developers.google.com/oauthplayground works: gear → "Use your
+own OAuth credentials", authorize the Gmail readonly scope, exchange for tokens,
+copy the **refresh token**). File the receipts you want imported under the
+`GMAIL_LABEL` label. Ingestion is idempotent (keyed by message id) and skips any
+charge whose vendor+date+amount already exists in the ledger, so it won't
+double-count what Mercury already pulled in.
+
 **Consumer webapp (app.whichoutfit.app) — currently HIDDEN.** While the focus is on
 iOS, every consumer route (and `/auth/callback`) renders the "coming soon" page
 (`components/ComingSoon.tsx`). The webapp code stays intact and building; flip the

@@ -7,7 +7,7 @@ import type { ExpenseRow } from "@/lib/data";
 export function FinanceActions({ rows }: { rows: ExpenseRow[] }) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
-  const [busy, setBusy] = useState<null | "import" | "sync">(null);
+  const [busy, setBusy] = useState<null | "import" | "sync" | "gmail">(null);
   const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
 
   function exportCsv() {
@@ -55,6 +55,23 @@ export function FinanceActions({ rows }: { rows: ExpenseRow[] }) {
     }
   }
 
+  async function syncGmail() {
+    setBusy("gmail");
+    setStatus(null);
+    try {
+      const res = await fetch("/api/gmail/sync", { method: "POST" });
+      const j = await res.json();
+      if (!res.ok || j.ok === false) throw new Error(j.error || "Gmail sync failed");
+      const more = j.remaining ? ` · ${j.remaining} more queued for the next run` : "";
+      setStatus({ ok: true, text: `Imported ${j.inserted} receipt${j.inserted === 1 ? "" : "s"} from Gmail · skipped ${j.skipped} duplicate${j.skipped === 1 ? "" : "s"}${more}.` });
+      router.refresh();
+    } catch (err) {
+      setStatus({ ok: false, text: err instanceof Error ? err.message : "Gmail sync failed" });
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function onFile(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -88,6 +105,13 @@ export function FinanceActions({ rows }: { rows: ExpenseRow[] }) {
           className="rounded-lg bg-[var(--wo-green)] px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
         >
           {busy === "sync" ? "Syncing…" : "Sync Mercury"}
+        </button>
+        <button
+          onClick={syncGmail}
+          disabled={busy !== null}
+          className="rounded-lg bg-[var(--wo-blue)] px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+        >
+          {busy === "gmail" ? "Syncing…" : "Sync Gmail"}
         </button>
         <button
           onClick={exportCsv}
