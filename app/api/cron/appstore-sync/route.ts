@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
-import { admin } from "@/lib/supabase";
-import { fetchSalesRange } from "@/lib/appstore";
-import { syncAnalytics } from "@/lib/appstoreAnalytics";
+import { syncAppstore } from "@/lib/appstoreSync";
 import { getAppstoreFreshness } from "@/lib/data";
 import { isAlertConfigured, sendAdminAlert } from "@/lib/alert";
 
@@ -24,14 +22,17 @@ type FreshnessCheck = { latestDay: string | null; daysStale: number | null; stal
 // that and emails the admin. Never throws; the result is folded into the response.
 async function checkFreshnessAndAlert(): Promise<FreshnessCheck> {
   try {
-    const { latestDay, daysStale, isStale } = await getAppstoreFreshness();
-    if (!isStale) return { latestDay, daysStale, stale: false, alerted: false };
+    const { latestDay, daysStale, hoursSinceRun, reason } = await getAppstoreFreshness();
+    // Only email on a genuinely stalled cron (no successful write in >26h) —
+    // that's the silent-failure case. Plain Apple lag while the cron keeps
+    // running is surfaced in the UI only, not emailed (avoids weekend false alarms).
+    if (reason !== "cron_stalled") return { latestDay, daysStale, stale: reason === "apple_lag", alerted: false };
     if (!isAlertConfigured()) {
       return { latestDay, daysStale, stale: true, alerted: false, note: "ADMIN_ALERT_EMAIL not configured" };
     }
     const res = await sendAdminAlert(
-      `⚠️ WhichOutfit App Store data is ${daysStale} days stale`,
-      `<p>The <code>appstore-sync</code> cron ran, but the newest App Store day in Supabase is <strong>${latestDay ?? "—"}</strong> (${daysStale} days ago).</p>
+      `⚠️ WhichOutfit App Store sync has stalled`,
+      `<p>The <code>appstore-sync</code> cron has not written data in <strong>${hoursSinceRun ?? "?"}h</strong> (it runs every 24h). Newest App Store day in Supabase is <strong>${latestDay ?? "—"}</strong> (${daysStale ?? "?"} days ago).</p>
 <p>The sync is likely failing to authenticate with Apple. The App Store Connect API key or vendor number may have been invalidated (e.g. by an org/account change). Regenerate the key at App Store Connect → Users and Access → Integrations, confirm the vendor number, update the <code>APPLE_ASC_*</code> / <code>APPLE_VENDOR_NUMBER</code> env vars in Vercel, then re-run <code>/api/cron/appstore-sync</code>.</p>`,
     );
     return { latestDay, daysStale, stale: true, alerted: res.sent, note: res.reason };
@@ -48,39 +49,7 @@ export async function GET(req: Request) {
   let syncError: string | null = null;
   let payload: Record<string, unknown> = {};
   try {
-    const rows = await fetchSalesRange(14);
-    if (rows.length) {
-      const { error } = await admin()
-        .from("appstore_metrics")
-        .upsert(
-          rows.map((r) => ({ ...r, updated_at: new Date().toISOString() })),
-          { onConflict: "day" },
-        );
-      if (error) throw error;
-    }
-    const totals = rows.reduce(
-      (a, r) => ({ downloads: a.downloads + r.downloads, redownloads: a.redownloads + r.redownloads }),
-      { downloads: 0, redownloads: 0 },
-    );
-
-    // Tier 2 — Analytics (impressions / product page views). Best-effort: never
-    // fail the sales sync if analytics isn't ready yet.
-    let analytics: { days: number; note: string; discovered?: { name: string; category: string }[] } = { days: 0, note: "skipped" };
-    try {
-      const a = await syncAnalytics();
-      if (a.days.length) {
-        const { error } = await admin().from("appstore_metrics").upsert(
-          a.days.map((d) => ({ day: d.day, impressions: d.impressions, product_page_views: d.product_page_views, updated_at: new Date().toISOString() })),
-          { onConflict: "day" },
-        );
-        if (error) throw error;
-      }
-      analytics = { days: a.days.length, note: a.note, discovered: a.discovered };
-    } catch (e) {
-      analytics = { days: 0, note: e instanceof Error ? e.message : "analytics failed" };
-    }
-
-    payload = { ok: true, sales_days: rows.length, ...totals, analytics };
+    payload = { ok: true, ...(await syncAppstore()) };
   } catch (e) {
     syncError = e instanceof Error ? e.message : "sync failed";
     // Log to Vercel runtime logs so the real cause (e.g. "ASC 401 for 2026-07-05")

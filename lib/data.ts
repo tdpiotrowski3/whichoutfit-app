@@ -117,12 +117,26 @@ export async function getAppstore(days = 30): Promise<AppstoreRow[]> {
   return (data ?? []) as AppstoreRow[];
 }
 
-// Apple restates ~1 day late, so up to 2 days stale is normal. Anything older
-// means the daily appstore-sync cron has stopped landing data (e.g. Apple auth
-// revoked) and the App Store totals are silently wrong.
-export const APPSTORE_STALE_AFTER_DAYS = 2;
+// Apple restates ~1–2 days late (worse over weekends/holidays), so a latest day
+// a few days old is normal *as long as the cron is still running*. We track two
+// independent signals:
+//   • latestDay age — how far behind Apple's published data we are (lag).
+//   • last-run age  — when the sync last successfully wrote (max updated_at).
+// A stalled cron (no successful write in >26h) is the real failure — that's when
+// Apple auth has likely been revoked and totals go silently wrong. Plain Apple
+// lag while the cron keeps running is not alarming.
+export const APPSTORE_STALE_AFTER_DAYS = 3;
+export const APPSTORE_CRON_STALE_HOURS = 26; // cron runs every 24h; allow a little slack
 
-export type AppstoreFreshness = { latestDay: string | null; daysStale: number | null; isStale: boolean };
+export type AppstoreFreshnessReason = "ok" | "apple_lag" | "cron_stalled";
+export type AppstoreFreshness = {
+  latestDay: string | null;
+  daysStale: number | null;
+  lastRunAt: string | null;
+  hoursSinceRun: number | null;
+  isStale: boolean;
+  reason: AppstoreFreshnessReason;
+};
 
 /** Whole-days between an ISO `YYYY-MM-DD` day and now (UTC). */
 export function daysStaleSince(latestDay: string | null): number | null {
@@ -130,18 +144,27 @@ export function daysStaleSince(latestDay: string | null): number | null {
   return Math.floor((Date.now() - new Date(`${latestDay}T00:00:00Z`).getTime()) / 86_400_000);
 }
 
-/** Cheap freshness probe: the most recent App Store day we have, and how stale it is. */
+/**
+ * Freshness probe: the most recent App Store day we hold, plus when the sync
+ * last actually ran (max updated_at). Distinguishes normal Apple lag from a
+ * stalled cron so the UI/alert can say the right thing.
+ */
 export async function getAppstoreFreshness(): Promise<AppstoreFreshness> {
-  const { data, error } = await admin()
-    .from("appstore_metrics")
-    .select("day")
-    .order("day", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (error) throw error;
-  const latestDay = (data?.day as string | undefined) ?? null;
+  const sb = admin();
+  const [dayRes, runRes] = await Promise.all([
+    sb.from("appstore_metrics").select("day").order("day", { ascending: false }).limit(1).maybeSingle(),
+    sb.from("appstore_metrics").select("updated_at").order("updated_at", { ascending: false }).limit(1).maybeSingle(),
+  ]);
+  if (dayRes.error) throw dayRes.error;
+  if (runRes.error) throw runRes.error;
+  const latestDay = (dayRes.data?.day as string | undefined) ?? null;
+  const lastRunAt = (runRes.data?.updated_at as string | undefined) ?? null;
   const daysStale = daysStaleSince(latestDay);
-  return { latestDay, daysStale, isStale: daysStale != null && daysStale > APPSTORE_STALE_AFTER_DAYS };
+  const hoursSinceRun = lastRunAt ? Math.floor((Date.now() - new Date(lastRunAt).getTime()) / 3_600_000) : null;
+  const cronStalled = hoursSinceRun == null || hoursSinceRun > APPSTORE_CRON_STALE_HOURS;
+  const appleLag = daysStale != null && daysStale > APPSTORE_STALE_AFTER_DAYS;
+  const reason: AppstoreFreshnessReason = cronStalled ? "cron_stalled" : appleLag ? "apple_lag" : "ok";
+  return { latestDay, daysStale, lastRunAt, hoursSinceRun, isStale: reason !== "ok", reason };
 }
 
 // --- Marketing segmentation (underused-feature nudges) ---

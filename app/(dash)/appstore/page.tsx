@@ -1,4 +1,4 @@
-import { getAppstore, daysStaleSince } from "@/lib/data";
+import { getAppstore, getAppstoreFreshness, type AppstoreFreshness } from "@/lib/data";
 import { Card, Stat } from "@/components/ui";
 import { StaleDataBanner } from "@/components/StaleDataBanner";
 
@@ -28,10 +28,15 @@ export default async function AppStorePage() {
   const hasAnalytics = totalImpr > 0 || totalViews > 0;
   const conversion = totalImpr > 0 ? (totalDownloads / totalImpr) * 100 : null;
 
-  // Freshness — the shared banner tolerates Apple's ~1-day restatement lag and
-  // only warns once the daily sync has genuinely stopped landing data.
+  // Freshness — the shared banner tolerates Apple's reporting lag and only warns
+  // (amber) once the daily sync has genuinely stalled; plain lag shows blue.
   const latestDay = rows.reduce<string | null>((max, r) => (max == null || r.day > max ? r.day : max), null);
-  const daysStale = daysStaleSince(latestDay);
+  let freshness: AppstoreFreshness | null = null;
+  try {
+    freshness = await getAppstoreFreshness();
+  } catch {
+    freshness = null;
+  }
 
   return (
     <div className="space-y-6">
@@ -43,7 +48,7 @@ export default async function AppStorePage() {
         </p>
       </div>
 
-      <StaleDataBanner latestDay={latestDay} daysStale={daysStale} />
+      <StaleDataBanner freshness={freshness} />
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <Stat label="Downloads · 30d" value={totalDownloads} accent="blue" />

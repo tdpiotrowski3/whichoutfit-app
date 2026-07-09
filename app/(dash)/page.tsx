@@ -46,7 +46,7 @@ export default async function OverviewPage() {
         <p className="text-sm text-[var(--wo-muted)]">Live from Supabase. Downloads &amp; conversion live in App Store Connect.</p>
       </div>
 
-      {freshness && <StaleDataBanner latestDay={freshness.latestDay} daysStale={freshness.daysStale} />}
+      <StaleDataBanner freshness={freshness} />
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <Stat label="Signups" value={o.total_signups} accent="blue" sub={`${o.profiles} with synced data`} />
