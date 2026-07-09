@@ -1,6 +1,7 @@
 import { getAppstore, getAppstoreFreshness, type AppstoreFreshness } from "@/lib/data";
 import { Card, Stat } from "@/components/ui";
 import { StaleDataBanner } from "@/components/StaleDataBanner";
+import { SyncAppstoreButton } from "@/components/SyncAppstoreButton";
 
 export const dynamic = "force-dynamic";
 
@@ -40,12 +41,15 @@ export default async function AppStorePage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">App Store</h1>
-        <p className="text-sm text-[var(--wo-muted)]">
-          From the App Store Connect API · last 30 days. Syncs daily (~1 day Apple latency). Conversion &amp; impressions coming in Tier 2.
-          {latestDay && <> Data through <strong className="text-[var(--wo-text)]">{latestDay}</strong>.</>}
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold">App Store</h1>
+          <p className="text-sm text-[var(--wo-muted)]">
+            From the App Store Connect API · last 30 days. Syncs daily (~1 day Apple latency). Conversion &amp; impressions coming in Tier 2.
+            {latestDay && <> Data through <strong className="text-[var(--wo-text)]">{latestDay}</strong>.</>}
+          </p>
+        </div>
+        <SyncAppstoreButton />
       </div>
 
       <StaleDataBanner freshness={freshness} />
