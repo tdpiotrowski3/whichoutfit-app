@@ -269,6 +269,15 @@ p{line-height:1.7}
 .step p{color:var(--dark-t2);font-size:.9rem}
 @media(max-width:680px){.steps{grid-template-columns:1fr;gap:44px}.steps::before{display:none}}
 
+/* How-it-works walkthrough grids */
+.how-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px}
+.how-grid-3{grid-template-columns:repeat(3,1fr)}
+.how-note{max-width:640px;margin:40px auto 0;text-align:center;font-size:.9rem;line-height:1.7;color:var(--text2)}
+.how-note a{color:var(--blue);text-decoration:underline}
+.how-note-dark{color:var(--dark-t2)}
+.how-note-dark a{color:var(--teal-l)}
+@media(max-width:760px){.how-grid,.how-grid-3{grid-template-columns:1fr}}
+
 /* ── PRICING ─────────────────────────────────────────── */
 .price-grid{display:grid;grid-template-columns:1fr 1fr;gap:22px;max-width:800px;margin:0 auto}
 .price-card{background:var(--surface);border-radius:24px;padding:36px 32px;border:1px solid var(--border);box-shadow:0 2px 12px rgba(0,0,0,.04);position:relative}
