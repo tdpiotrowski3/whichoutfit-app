@@ -107,14 +107,17 @@ footer a{color:#2563eb;text-decoration:none;font-weight:600}
 (function () {
   var API = 'https://irfzsyzhoxxtzuugdtef.supabase.co/functions/v1/poll';
 
-  // Referral target. Swap to an Apple Offer Code redemption URL to grant a literal
-  // free month, e.g.:
-  //   https://apps.apple.com/redeem?ctx=offercodes&id=6778094125&code=FRIEND
-  // Until an offer code exists, this drives installs to the App Store listing.
-  var REDEEM_URL = 'https://apps.apple.com/us/app/whichoutfit/id6778094125';
-
   var params = new URLSearchParams(location.search);
   var id = params.get('id');
+  var ref = params.get('ref');
+
+  // Install CTA target. When the poll link carries the owner's referral code
+  // (?ref=CODE), send voters through the owner's redeem link — whichoutfit.app/r/CODE
+  // grants Premium to BOTH sides (our own comp system, no Apple Offer Code needed),
+  // so the install is attributed and rewarded. Otherwise fall back to the listing.
+  var REDEEM_URL = ref
+    ? 'https://whichoutfit.app/r/' + encodeURIComponent(ref)
+    : 'https://apps.apple.com/us/app/whichoutfit/id6778094125';
   var root = document.getElementById('poll');
   var extra = document.getElementById('extra');
   var titleEl = document.getElementById('title');
