@@ -94,9 +94,9 @@ footer a{color:#2563eb;text-decoration:none;font-weight:600}
     <!-- referral vector -->
     <div class="cta">
       <div class="k">Psst — you've got taste</div>
-      <div class="h">Get WhichOutfit free for a month</div>
-      <div class="p">Your AI stylist for the wardrobe you already own. First month of Premium on us.</div>
-      <a id="redeem" href="#" target="_blank" rel="noopener">Claim a month free →</a>
+      <div class="h" id="ctaHead">Try WhichOutfit free</div>
+      <div class="p" id="ctaSub">Your AI stylist for the wardrobe you already own.</div>
+      <a id="redeem" href="#" target="_blank" rel="noopener">Get the app →</a>
     </div>
   </div>
 
@@ -125,6 +125,16 @@ footer a{color:#2563eb;text-decoration:none;font-weight:600}
   var data = null;
 
   document.getElementById('redeem').href = REDEEM_URL;
+
+  // A poll link carries the owner's referral code, so the reward is the real
+  // two-sided comp grant (see r.html) — 2 weeks of Premium + 15 free photo
+  // cleanups, NOT "a month". Only promise it when there's actually a code to
+  // redeem; without a ref the CTA just points at the App Store listing.
+  if (ref) {
+    document.getElementById('ctaHead').textContent = 'Get 2 weeks of Premium — free';
+    document.getElementById('ctaSub').textContent = "Your AI stylist for the wardrobe you already own. Redeem your friend's code for 2 weeks of Premium + 15 free photo cleanups.";
+    document.getElementById('redeem').textContent = 'Claim 2 weeks free →';
+  }
 
   if (!id) { root.innerHTML = '<div class="state">This poll link looks incomplete.</div>'; return; }
 
