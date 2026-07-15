@@ -185,6 +185,9 @@ p{line-height:1.7}
 .phone{width:256px;height:544px;background:var(--dark-s);border-radius:44px;border:1.5px solid rgba(255,255,255,.07);box-shadow:0 0 0 9px #10141B,0 44px 88px rgba(16,20,27,.38),inset 0 0 0 1px rgba(255,255,255,.03);position:relative;overflow:hidden;flex-shrink:0}
 .phone-float{animation:float 5.4s ease-in-out infinite}
 .phone::before{content:'';position:absolute;top:14px;left:50%;transform:translateX(-50%);width:84px;height:28px;background:#070A0F;border-radius:18px;z-index:20}
+/* real app screenshots — the capture already includes the Dynamic Island */
+.phone-photo::before{display:none}
+.ph-shot{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:42px}
 .phone-screen{position:absolute;inset:0;background:var(--dark);border-radius:42px;overflow:hidden;display:flex;flex-direction:column}
 .ph-header{padding:52px 16px 10px;display:flex;align-items:center;justify-content:space-between}
 .ph-wm{font-size:.88rem;font-weight:800;background:var(--grad-t);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
