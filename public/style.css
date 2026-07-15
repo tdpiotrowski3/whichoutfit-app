@@ -345,6 +345,10 @@ p{line-height:1.7}
 .dl-section h2{color:var(--dark-t);max-width:600px;margin:0 auto 18px;position:relative}
 .dl-section p{color:var(--dark-t2);font-size:1rem;max-width:400px;margin:0 auto 44px;position:relative}
 .dl-ctas{display:flex;justify-content:center;gap:16px;flex-wrap:wrap;position:relative}
+.dl-qr{margin:30px auto 0;display:flex;flex-direction:column;align-items:center;gap:10px;position:relative}
+.dl-qr img{width:128px;height:128px;padding:10px;background:#fff;border-radius:var(--r-md);box-shadow:0 10px 32px rgba(0,0,0,.35)}
+.dl-qr span{font-size:.75rem;color:var(--dark-t2)}
+@media(max-width:840px),(pointer:coarse){.dl-qr{display:none}}
 
 /* ── FAQ ─────────────────────────────────────────────── */
 .faq-group{margin-bottom:48px}
