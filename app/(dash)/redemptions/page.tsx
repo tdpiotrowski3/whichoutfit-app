@@ -6,7 +6,20 @@ export const dynamic = "force-dynamic";
 
 const COMP = "var(--wo-blue)";
 const REFERRAL = "var(--wo-teal)";
+const GREEN = "var(--wo-green)";
+const LOSS = "#DC2626";
 const GRADIENT = "linear-gradient(120deg, var(--wo-blue), var(--wo-teal))";
+
+// ── Program economics (tune here as App Store pricing changes) ────────────────
+const PREMIUM_MONTHLY_USD = 14.99; // App Store monthly price
+const PREMIUM_ANNUAL_USD = 99.99; // App Store annual price ($8.33/mo)
+// Retail value of one free premium week given away (monthly rate ÷ ~4.33 weeks).
+const FREE_WEEK_VALUE_USD = (PREMIUM_MONTHLY_USD * 12) / 52; // ≈ $3.46
+// First-year revenue booked per paying convert — annual price is the conservative anchor.
+const VALUE_PER_CONVERT_USD = PREMIUM_ANNUAL_USD;
+
+const usd0 = (n: number) =>
+  n.toLocaleString(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 
 const KIND_LABELS: Record<string, string> = { comp: "Comp", referral: "Referral" };
 const kindLabel = (k: string | null) =>
@@ -180,6 +193,17 @@ export default async function RedemptionsPage({
   // "Past the free weeks": redeemers who now hold a paid subscription.
   const { redeemers, converted_paid: convertedPaid } = r.retention;
   const paidConversion = redeemers > 0 ? pct(convertedPaid, redeemers) : null;
+
+  // Program ROI: value returned (paying converts) vs value given away (free weeks,
+  // priced at retail — an opportunity cost, not cash). "Am I losing money?" = net sign.
+  const giveawayValue = freeWeeks * FREE_WEEK_VALUE_USD;
+  const convertRevenue = convertedPaid * VALUE_PER_CONVERT_USD;
+  const netUsd = convertRevenue - giveawayValue;
+  const roiRatio = giveawayValue > 0 ? convertRevenue / giveawayValue : null;
+  const breakEvenConverts = Math.ceil(giveawayValue / VALUE_PER_CONVERT_USD);
+  const breakEvenPct = redeemers > 0 ? pct(breakEvenConverts, redeemers) : null;
+  const hasRoiData = redeemers > 0 || giveawayValue > 0;
+  const profitable = netUsd >= 0;
 
   const codeHref = (code: string | null) => (code ? `/redemptions?code=${encodeURIComponent(code)}` : "/redemptions");
 
@@ -440,11 +464,78 @@ export default async function RedemptionsPage({
               <span className="text-lg font-semibold tabular-nums">{freeWeeksLabel} wk</span>
             </div>
             <p className="text-xs text-[var(--wo-muted)]">
-              The cost side of the trade: {freeWeeksLabel} free weeks handed out to lift installs. Weigh it against paid
-              conversion here and the comp spend on the <code className="rounded bg-[var(--wo-bg)] px-1 py-0.5">Finance</code> tab for ROI.
+              The cost side of the trade: {freeWeeksLabel} free weeks handed out to lift installs. The value math —
+              are the converts worth more than the give-away? — is in <strong>Program ROI</strong> below.
             </p>
           </div>
         </div>
+      </div>
+
+      {/* Program ROI — value returned (paying converts) vs value given away (free weeks) */}
+      <div className="rounded-2xl border border-[var(--wo-border)] bg-white p-5 shadow-sm">
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h2 className="text-base font-semibold">Program ROI</h2>
+            <p className="text-xs text-[var(--wo-muted)]">Value returned vs. value given away — comp + referral{selected ? ` · ${selected}` : ""}</p>
+          </div>
+          {hasRoiData ? (
+            <span
+              className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold"
+              style={{ color: profitable ? GREEN : LOSS, background: tint(profitable ? GREEN : LOSS, 12) }}
+            >
+              <span className="h-1.5 w-1.5 rounded-full" style={{ background: profitable ? GREEN : LOSS }} />
+              {profitable ? "In the black" : "Underwater"}
+            </span>
+          ) : (
+            <span className="rounded-full bg-[var(--wo-bg)] px-3 py-1 text-xs font-medium text-[var(--wo-muted)]">No data yet</span>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="rounded-xl border border-[var(--wo-border)] p-4">
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-[var(--wo-muted)]">Revenue from converts</div>
+            <div className="mt-2 text-2xl font-semibold tabular-nums" style={{ color: GREEN }}>{usd0(convertRevenue)}</div>
+            <div className="mt-1 text-xs text-[var(--wo-muted)]">{convertedPaid} paying × {usd0(VALUE_PER_CONVERT_USD)}/yr</div>
+          </div>
+          <div className="rounded-xl border border-[var(--wo-border)] p-4">
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-[var(--wo-muted)]">Free weeks given (retail)</div>
+            <div className="mt-2 text-2xl font-semibold tabular-nums">{usd0(giveawayValue)}</div>
+            <div className="mt-1 text-xs text-[var(--wo-muted)]">{freeWeeksLabel} wk × {usd0(FREE_WEEK_VALUE_USD)}</div>
+          </div>
+          <div className="rounded-xl border p-4" style={{ borderColor: hasRoiData ? tint(profitable ? GREEN : LOSS, 45) : "var(--wo-border)" }}>
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-[var(--wo-muted)]">Net</div>
+            <div className="mt-2 text-2xl font-semibold tabular-nums" style={{ color: hasRoiData ? (profitable ? GREEN : LOSS) : "var(--wo-text)" }}>
+              {netUsd < 0 ? `−${usd0(Math.abs(netUsd))}` : usd0(netUsd)}
+            </div>
+            <div className="mt-1 text-xs text-[var(--wo-muted)]">{roiRatio == null ? "return —" : `${roiRatio.toFixed(1)}× return on give-away`}</div>
+          </div>
+        </div>
+
+        {/* break-even */}
+        <div className="mt-4 rounded-xl bg-[var(--wo-bg)] px-4 py-3">
+          <div className="flex items-center justify-between text-sm">
+            <span className="font-medium text-[var(--wo-muted)]">Break-even</span>
+            <span className="tabular-nums">
+              needs <strong>{breakEvenConverts}</strong> convert{breakEvenConverts === 1 ? "" : "s"}
+              {breakEvenPct == null ? "" : ` (${breakEvenPct}%)`} · at <strong>{convertedPaid}</strong>
+              {paidConversion == null ? "" : ` (${paidConversion}%)`}
+            </span>
+          </div>
+          <div className="relative mt-2 h-2 w-full rounded-full bg-white">
+            <div
+              className="h-2 rounded-full"
+              style={{ width: `${Math.min(100, breakEvenConverts > 0 ? (convertedPaid / breakEvenConverts) * 100 : 0)}%`, background: profitable ? GREEN : LOSS }}
+            />
+            {/* break-even marker at 100% of the needed line */}
+            <div className="absolute inset-y-0 right-0 w-px bg-[var(--wo-muted)]" />
+          </div>
+        </div>
+
+        <p className="mt-3 text-xs text-[var(--wo-muted)]">
+          Give-away is valued at retail (an opportunity cost, not cash out the door). Prices:{" "}
+          {usd0(PREMIUM_MONTHLY_USD)}/mo · {usd0(PREMIUM_ANNUAL_USD)}/yr. For true cash ROI including ad spend, see the{" "}
+          <code className="rounded bg-[var(--wo-bg)] px-1 py-0.5">Finance</code> tab.
+        </p>
       </div>
 
       <p className="text-xs text-[var(--wo-muted)]">

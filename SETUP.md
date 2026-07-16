@@ -7,7 +7,7 @@ WhichOutfit Supabase project, server-side only.
 
 ## What it shows
 - **Overview** — signups, premium, AI calls (30d + all-time), content counts, IAP counts, storage/DB usage + free-tier projections.
-- **Redemptions** — comp/referral code redemptions over time from `usage_events` (`code_redeemed`), with a per-code breakdown, a comp-vs-referral split, a campaign filter to isolate a single code (e.g. `SOHOFRIENDS`), a **free-weeks-granted** counter (granted_days ÷ 7, the ROI cost side), a **"past the free weeks"** free→paid conversion (redeemers who now hold a paid App Store subscription, via `entitlements.premium_original_transaction_id`), and a referral funnel (sharers → referral redemptions → conversion, from `referral_code_created`).
+- **Redemptions** — comp/referral code redemptions over time from `usage_events` (`code_redeemed`), with a per-code breakdown, a comp-vs-referral split, a campaign filter to isolate a single code (e.g. `SOHOFRIENDS`), a **free-weeks-granted** counter (granted_days ÷ 7, the ROI cost side), a **"past the free weeks"** free→paid conversion (redeemers who kept a paid App Store subscription *beyond* their comp window — `entitlements.premium_original_transaction_id` present and `premium_until` past `redeemed_at + granted_days`), a **Program ROI** card (revenue from converts vs. retail value of the free weeks given away → net / return multiple / break-even, prices tunable at the top of the page), and a referral funnel (sharers → referral redemptions → conversion, from `referral_code_created`).
 - **AI Consumption** — daily calls, tokens, estimated cost, monthly projection, by-kind breakdown (from `usage_events`).
 - **Users** — email, tier, signup, last active, AI usage, closet size.
 
