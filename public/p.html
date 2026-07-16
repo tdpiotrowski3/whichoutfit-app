@@ -22,64 +22,140 @@
 
 <link rel="icon" type="image/svg+xml" href="favicon.svg"/>
 <style>
-:root{--blue:#3b82f6;--ink:#0f172a;--muted:#64748b;--bg:#f8fafc;--card:#fff;--line:#e2e8f0}
-*{box-sizing:border-box}
-body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--ink)}
-header{padding:18px;text-align:center}
-.brand{font-weight:800;color:#2563eb;font-size:18px;text-decoration:none}
-main{max-width:520px;margin:0 auto;padding:0 18px 48px}
-h1{font-size:26px;font-weight:800;text-align:center;margin:8px 0 22px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:20px;overflow:hidden;box-shadow:0 6px 24px rgba(15,23,42,.06)}
-.card img{display:block;width:100%;height:auto}
-.btns{display:flex;gap:12px;margin-top:18px}
-.vote{flex:1;border:0;border-radius:16px;padding:18px;font-size:18px;font-weight:700;cursor:pointer;color:#fff}
-.vote.yes{background:#22c55e}.vote.no{background:#ef4444}
-.vote.pick{width:100%;background:#2563eb;margin-top:10px;padding:12px;font-size:15px}
-.vote:disabled{opacity:.55}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.opt{position:relative;background:var(--card);border:2px solid var(--line);border-radius:18px;overflow:hidden;padding:8px}
-.opt.win{border-color:#22c55e}
-.opt img{display:block;width:100%;height:auto;border-radius:12px}
-.badge{position:absolute;top:12px;left:12px;background:rgba(15,23,42,.78);color:#fff;width:26px;height:26px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px}
-.optres{text-align:center;font-weight:800;padding:8px 0 4px}
-.res{margin-top:20px}
-.row{display:flex;align-items:center;gap:10px;margin:10px 0}
-.lbl{width:78px;font-weight:700}
-.track{flex:1;height:14px;background:#e2e8f0;border-radius:7px;overflow:hidden}
-.fill{display:block;height:100%}.fill.up{background:#22c55e}.fill.down{background:#ef4444}
-.num{width:42px;text-align:right;font-weight:700}
-.tot{text-align:center;color:var(--muted);margin-top:16px}
-.state{text-align:center;color:var(--muted);padding:48px 12px;font-size:16px}
+/* WhichOutfit — poll / vote page. Brand tokens mirror the marketing site (style.css)
+   and the iOS app: light canvas, blue→teal gradient, ink accents. Green/red on the
+   vote controls is semantic (approve / reject), kept distinct from the brand accent. */
+:root{
+  --blue:#2E6BFF; --teal:#0FA3A3; --green:#16B981; --red:#F04438;
+  --grad:linear-gradient(135deg,#2E6BFF 0%,#0FA3A3 100%);
+  --ink:#10141B; --muted:#5C6B7A; --bg:#F5F7FB; --card:#FFFFFF; --line:#E2E8F0;
+  --r-sm:12px; --r-md:16px; --r-lg:20px; --r-xl:26px; --pill:999px;
+  --ease:cubic-bezier(.2,0,0,1);
+  --shadow:0 1px 2px rgba(16,20,27,.04),0 12px 32px rgba(16,20,27,.07);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',Roboto,system-ui,sans-serif;
+  background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;line-height:1.5}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer;border:none;background:none}
+img{display:block;max-width:100%}
 
-/* comments */
-.sec-title{font-size:15px;font-weight:800;margin:30px 0 12px;color:var(--ink)}
-.comments{display:flex;flex-direction:column;gap:10px}
-.comment{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
-.comment .who{font-weight:700;font-size:13px;color:var(--ink);margin-bottom:2px}
-.comment .body{font-size:15px;color:#1f2937;white-space:pre-wrap;word-break:break-word}
-.comments-empty{color:var(--muted);font-size:14px;padding:4px 2px 8px}
-.cform{margin-top:14px;display:flex;flex-direction:column;gap:8px}
-.cform input,.cform textarea{width:100%;border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:15px;font-family:inherit;background:#fff;color:var(--ink)}
-.cform textarea{resize:vertical;min-height:48px}
-.cform .post{align-self:flex-end;background:#2563eb;color:#fff;border:0;border-radius:12px;padding:11px 20px;font-weight:700;font-size:15px;cursor:pointer}
-.cform .post:disabled{opacity:.55}
+/* ambient brand glow */
+.bg-orbs{position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0}
+.bg-orbs::before,.bg-orbs::after{content:'';position:absolute;border-radius:50%}
+.bg-orbs::before{width:540px;height:540px;top:-260px;left:-160px;background:radial-gradient(circle,rgba(46,107,255,.12),transparent 66%)}
+.bg-orbs::after{width:500px;height:500px;bottom:-240px;right:-160px;background:radial-gradient(circle,rgba(15,163,163,.11),transparent 66%)}
 
-/* referral CTA */
-.cta{margin-top:30px;border-radius:20px;padding:22px;text-align:center;color:#fff;background:linear-gradient(135deg,#2E6BFF 0%,#0FA3A3 100%)}
-.cta .k{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;opacity:.9}
-.cta .h{font-size:21px;font-weight:800;margin:6px 0 4px}
-.cta .p{font-size:14px;opacity:.92;margin-bottom:16px}
-.cta a{display:inline-block;background:#fff;color:#1f2937;font-weight:800;font-size:15px;text-decoration:none;padding:13px 26px;border-radius:14px}
+header{position:relative;z-index:1;padding:22px 18px 2px;text-align:center}
+.brand{display:inline-flex;align-items:center;gap:8px;font-weight:800;font-size:1.05rem;letter-spacing:-.02em;color:var(--ink)}
+.brand .logo{width:26px;height:26px;border-radius:8px;background:var(--grad);box-shadow:0 4px 12px rgba(46,107,255,.34);
+  display:flex;align-items:center;justify-content:center;font-size:.85rem}
 
-footer{text-align:center;color:var(--muted);margin-top:30px;font-size:14px}
-footer a{color:#2563eb;text-decoration:none;font-weight:600}
+main{position:relative;z-index:1;max-width:520px;margin:0 auto;padding:14px 18px 52px}
+
+.eyebrow{display:block;text-align:center;font-size:.72rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;
+  margin-top:12px;background:var(--grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+h1{font-size:1.7rem;font-weight:900;letter-spacing:-.03em;text-align:center;margin:8px 0 22px;text-wrap:balance}
+
+/* ── OUTFIT CARD (binary) ── */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--shadow)}
+.card img{width:100%;height:auto}
+
+/* ── VOTE BUTTONS ── */
+.btns{display:flex;gap:12px;margin-top:16px}
+.vote{flex:1;border-radius:var(--r-md);padding:17px;font-size:1.05rem;font-weight:800;color:#fff;letter-spacing:-.01em;
+  transition:transform .14s var(--ease),box-shadow .2s,opacity .2s;box-shadow:0 8px 22px rgba(16,20,27,.12)}
+.vote:hover{transform:translateY(-2px)}
+.vote:active{transform:scale(.98)}
+.vote.yes{background:linear-gradient(135deg,#16B981,#0FA3A3);box-shadow:0 8px 22px rgba(22,185,129,.32)}
+.vote.no{background:linear-gradient(135deg,#F04438,#E11D48);box-shadow:0 8px 22px rgba(240,68,56,.3)}
+.vote.pick{width:100%;background:var(--grad);margin-top:12px;padding:13px;font-size:.95rem;box-shadow:0 8px 22px rgba(46,107,255,.3)}
+.vote:disabled{opacity:.5;transform:none;box-shadow:none;cursor:default}
+
+/* ── MULTI-OPTION GRID ── */
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.opt{position:relative;background:var(--card);border:2px solid var(--line);border-radius:var(--r-md);overflow:hidden;padding:8px;
+  box-shadow:var(--shadow);transition:border-color .2s,box-shadow .2s,transform .2s}
+.opt img{width:100%;height:auto;border-radius:11px}
+.opt.win{border-color:var(--green);box-shadow:0 0 0 3px rgba(22,185,129,.16),0 14px 30px rgba(22,185,129,.14)}
+.badge{position:absolute;top:12px;left:12px;width:28px;height:28px;border-radius:50%;
+  background:rgba(16,20,27,.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.85rem;z-index:1}
+.opt.win .badge{background:var(--green)}
+.optres{text-align:center;font-weight:800;font-size:.95rem;padding:9px 0 4px;color:var(--ink)}
+
+/* ── RESULTS BARS ── */
+.res{margin-top:20px;background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);padding:18px 18px 8px;box-shadow:var(--shadow)}
+.row{display:flex;align-items:center;gap:12px;margin:0 0 14px}
+.lbl{width:74px;font-weight:700;font-size:.92rem}
+.track{flex:1;height:16px;background:#EEF2F8;border-radius:var(--pill);overflow:hidden}
+.fill{display:block;height:100%;border-radius:var(--pill);width:0;transition:width .8s var(--ease)}
+.fill.up{background:linear-gradient(90deg,#16B981,#0FA3A3)}
+.fill.down{background:linear-gradient(90deg,#F04438,#E11D48)}
+.num{width:44px;text-align:right;font-weight:800;font-variant-numeric:tabular-nums}
+.tot{text-align:center;color:var(--muted);margin-top:14px;font-size:.86rem;font-weight:600}
+
+/* thanks note after voting */
+.voted-note{display:flex;align-items:center;justify-content:center;gap:7px;margin-top:16px;
+  font-size:.82rem;font-weight:600;color:var(--green)}
+
+.state{text-align:center;color:var(--muted);padding:56px 16px;font-size:1rem}
+.state .spin{width:26px;height:26px;margin:0 auto 14px;border-radius:50%;
+  border:3px solid var(--line);border-top-color:var(--blue);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── COMMENTS ── */
+.sec-title{display:flex;align-items:center;gap:8px;font-size:1rem;font-weight:800;letter-spacing:-.01em;margin:32px 0 14px;color:var(--ink)}
+.comments{display:flex;flex-direction:column;gap:11px}
+.comment{background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);padding:13px 15px;box-shadow:0 1px 2px rgba(16,20,27,.03)}
+.comment .who{display:flex;align-items:center;gap:8px;font-weight:800;font-size:.82rem;color:var(--ink);margin-bottom:4px}
+.comment .who::before{content:'';width:22px;height:22px;border-radius:50%;background:var(--grad);opacity:.9;flex-shrink:0}
+.comment .body{font-size:.95rem;color:#334155;white-space:pre-wrap;word-break:break-word;line-height:1.55}
+.comments-empty{color:var(--muted);font-size:.9rem;padding:6px 2px 10px}
+.cform{margin-top:14px;display:flex;flex-direction:column;gap:9px}
+.cform input,.cform textarea{width:100%;border:1px solid var(--line);border-radius:var(--r-sm);padding:13px 15px;font-size:.95rem;
+  font-family:inherit;background:var(--card);color:var(--ink);transition:border-color .2s,box-shadow .2s}
+.cform input:focus,.cform textarea:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(46,107,255,.12)}
+.cform textarea{resize:vertical;min-height:52px;line-height:1.5}
+.cform .post{align-self:flex-end;background:var(--ink);color:#fff;border-radius:var(--pill);padding:12px 24px;font-weight:700;font-size:.92rem;
+  transition:transform .14s,box-shadow .2s,opacity .2s;box-shadow:0 6px 18px rgba(16,20,27,.18)}
+.cform .post:hover{transform:translateY(-1px)}
+.cform .post:active{transform:scale(.98)}
+.cform .post:disabled{opacity:.5;transform:none;box-shadow:none;cursor:default}
+
+/* ── REFERRAL CTA ── */
+.cta{position:relative;overflow:hidden;margin-top:32px;border-radius:var(--r-xl);padding:28px 24px;text-align:center;color:#fff;
+  background:var(--grad);box-shadow:0 18px 44px rgba(46,107,255,.3),inset 0 1px 0 rgba(255,255,255,.2)}
+.cta::before{content:'';position:absolute;inset:0;background:radial-gradient(340px 160px at 50% -20%,rgba(255,255,255,.26),transparent 70%);pointer-events:none}
+.cta .k{position:relative;font-size:.72rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;opacity:.92}
+.cta .h{position:relative;font-size:1.4rem;font-weight:900;letter-spacing:-.02em;margin:8px 0 6px;text-wrap:balance}
+.cta .p{position:relative;font-size:.92rem;opacity:.94;margin:0 auto 18px;max-width:340px;line-height:1.55}
+.cta a{position:relative;display:inline-flex;align-items:center;gap:8px;background:#fff;color:var(--ink);font-weight:800;font-size:.98rem;
+  padding:14px 28px;border-radius:var(--pill);box-shadow:0 8px 24px rgba(0,0,0,.16);transition:transform .15s,box-shadow .2s}
+.cta a:hover{transform:translateY(-2px);box-shadow:0 14px 34px rgba(0,0,0,.22)}
+
+footer{text-align:center;color:var(--muted);margin-top:30px;font-size:.86rem}
+footer a{color:#2456D6;font-weight:700}
+
+@media(max-width:400px){
+  h1{font-size:1.5rem}
+  .cta .h{font-size:1.25rem}
+}
+@media(prefers-reduced-motion:reduce){
+  .fill{transition:none}
+  .state .spin{animation:none}
+}
 </style>
 </head>
 <body>
-<header><a class="brand" href="https://whichoutfit.app">👕 WhichOutfit</a></header>
+<div class="bg-orbs" aria-hidden="true"></div>
+
+<header><a class="brand" href="https://whichoutfit.app"><span class="logo" aria-hidden="true">👕</span>WhichOutfit</a></header>
 <main>
+  <span class="eyebrow">Help me pick</span>
   <h1 id="title">Which fit? 👀</h1>
-  <div id="poll"><div class="state">Loading…</div></div>
+  <div id="poll"><div class="state"><div class="spin" aria-hidden="true"></div>Loading the look…</div></div>
 
   <div id="extra" style="display:none">
     <!-- friend comments -->

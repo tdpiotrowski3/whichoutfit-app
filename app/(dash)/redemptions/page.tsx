@@ -173,6 +173,14 @@ export default async function RedemptionsPage({
   const { sharers, referral_redemptions: refRedeemed } = r.funnel;
   const conversion = sharers > 0 ? pct(refRedeemed, sharers) : null;
 
+  // Free weeks = premium days given away ÷ 7 (the ROI cost proxy). Whole where it
+  // divides evenly (comp grants are 14-day multiples), else one decimal.
+  const freeWeeks = r.granted_days_total / 7;
+  const freeWeeksLabel = Number.isInteger(freeWeeks) ? String(freeWeeks) : freeWeeks.toFixed(1);
+  // "Past the free weeks": redeemers who now hold a paid subscription.
+  const { redeemers, converted_paid: convertedPaid } = r.retention;
+  const paidConversion = redeemers > 0 ? pct(convertedPaid, redeemers) : null;
+
   const codeHref = (code: string | null) => (code ? `/redemptions?code=${encodeURIComponent(code)}` : "/redemptions");
 
   return (
@@ -254,9 +262,9 @@ export default async function RedemptionsPage({
           icon={<ShareIcon color={REFERRAL} />}
         />
         <Tile
-          label="Premium days granted"
-          value={r.granted_days_total.toLocaleString()}
-          sub="sum of granted_days"
+          label="Free weeks granted"
+          value={freeWeeksLabel}
+          sub={`${r.granted_days_total.toLocaleString()} premium days given`}
           color="var(--wo-green)"
           icon={<CalendarIcon color="var(--wo-green)" />}
         />
@@ -374,10 +382,76 @@ export default async function RedemptionsPage({
         </div>
       </div>
 
+      {/* Past the free weeks — free-trial → paid conversion (respects campaign filter) */}
+      <div className="rounded-2xl border border-[var(--wo-border)] bg-white p-5 shadow-sm">
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h2 className="text-base font-semibold">Past the free weeks</h2>
+            <p className="text-xs text-[var(--wo-muted)]">Free-code redeemers who became paying subscribers</p>
+          </div>
+          <span className="text-xs text-[var(--wo-muted)]">{selected ?? "all codes"} · {r.days} days</span>
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-2">
+          {/* stage bars */}
+          <div className="space-y-3">
+            <div>
+              <div className="mb-1.5 flex items-baseline justify-between text-sm">
+                <span className="font-medium">Redeemed a free code</span>
+                <span className="font-semibold tabular-nums">{redeemers}</span>
+              </div>
+              <div className="h-9 w-full overflow-hidden rounded-lg" style={{ background: tint(COMP, 10) }}>
+                <div className="h-9 rounded-lg" style={{ width: redeemers > 0 ? "100%" : "0%", background: `linear-gradient(90deg, ${tint(COMP, 85)}, ${COMP})` }} />
+              </div>
+            </div>
+            <div className="flex items-center justify-center py-0.5 text-[var(--wo-muted)]">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 5v14M5 12l7 7 7-7" />
+              </svg>
+            </div>
+            <div>
+              <div className="mb-1.5 flex items-baseline justify-between text-sm">
+                <span className="font-medium">Now paying</span>
+                <span className="font-semibold tabular-nums">{convertedPaid}</span>
+              </div>
+              <div className="h-9 w-full overflow-hidden rounded-lg" style={{ background: tint("var(--wo-green)", 10) }}>
+                <div
+                  className="h-9 rounded-lg"
+                  style={{
+                    width: redeemers > 0 && convertedPaid > 0 ? `${Math.max(4, (convertedPaid / redeemers) * 100)}%` : "0%",
+                    background: `linear-gradient(90deg, ${tint("var(--wo-green)", 85)}, var(--wo-green))`,
+                  }}
+                />
+              </div>
+              <div className="mt-1 text-xs text-[var(--wo-muted)]">hold a paid App Store subscription</div>
+            </div>
+          </div>
+
+          {/* conversion + ROI summary */}
+          <div className="flex flex-col justify-center gap-3">
+            <div className="flex items-center justify-between rounded-xl border border-[var(--wo-border)] bg-[var(--wo-bg)] px-4 py-3">
+              <span className="text-sm font-medium text-[var(--wo-muted)]">Free → paid conversion</span>
+              <span className="text-2xl font-semibold tabular-nums" style={{ color: "var(--wo-green)" }}>
+                {paidConversion == null ? "—" : `${paidConversion}%`}
+              </span>
+            </div>
+            <div className="flex items-center justify-between rounded-xl border border-[var(--wo-border)] px-4 py-3">
+              <span className="text-sm font-medium text-[var(--wo-muted)]">Free weeks given{selected ? "" : " (all codes)"}</span>
+              <span className="text-lg font-semibold tabular-nums">{freeWeeksLabel} wk</span>
+            </div>
+            <p className="text-xs text-[var(--wo-muted)]">
+              The cost side of the trade: {freeWeeksLabel} free weeks handed out to lift installs. Weigh it against paid
+              conversion here and the comp spend on the <code className="rounded bg-[var(--wo-bg)] px-1 py-0.5">Finance</code> tab for ROI.
+            </p>
+          </div>
+        </div>
+      </div>
+
       <p className="text-xs text-[var(--wo-muted)]">
         Data: <code className="rounded bg-[var(--wo-bg)] px-1 py-0.5">admin_redemptions()</code> over{" "}
-        <code className="rounded bg-[var(--wo-bg)] px-1 py-0.5">usage_events</code>. Redemption tiles and the campaign
-        filter cover both comp and referral codes; the funnel is referral-only and spans the whole program.
+        <code className="rounded bg-[var(--wo-bg)] px-1 py-0.5">usage_events</code> (+ <code className="rounded bg-[var(--wo-bg)] px-1 py-0.5">entitlements</code> for
+        paid conversion). Redemption tiles, free weeks, the campaign filter and conversion cover both comp and referral
+        codes; the referral funnel is referral-only and spans the whole program.
       </p>
     </div>
   );

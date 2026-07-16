@@ -347,6 +347,13 @@ export type Redemptions = {
   by_code: RedemptionCode[];
   /** All codes seen in the window (unfiltered) — powers the campaign filter chips. */
   codes: RedemptionCode[];
+  /**
+   * Of the (campaign-filtered) free-code redeemers, how many now hold a PAID App
+   * Store subscription — i.e. they continued past the free weeks. `converted_paid`
+   * keys off entitlements.premium_original_transaction_id (comp grants never carry
+   * one), so it counts genuine paying customers.
+   */
+  retention: { redeemers: number; converted_paid: number };
   /** Program-level funnel (not campaign-filtered). */
   funnel: { sharers: number; referral_redemptions: number };
 };
