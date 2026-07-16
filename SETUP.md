@@ -7,6 +7,7 @@ WhichOutfit Supabase project, server-side only.
 
 ## What it shows
 - **Overview** — signups, premium, AI calls (30d + all-time), content counts, IAP counts, storage/DB usage + free-tier projections.
+- **Redemptions** — comp/referral code redemptions over time from `usage_events` (`code_redeemed`), with a per-code breakdown, a comp-vs-referral split, a campaign filter to isolate a single code (e.g. `SOHOFRIENDS`), and a referral funnel (sharers → referral redemptions → conversion, from `referral_code_created`).
 - **AI Consumption** — daily calls, tokens, estimated cost, monthly projection, by-kind breakdown (from `usage_events`).
 - **Users** — email, tier, signup, last active, AI usage, closet size.
 
@@ -118,4 +119,5 @@ flag and redeploy to bring it back. Browser-side, RLS-protected — the two
 ## Backend dependencies (already live)
 - `public.usage_events` table (RLS-locked, service-role only).
 - `ai` edge function logs each call to `usage_events`.
-- RPCs: `admin_overview()`, `admin_ai_daily(int)`, `admin_user_usage()` (execute = service_role only).
+- RPCs: `admin_overview()`, `admin_ai_daily(int)`, `admin_user_usage()`, `admin_redemptions(int, text)` (execute = service_role only).
+- `code_redeemed` / `referral_code_created` events on `usage_events`, written server-side by DB triggers (no app release needed).
