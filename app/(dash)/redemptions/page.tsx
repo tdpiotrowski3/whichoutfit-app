@@ -1,43 +1,145 @@
 import Link from "next/link";
-import { getRedemptions, type RedemptionCode } from "@/lib/data";
-import { Card, Stat, Bar } from "@/components/ui";
+import { getRedemptions, type RedemptionCode, type RedemptionsDayRow } from "@/lib/data";
+import { Card } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
 const COMP = "var(--wo-blue)";
 const REFERRAL = "var(--wo-teal)";
+const GRADIENT = "linear-gradient(120deg, var(--wo-blue), var(--wo-teal))";
 
-const KIND_LABELS: Record<string, string> = {
-  comp: "Comp",
-  referral: "Referral",
-};
+const KIND_LABELS: Record<string, string> = { comp: "Comp", referral: "Referral" };
+const kindLabel = (k: string | null) =>
+  !k ? "—" : KIND_LABELS[k] ?? k.charAt(0).toUpperCase() + k.slice(1);
+const kindColor = (k: string | null) => (k === "referral" ? REFERRAL : COMP);
+const tint = (color: string, pct: number) => `color-mix(in srgb, ${color} ${pct}%, white)`;
 
-function kindLabel(kind: string | null): string {
-  if (!kind) return "—";
-  return KIND_LABELS[kind] ?? kind.charAt(0).toUpperCase() + kind.slice(1);
+/** Round up to a "nice" y-axis max divisible by 4, so the four gridline labels are whole numbers. */
+function niceMax(v: number): number {
+  return Math.max(4, Math.ceil(v / 4) * 4);
 }
 
-/** Two-segment bar: comp (blue) + referral (teal), scaled against the busiest day. */
-function SplitBar({ comp, referral, max }: { comp: number; referral: number; max: number }) {
-  const w = (n: number) => (max > 0 ? `${Math.min(100, (n / max) * 100)}%` : "0%");
+function fmtDay(iso: string): string {
+  return iso.slice(5); // MM-DD
+}
+
+// ── Icons (inline, brand-tinted) ──────────────────────────────────────────────
+type IconProps = { color: string };
+const Icon = ({ color, d }: IconProps & { d: React.ReactNode }) => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    {d}
+  </svg>
+);
+const TicketIcon = ({ color }: IconProps) => (
+  <Icon color={color} d={<><path d="M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v3a2 2 0 0 0 0 4v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3a2 2 0 0 0 0-4z" /><path d="M13 5v14" /></>} />
+);
+const GiftIcon = ({ color }: IconProps) => (
+  <Icon color={color} d={<><path d="M20 12v9H4v-9" /><path d="M2 7h20v5H2z" /><path d="M12 22V7" /><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z" /><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" /></>} />
+);
+const ShareIcon = ({ color }: IconProps) => (
+  <Icon color={color} d={<><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4" /></>} />
+);
+const CalendarIcon = ({ color }: IconProps) => (
+  <Icon color={color} d={<><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></>} />
+);
+
+// ── KPI tile ──────────────────────────────────────────────────────────────────
+function Tile({
+  label,
+  value,
+  sub,
+  color,
+  icon,
+  primary,
+}: {
+  label: string;
+  value: string | number;
+  sub: string;
+  color: string;
+  icon: React.ReactNode;
+  primary?: boolean;
+}) {
   return (
-    <div className="flex h-2 w-full overflow-hidden rounded-full bg-[var(--wo-bg)]">
-      <div className="h-2" style={{ width: w(comp), background: COMP }} />
-      <div className="h-2" style={{ width: w(referral), background: REFERRAL }} />
+    <div className="group relative overflow-hidden rounded-2xl border border-[var(--wo-border)] bg-white p-5 shadow-sm transition hover:shadow-md">
+      {primary && <div className="absolute inset-x-0 top-0 h-1" style={{ background: GRADIENT }} />}
+      <div className="flex items-start justify-between">
+        <div className="text-[11px] font-semibold uppercase tracking-wide text-[var(--wo-muted)]">{label}</div>
+        <div className="flex h-8 w-8 items-center justify-center rounded-xl" style={{ background: tint(color, 12) }}>
+          {icon}
+        </div>
+      </div>
+      <div className="mt-3 text-3xl font-semibold tabular-nums" style={primary ? undefined : { color }}>
+        {value}
+      </div>
+      <div className="mt-1 text-sm text-[var(--wo-muted)]">{sub}</div>
     </div>
   );
 }
 
-function Header() {
+// ── Stacked-bar time series (comp on bottom, referral on top) ─────────────────
+function TrendChart({ days, max }: { days: RedemptionsDayRow[]; max: number }) {
+  const ticks = [max, (max * 3) / 4, max / 2, max / 4, 0];
+  const labelIdx = [0, Math.floor(days.length / 2), days.length - 1];
+
   return (
-    <div>
-      <h1 className="text-2xl font-semibold">Redemptions</h1>
-      <p className="text-sm text-[var(--wo-muted)]">
-        Comp &amp; referral code redemptions from <code>usage_events</code> (<code>code_redeemed</code> /{" "}
-        <code>referral_code_created</code>, written server-side). Seed/founder accounts excluded — same list as
-        Growth, so numbers stay at 0 until real users redeem.
-      </p>
-    </div>
+    <>
+      <div className="flex">
+        {/* y-axis gutter */}
+        <div className="relative mr-2 h-56 w-7 shrink-0 text-[10px] tabular-nums text-[var(--wo-muted)]">
+          {ticks.map((t, i) => (
+            <span
+              key={i}
+              className="absolute right-0"
+              style={{ top: `${(i / (ticks.length - 1)) * 100}%`, transform: "translateY(-50%)" }}
+            >
+              {t}
+            </span>
+          ))}
+        </div>
+        {/* plot */}
+        <div className="relative h-56 flex-1">
+          <div className="absolute inset-0 flex flex-col justify-between">
+            {ticks.map((_, i) => (
+              <div key={i} className={i === 0 || i === ticks.length - 1 ? "border-t border-[var(--wo-border)]" : "border-t border-[var(--wo-border)]/60"} />
+            ))}
+          </div>
+          <div className="absolute inset-0 flex items-end gap-[3px]">
+            {days.map((d) => {
+              const compH = (d.comp / max) * 100;
+              const refH = (d.referral / max) * 100;
+              const compRounded = d.comp > 0 && d.referral === 0;
+              return (
+                <div key={d.day} className="group relative flex h-full flex-1 flex-col justify-end">
+                  {d.referral > 0 && (
+                    <div className="w-full rounded-t-[3px]" style={{ height: `${refH}%`, minHeight: 2, background: REFERRAL }} />
+                  )}
+                  {d.comp > 0 && (
+                    <div
+                      className={`w-full ${d.referral > 0 ? "mt-[2px]" : ""} ${compRounded ? "rounded-t-[3px]" : ""}`}
+                      style={{ height: `${compH}%`, minHeight: 2, background: COMP }}
+                    />
+                  )}
+                  {/* hover tooltip */}
+                  <div className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 hidden -translate-x-1/2 whitespace-nowrap rounded-lg bg-[var(--wo-text)] px-2.5 py-1.5 text-[11px] text-white shadow-lg group-hover:block">
+                    <div className="font-medium">{fmtDay(d.day)}</div>
+                    <div className="mt-0.5 flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm" style={{ background: COMP }} />Comp {d.comp}</div>
+                    <div className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm" style={{ background: REFERRAL }} />Referral {d.referral}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+      {/* x-axis labels: first · middle · last */}
+      <div className="mt-2 flex pl-9 text-[10px] text-[var(--wo-muted)]">
+        {labelIdx.map((idx, i) => (
+          <span key={i} className={`flex-1 ${i === 0 ? "text-left" : i === 1 ? "text-center" : "text-right"}`}>
+            {days[idx] ? fmtDay(days[idx].day) : ""}
+          </span>
+        ))}
+      </div>
+    </>
   );
 }
 
@@ -61,146 +163,221 @@ export default async function RedemptionsPage({
     );
   }
 
-  const pct = (n: number, of: number) => (of > 0 ? `${Math.round((n / of) * 100)}%` : "—");
+  const pct = (n: number, of: number) => (of > 0 ? Math.round((n / of) * 100) : 0);
   const selected = r.code_filter; // null = all codes
+  const total = r.total_redemptions;
   const days = [...r.by_day].sort((a, b) => a.day.localeCompare(b.day));
-  const maxDay = Math.max(1, ...days.map((d) => d.total));
+  const chartMax = niceMax(Math.max(0, ...days.map((d) => d.total)));
   const byCode = r.by_code;
   const maxCode = Math.max(1, ...byCode.map((c) => c.n));
-  const conversion = r.funnel.sharers > 0 ? r.funnel.referral_redemptions / r.funnel.sharers : null;
+  const { sharers, referral_redemptions: refRedeemed } = r.funnel;
+  const conversion = sharers > 0 ? pct(refRedeemed, sharers) : null;
 
   const codeHref = (code: string | null) => (code ? `/redemptions?code=${encodeURIComponent(code)}` : "/redemptions");
 
   return (
     <div className="space-y-6">
-      <Header />
+      {/* Header */}
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Redemptions</h1>
+          <p className="mt-1 max-w-2xl text-sm text-[var(--wo-muted)]">
+            Comp &amp; referral code redemptions from <code className="rounded bg-[var(--wo-bg)] px-1 py-0.5 text-xs">usage_events</code>,
+            written server-side. Seed/founder accounts excluded — same basis as Growth, so numbers stay at 0 until real
+            users redeem.
+          </p>
+        </div>
+        <div className="rounded-2xl border border-[var(--wo-border)] bg-white px-4 py-2 text-right shadow-sm">
+          <div className="text-[11px] font-medium uppercase tracking-wide text-[var(--wo-muted)]">Last {r.days} days</div>
+          <div className="text-lg font-semibold tabular-nums">
+            {total} redemption{total === 1 ? "" : "s"}
+          </div>
+        </div>
+      </div>
 
-      {/* Campaign filter — isolate a single code (e.g. SOHOFRIENDS). */}
+      {/* Campaign filter */}
       {r.codes.length > 0 && (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="mr-1 text-xs font-medium uppercase tracking-wide text-[var(--wo-muted)]">Campaign</span>
           <Link
             href={codeHref(null)}
-            className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
-              selected == null ? "text-white" : "border border-[var(--wo-border)] text-[var(--wo-muted)] hover:text-[var(--wo-text)]"
+            className={`rounded-full px-3.5 py-1.5 text-sm font-medium shadow-sm transition ${
+              selected == null ? "text-white" : "border border-[var(--wo-border)] bg-white text-[var(--wo-muted)] hover:text-[var(--wo-text)]"
             }`}
-            style={selected == null ? { background: "var(--wo-blue)" } : undefined}
+            style={selected == null ? { background: GRADIENT } : undefined}
           >
             All codes
           </Link>
           {r.codes.map((c: RedemptionCode) => {
             const active = selected === c.code;
+            const color = kindColor(c.code_kind);
             return (
               <Link
                 key={c.code}
                 href={codeHref(c.code)}
-                className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
-                  active ? "text-white" : "border border-[var(--wo-border)] text-[var(--wo-muted)] hover:text-[var(--wo-text)]"
+                className={`group inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-sm font-medium shadow-sm transition ${
+                  active ? "text-white" : "border border-[var(--wo-border)] bg-white text-[var(--wo-muted)] hover:text-[var(--wo-text)]"
                 }`}
-                style={active ? { background: c.code_kind === "referral" ? REFERRAL : COMP } : undefined}
+                style={active ? { background: color } : undefined}
               >
-                {c.code} <span className="opacity-70">· {kindLabel(c.code_kind)} · {c.n}</span>
+                <span className="h-1.5 w-1.5 rounded-full" style={{ background: active ? "white" : color }} />
+                {c.code}
+                <span className="tabular-nums opacity-60">· {c.n}</span>
               </Link>
             );
           })}
         </div>
       )}
 
+      {/* KPI row */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <Stat
+        <Tile
+          primary
           label={selected ? `Redemptions · ${selected}` : "Redemptions"}
-          value={r.total_redemptions}
+          value={total}
           sub={`last ${r.days} days`}
-          accent="blue"
+          color={COMP}
+          icon={<TicketIcon color={COMP} />}
         />
-        <Stat label="Comp" value={r.by_kind.comp} sub="comp codes" accent="blue" />
-        <Stat label="Referral" value={r.by_kind.referral} sub="referral codes" accent="teal" />
-        <Stat label="Premium days granted" value={r.granted_days_total} sub="sum of granted_days" accent="green" />
+        <Tile
+          label="Comp"
+          value={r.by_kind.comp}
+          sub={total > 0 ? `comp codes · ${pct(r.by_kind.comp, total)}%` : "comp codes"}
+          color={COMP}
+          icon={<GiftIcon color={COMP} />}
+        />
+        <Tile
+          label="Referral"
+          value={r.by_kind.referral}
+          sub={total > 0 ? `referral codes · ${pct(r.by_kind.referral, total)}%` : "referral codes"}
+          color={REFERRAL}
+          icon={<ShareIcon color={REFERRAL} />}
+        />
+        <Tile
+          label="Premium days granted"
+          value={r.granted_days_total.toLocaleString()}
+          sub="sum of granted_days"
+          color="var(--wo-green)"
+          icon={<CalendarIcon color="var(--wo-green)" />}
+        />
+      </div>
+
+      {/* Trend chart */}
+      <div className="rounded-2xl border border-[var(--wo-border)] bg-white p-5 shadow-sm">
+        <div className="mb-5 flex items-center justify-between">
+          <div>
+            <h2 className="text-base font-semibold">Redemptions over time</h2>
+            <p className="text-xs text-[var(--wo-muted)]">Daily, stacked by code type</p>
+          </div>
+          <div className="flex items-center gap-4 text-xs text-[var(--wo-muted)]">
+            <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm" style={{ background: COMP }} />Comp</span>
+            <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm" style={{ background: REFERRAL }} />Referral</span>
+          </div>
+        </div>
+        {days.length === 0 ? (
+          <div className="flex h-56 flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-[var(--wo-border)] text-center">
+            <p className="text-sm font-medium">No redemptions in this window{selected ? ` for ${selected}` : ""}.</p>
+            <p className="text-xs text-[var(--wo-muted)]">Fills in as users redeem comp or referral codes.</p>
+          </div>
+        ) : (
+          <TrendChart days={days} max={chartMax} />
+        )}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card
-          title="Redemptions by day"
-          right={
-            <span className="flex items-center gap-3 text-xs text-[var(--wo-muted)]">
-              <span className="flex items-center gap-1">
-                <span className="inline-block h-2 w-2 rounded-full" style={{ background: COMP }} /> Comp
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="inline-block h-2 w-2 rounded-full" style={{ background: REFERRAL }} /> Referral
-              </span>
-            </span>
-          }
-        >
-          {days.length === 0 ? (
-            <p className="text-sm text-[var(--wo-muted)]">
-              No redemptions in this window{selected ? ` for ${selected}` : ""}. Fills in as users redeem comp or
-              referral codes.
-            </p>
-          ) : (
-            <div className="space-y-2">
-              {days.map((d) => (
-                <div key={d.day} className="flex items-center gap-3 text-sm">
-                  <span className="w-24 shrink-0 tabular-nums text-[var(--wo-muted)]">{d.day}</span>
-                  <div className="flex-1">
-                    <SplitBar comp={d.comp} referral={d.referral} max={maxDay} />
-                  </div>
-                  <span className="w-8 text-right tabular-nums">{d.total}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </Card>
-
-        <Card title="By code">
+        {/* By code */}
+        <div className="rounded-2xl border border-[var(--wo-border)] bg-white p-5 shadow-sm">
+          <h2 className="mb-4 text-base font-semibold">By code</h2>
           {byCode.length === 0 ? (
             <p className="text-sm text-[var(--wo-muted)]">No redemptions to break down yet.</p>
           ) : (
-            <div className="space-y-2">
-              {byCode.map((c) => (
-                <div key={c.code} className="flex items-center gap-3 text-sm">
-                  <span className="flex w-40 shrink-0 items-center gap-2 truncate">
-                    <span className="truncate font-medium">{c.code}</span>
-                    <span className="shrink-0 text-xs text-[var(--wo-muted)]">{kindLabel(c.code_kind)}</span>
-                  </span>
-                  <div className="flex-1">
-                    <Bar value={c.n} max={maxCode} color={c.code_kind === "referral" ? REFERRAL : COMP} />
+            <div className="space-y-3.5">
+              {byCode.map((c) => {
+                const color = kindColor(c.code_kind);
+                return (
+                  <div key={c.code}>
+                    <div className="mb-1 flex items-center justify-between text-sm">
+                      <span className="flex items-center gap-2 truncate">
+                        <span className="truncate font-medium">{c.code}</span>
+                        <span
+                          className="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium uppercase"
+                          style={{ color, background: tint(color, 12) }}
+                        >
+                          {kindLabel(c.code_kind)}
+                        </span>
+                      </span>
+                      <span className="shrink-0 tabular-nums text-[var(--wo-muted)]">
+                        {c.n} · {pct(c.n, total)}%
+                      </span>
+                    </div>
+                    <div className="h-2 w-full rounded-full bg-[var(--wo-bg)]">
+                      <div className="h-2 rounded-full" style={{ width: `${(c.n / maxCode) * 100}%`, background: color }} />
+                    </div>
                   </div>
-                  <span className="w-8 text-right tabular-nums">{c.n}</span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
-        </Card>
+        </div>
+
+        {/* Referral funnel */}
+        <div className="rounded-2xl border border-[var(--wo-border)] bg-white p-5 shadow-sm">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-base font-semibold">Referral funnel</h2>
+            <span className="text-xs text-[var(--wo-muted)]">whole program · {r.days} days</span>
+          </div>
+          <div className="space-y-3">
+            <div>
+              <div className="mb-1.5 flex items-baseline justify-between text-sm">
+                <span className="font-medium">Sharers</span>
+                <span className="font-semibold tabular-nums">{sharers}</span>
+              </div>
+              <div className="h-9 w-full overflow-hidden rounded-lg" style={{ background: tint(COMP, 10) }}>
+                <div
+                  className="h-9 rounded-lg"
+                  style={{ width: sharers > 0 ? "100%" : "0%", background: `linear-gradient(90deg, ${tint(COMP, 85)}, ${COMP})` }}
+                />
+              </div>
+              <div className="mt-1 text-xs text-[var(--wo-muted)]">users who reached Invite Friends</div>
+            </div>
+
+            <div className="flex items-center justify-center py-0.5 text-[var(--wo-muted)]">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 5v14M5 12l7 7 7-7" />
+              </svg>
+            </div>
+
+            <div>
+              <div className="mb-1.5 flex items-baseline justify-between text-sm">
+                <span className="font-medium">Referral redemptions</span>
+                <span className="font-semibold tabular-nums">{refRedeemed}</span>
+              </div>
+              <div className="h-9 w-full overflow-hidden rounded-lg" style={{ background: tint(REFERRAL, 10) }}>
+                <div
+                  className="h-9 rounded-lg"
+                  style={{
+                    width: sharers > 0 && refRedeemed > 0 ? `${Math.max(4, (refRedeemed / sharers) * 100)}%` : "0%",
+                    background: `linear-gradient(90deg, ${tint(REFERRAL, 85)}, ${REFERRAL})`,
+                  }}
+                />
+              </div>
+              <div className="mt-1 text-xs text-[var(--wo-muted)]">redeemed a friend&apos;s code</div>
+            </div>
+          </div>
+
+          <div className="mt-4 flex items-center justify-between rounded-xl border border-[var(--wo-border)] bg-[var(--wo-bg)] px-4 py-3">
+            <span className="text-sm font-medium text-[var(--wo-muted)]">Conversion</span>
+            <span className="text-2xl font-semibold tabular-nums" style={{ color: REFERRAL }}>
+              {conversion == null ? "—" : `${conversion}%`}
+            </span>
+          </div>
+        </div>
       </div>
 
-      <Card
-        title="Referral funnel"
-        right={<span className="text-xs text-[var(--wo-muted)]">whole program · last {r.days} days</span>}
-      >
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <Stat label="Sharers" value={r.funnel.sharers} sub="users with a shareable code" accent="blue" />
-          <Stat
-            label="Referral redemptions"
-            value={r.funnel.referral_redemptions}
-            sub="code_kind = referral"
-            accent="teal"
-          />
-          <Stat
-            label="Conversion"
-            value={conversion == null ? "—" : pct(r.funnel.referral_redemptions, r.funnel.sharers)}
-            sub="redemptions ÷ sharers"
-            accent="green"
-          />
-        </div>
-        <p className="mt-4 text-xs text-[var(--wo-muted)]">
-          Sharers = distinct users who reached Invite Friends (<code>referral_code_created</code>). The funnel spans
-          the whole referral program and is not affected by the campaign filter above.
-        </p>
-      </Card>
-
       <p className="text-xs text-[var(--wo-muted)]">
-        Data: <code>admin_redemptions()</code> over <code>usage_events</code>. Redemption tiles and the campaign filter
-        cover both comp and referral codes; the funnel is referral-only.
+        Data: <code className="rounded bg-[var(--wo-bg)] px-1 py-0.5">admin_redemptions()</code> over{" "}
+        <code className="rounded bg-[var(--wo-bg)] px-1 py-0.5">usage_events</code>. Redemption tiles and the campaign
+        filter cover both comp and referral codes; the funnel is referral-only and spans the whole program.
       </p>
     </div>
   );
