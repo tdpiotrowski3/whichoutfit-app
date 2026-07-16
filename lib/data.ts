@@ -324,3 +324,42 @@ export async function getGrowth(days = 30): Promise<Growth> {
   if (error) throw error;
   return data as Growth;
 }
+
+// ── Redemptions & referral funnel ─────────────────────────────────────────────
+// Backed by admin_redemptions() over the two server-written usage_events:
+//   code_redeemed         metadata = { code, code_kind ('comp'|'referral'), granted_days }
+//   referral_code_created metadata = { code }
+// Seed/founder accounts are excluded (same list as admin_growth), so numbers stay
+// zero until real users redeem — expected, like the rest of the growth funnel.
+
+export type RedemptionsDayRow = { day: string; comp: number; referral: number; total: number };
+export type RedemptionCode = { code: string; code_kind: string | null; n: number };
+
+export type Redemptions = {
+  days: number;
+  /** Echoed campaign filter (null = all codes). */
+  code_filter: string | null;
+  total_redemptions: number;
+  /** Sum of granted_days across the filtered redemptions (premium days handed out). */
+  granted_days_total: number;
+  by_kind: { comp: number; referral: number };
+  by_day: RedemptionsDayRow[];
+  by_code: RedemptionCode[];
+  /** All codes seen in the window (unfiltered) — powers the campaign filter chips. */
+  codes: RedemptionCode[];
+  /**
+   * Of the (campaign-filtered) free-code redeemers, how many now hold a PAID App
+   * Store subscription — i.e. they continued past the free weeks. `converted_paid`
+   * keys off entitlements.premium_original_transaction_id (comp grants never carry
+   * one), so it counts genuine paying customers.
+   */
+  retention: { redeemers: number; converted_paid: number };
+  /** Program-level funnel (not campaign-filtered). */
+  funnel: { sharers: number; referral_redemptions: number };
+};
+
+export async function getRedemptions(days = 30, code: string | null = null): Promise<Redemptions> {
+  const { data, error } = await admin().rpc("admin_redemptions", { days, p_code: code });
+  if (error) throw error;
+  return data as Redemptions;
+}

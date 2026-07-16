@@ -21,60 +21,178 @@
 
 <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
 <style>
-:root{--blue:#2E6BFF;--teal:#0FA3A3;--ink:#0f172a;--muted:#64748b;--bg:#f8fafc;--card:#fff;--line:#e2e8f0}
-*{box-sizing:border-box}
-body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--ink)}
-header{padding:18px;text-align:center}
-.brand{font-weight:800;color:#2563eb;font-size:18px;text-decoration:none}
-main{max-width:520px;margin:0 auto;padding:0 18px 48px}
-.hero{margin-top:8px;border-radius:24px;padding:30px 22px;text-align:center;color:#fff;background:linear-gradient(135deg,var(--blue) 0%,var(--teal) 100%);box-shadow:0 10px 30px rgba(46,107,255,.25)}
-.hero .gift{font-size:46px;line-height:1}
-.hero h1{font-size:26px;font-weight:800;margin:12px 0 6px}
-.hero p{font-size:15px;opacity:.95;margin:0}
-.codewrap{margin:24px 0 8px;text-align:center}
-.codelabel{font-size:12px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
-.code{margin-top:8px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:34px;font-weight:800;letter-spacing:.06em;color:var(--ink)}
-.copy{margin-top:10px;background:#eef2ff;color:#2563eb;border:0;border-radius:12px;padding:10px 18px;font-weight:700;font-size:14px;cursor:pointer}
-.copy:active{transform:scale(.97)}
-.cta{display:block;width:100%;margin-top:20px;background:#2563eb;color:#fff;font-weight:800;font-size:17px;text-decoration:none;text-align:center;padding:16px;border-radius:16px;border:0;cursor:pointer}
-.cta.alt{background:#fff;color:#1f2937;border:1px solid var(--line);margin-top:12px;font-size:15px;font-weight:700}
-.steps{margin-top:28px;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px 20px}
-.steps h2{font-size:15px;font-weight:800;margin:0 0 12px}
-.step{display:flex;gap:12px;align-items:flex-start;margin:12px 0;font-size:15px;color:#1f2937}
-.num{flex:0 0 auto;width:24px;height:24px;border-radius:12px;color:#fff;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--blue),var(--teal))}
-footer{text-align:center;color:var(--muted);margin-top:30px;font-size:14px}
-footer a{color:#2563eb;text-decoration:none;font-weight:600}
+/* WhichOutfit — invite / redeem page. Brand tokens mirror the marketing site
+   (style.css) and the iOS app: light canvas, blue→teal gradient, ink accents. */
+:root{
+  --blue:#2E6BFF; --teal:#0FA3A3; --green:#16B981;
+  --grad:linear-gradient(135deg,#2E6BFF 0%,#0FA3A3 100%);
+  --ink:#10141B; --muted:#5C6B7A; --bg:#F5F7FB; --card:#FFFFFF; --line:#E2E8F0;
+  --dark:#0D1117; --dark-t2:#9AA7B6;
+  --r-md:14px; --r-lg:20px; --r-xl:28px; --pill:999px;
+  --ease:cubic-bezier(.2,0,0,1);
+  --shadow:0 1px 2px rgba(16,20,27,.04),0 12px 34px rgba(16,20,27,.08);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',Roboto,system-ui,sans-serif;
+  background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;line-height:1.5}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer;border:none;background:none}
+
+/* ambient brand glow behind the page */
+.bg-orbs{position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0}
+.bg-orbs::before,.bg-orbs::after{content:'';position:absolute;border-radius:50%}
+.bg-orbs::before{width:560px;height:560px;top:-240px;left:-160px;background:radial-gradient(circle,rgba(46,107,255,.14),transparent 66%)}
+.bg-orbs::after{width:520px;height:520px;bottom:-240px;right:-160px;background:radial-gradient(circle,rgba(15,163,163,.13),transparent 66%)}
+
+header{position:relative;z-index:1;padding:22px 18px 4px;text-align:center}
+.brand{display:inline-flex;align-items:center;gap:8px;font-weight:800;font-size:1.05rem;letter-spacing:-.02em;color:var(--ink)}
+.brand .logo{width:26px;height:26px;border-radius:8px;background:var(--grad);box-shadow:0 4px 12px rgba(46,107,255,.34)}
+
+main{position:relative;z-index:1;max-width:480px;margin:0 auto;padding:14px 18px 56px}
+
+/* entrance motion */
+.reveal{opacity:0;transform:translateY(16px);animation:rise .7s var(--ease) forwards}
+.d1{animation-delay:.05s}.d2{animation-delay:.13s}.d3{animation-delay:.22s}.d4{animation-delay:.32s}.d5{animation-delay:.42s}
+@keyframes rise{to{opacity:1;transform:none}}
+@keyframes floaty{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-9px) rotate(3deg)}}
+
+/* ── HERO ── */
+.hero{position:relative;overflow:hidden;border-radius:var(--r-xl);padding:38px 26px 30px;text-align:center;color:#fff;
+  background:var(--grad);box-shadow:0 18px 46px rgba(46,107,255,.32),inset 0 1px 0 rgba(255,255,255,.22)}
+.hero::before{content:'';position:absolute;inset:0;background:
+  radial-gradient(420px 200px at 50% -30%,rgba(255,255,255,.28),transparent 70%),
+  radial-gradient(300px 240px at 110% 120%,rgba(255,255,255,.12),transparent 70%);pointer-events:none}
+.hero .eyebrow{position:relative;display:inline-flex;align-items:center;gap:7px;font-size:.72rem;font-weight:700;
+  letter-spacing:.12em;text-transform:uppercase;color:#fff;background:rgba(255,255,255,.16);
+  border:1px solid rgba(255,255,255,.28);padding:6px 13px;border-radius:var(--pill);margin-bottom:18px}
+.hero .gift{position:relative;font-size:52px;line-height:1;filter:drop-shadow(0 10px 18px rgba(0,0,0,.22));animation:floaty 5s var(--ease) infinite}
+.hero h1{position:relative;font-size:1.85rem;font-weight:900;letter-spacing:-.03em;margin:14px 0 8px;text-wrap:balance}
+.hero .sub{position:relative;font-size:.98rem;line-height:1.55;color:rgba(255,255,255,.94);max-width:330px;margin:0 auto}
+
+/* reward chips */
+.rewards{position:relative;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:22px}
+.reward{display:flex;align-items:center;gap:9px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.26);
+  border-radius:var(--r-md);padding:10px 14px;text-align:left}
+.reward .ri{width:30px;height:30px;border-radius:9px;background:rgba(255,255,255,.92);display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0}
+.reward b{display:block;font-size:.86rem;font-weight:800;line-height:1.1}
+.reward span{display:block;font-size:.7rem;color:rgba(255,255,255,.85)}
+
+/* ── CODE "PASS" TICKET ── */
+.pass{position:relative;margin-top:18px;background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);
+  box-shadow:var(--shadow);padding:22px 24px 24px;text-align:center}
+.pass[hidden]{display:none}
+/* perforation notches on the sides */
+.pass::before,.pass::after{content:'';position:absolute;top:50%;width:22px;height:22px;border-radius:50%;background:var(--bg);
+  border:1px solid var(--line);transform:translateY(-50%)}
+.pass::before{left:-12px}.pass::after{right:-12px}
+.codelabel{font-size:.7rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.code{margin-top:10px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:2.05rem;font-weight:800;
+  letter-spacing:.08em;color:var(--ink);word-break:break-all;
+  background:var(--grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.perf{border:none;border-top:1.5px dashed var(--line);margin:18px -8px 16px}
+.copy{display:inline-flex;align-items:center;gap:8px;background:rgba(46,107,255,.08);color:#2456D6;
+  border-radius:var(--pill);padding:11px 20px;font-weight:700;font-size:.9rem;transition:transform .12s,background .2s}
+.copy:hover{background:rgba(46,107,255,.13)}
+.copy:active{transform:scale(.96)}
+.copy.done{background:rgba(22,185,129,.13);color:#0F9D68}
+
+/* ── CTA BUTTONS ── */
+.cta{display:flex;align-items:center;justify-content:center;gap:11px;width:100%;margin-top:18px;
+  background:var(--ink);color:#fff;font-weight:800;font-size:1.06rem;text-align:center;padding:17px;
+  border-radius:var(--r-md);box-shadow:0 10px 28px rgba(16,20,27,.22);transition:transform .15s,box-shadow .2s}
+.cta:hover{transform:translateY(-2px);box-shadow:0 16px 38px rgba(16,20,27,.3)}
+.cta:active{transform:scale(.99)}
+.cta .apple{width:19px;height:19px;fill:#fff;flex-shrink:0}
+.cta.alt{background:var(--card);color:var(--ink);border:1px solid var(--line);box-shadow:none;margin-top:11px;font-size:.94rem;font-weight:700}
+.cta.alt:hover{border-color:rgba(16,20,27,.28);transform:translateY(-1px)}
+.cta.alt[hidden]{display:none}
+
+/* ── STEPS ── */
+.steps{margin-top:26px;background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);padding:22px 22px 8px;box-shadow:var(--shadow)}
+.steps h2{font-size:.95rem;font-weight:800;letter-spacing:-.01em;margin-bottom:6px}
+.steps .lead{font-size:.82rem;color:var(--muted);margin-bottom:16px}
+.step{position:relative;display:flex;gap:14px;align-items:flex-start;padding-bottom:20px}
+.step:not(:last-child)::before{content:'';position:absolute;left:14px;top:30px;bottom:2px;width:2px;
+  background:linear-gradient(var(--blue),var(--teal));opacity:.28}
+.num{flex:0 0 auto;width:28px;height:28px;border-radius:50%;color:#fff;font-weight:800;font-size:.82rem;
+  display:flex;align-items:center;justify-content:center;background:var(--grad);box-shadow:0 4px 12px rgba(46,107,255,.3);z-index:1}
+.step .txt{font-size:.92rem;color:#334155;padding-top:3px;line-height:1.5}
+.step .txt b{color:var(--ink);font-weight:700}
+
+/* ── TRUST ── */
+.trust{display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap;margin-top:20px;
+  font-size:.78rem;color:var(--muted)}
+.trust .dot{width:3px;height:3px;border-radius:50%;background:currentColor;opacity:.5}
+.trust .stars{color:#F0A954;letter-spacing:1px}
+
+footer{text-align:center;color:var(--muted);margin-top:28px;font-size:.82rem}
+footer a{color:#2456D6;font-weight:600}
+footer .sep{opacity:.5;margin:0 6px}
+
+@media(max-width:400px){
+  .hero{padding:32px 20px 26px}
+  .hero h1{font-size:1.6rem}
+  .code{font-size:1.7rem}
+  .reward{padding:9px 12px}
+}
+@media(prefers-reduced-motion:reduce){
+  .reveal{animation:none;opacity:1;transform:none}
+  .hero .gift{animation:none}
+}
 </style>
 </head>
 <body>
-<header><a class="brand" href="https://whichoutfit.app">WhichOutfit</a></header>
+<div class="bg-orbs" aria-hidden="true"></div>
+
+<header><a class="brand" href="https://whichoutfit.app"><span class="logo" aria-hidden="true"></span>WhichOutfit</a></header>
+
 <main>
-  <section class="hero">
-    <div class="gift">🎁</div>
-    <h1>You've got a gift</h1>
-    <p>A friend invited you to WhichOutfit — redeem their code for <strong>2 weeks of Premium + 15 free photo cleanups</strong>.</p>
+  <section class="hero reveal d1">
+    <span class="eyebrow">🎁 A friend invited you</span>
+    <div class="gift" aria-hidden="true">🎁</div>
+    <h1>Your first 2 weeks are on us</h1>
+    <p class="sub">Redeem your invite to unlock WhichOutfit Premium — free.</p>
+    <div class="rewards">
+      <div class="reward"><span class="ri" aria-hidden="true">✨</span><span><b>2 weeks Premium</b><span>full access</span></span></div>
+      <div class="reward"><span class="ri" aria-hidden="true">🧼</span><span><b>15 photo cleanups</b><span>on the house</span></span></div>
+    </div>
   </section>
 
-  <div class="codewrap" id="codewrap" hidden>
-    <div class="codelabel">Your code</div>
+  <div class="pass reveal d2" id="codewrap" hidden>
+    <div class="codelabel">Your invite code</div>
     <div class="code" id="code">—</div>
-    <button class="copy" id="copy" type="button">Copy code</button>
+    <hr class="perf"/>
+    <button class="copy" id="copy" type="button">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+      <span class="label">Copy code</span>
+    </button>
   </div>
 
-  <a class="cta" id="getApp" href="https://apps.apple.com/us/app/whichoutfit/id6778094125">Get WhichOutfit — free</a>
-  <button class="cta alt" id="openApp" type="button" hidden>Already have the app? Open it</button>
+  <a class="cta reveal d3" id="getApp" href="https://apps.apple.com/us/app/whichoutfit/id6778094125">
+    <svg class="apple" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.05 12.7c-.03-2.6 2.13-3.85 2.23-3.91-1.22-1.78-3.11-2.02-3.78-2.05-1.61-.16-3.14.94-3.96.94-.81 0-2.07-.92-3.4-.9-1.75.03-3.36 1.02-4.26 2.58-1.82 3.15-.47 7.82 1.3 10.38.86 1.26 1.89 2.66 3.24 2.61 1.3-.05 1.79-.84 3.36-.84 1.57 0 2.01.84 3.39.81 1.4-.02 2.29-1.28 3.15-2.54 1-1.45 1.41-2.86 1.43-2.93-.03-.01-2.74-1.05-2.77-4.16zM14.53 5.13c.71-.86 1.19-2.06 1.06-3.25-1.02.04-2.26.68-3 1.54-.66.76-1.24 1.98-1.08 3.15 1.14.09 2.31-.58 3.02-1.44z"/></svg>
+    <span>Get WhichOutfit — free</span>
+  </a>
+  <button class="cta alt reveal d3" id="openApp" type="button" hidden>Already have the app? Open it →</button>
 
-  <section class="steps">
+  <section class="steps reveal d4">
     <h2>How to redeem</h2>
-    <div class="step"><span class="num">1</span><span>Download WhichOutfit and create your account.</span></div>
-    <div class="step"><span class="num">2</span><span>On the last onboarding screen (or <strong>More → Redeem a Code</strong>), tap <strong>Have a code?</strong></span></div>
-    <div class="step"><span class="num">3</span><span>Your code is copied to your clipboard — just paste it and tap Redeem. Premium unlocks instantly. 🎉</span></div>
+    <p class="lead">Takes under a minute — Premium unlocks instantly.</p>
+    <div class="step"><span class="num">1</span><span class="txt">Download WhichOutfit and create your account.</span></div>
+    <div class="step"><span class="num">2</span><span class="txt">On the last onboarding screen (or <b>More → Redeem a Code</b>), tap <b>Have a code?</b></span></div>
+    <div class="step"><span class="num">3</span><span class="txt">Your code is already copied — paste it, tap Redeem, and Premium unlocks. 🎉</span></div>
   </section>
 
-  <footer>
-    <a href="https://whichoutfit.app">whichoutfit.app</a> ·
-    <a href="https://whichoutfit.app/privacy.html">Privacy</a> ·
-    <a href="https://whichoutfit.app/terms.html">Terms</a>
+  <div class="trust reveal d5">
+    <span class="stars" aria-hidden="true">★★★★★</span>
+    <span class="dot"></span><span>No credit card</span>
+    <span class="dot"></span><span>Cancel anytime</span>
+  </div>
+
+  <footer class="reveal d5">
+    <a href="https://whichoutfit.app">whichoutfit.app</a>
+    <span class="sep">·</span><a href="https://whichoutfit.app/privacy.html">Privacy</a>
+    <span class="sep">·</span><a href="https://whichoutfit.app/terms.html">Terms</a>
   </footer>
 </main>
 
@@ -88,6 +206,7 @@ footer a{color:#2563eb;text-decoration:none;font-weight:600}
   var wrap = document.getElementById('codewrap');
   var codeEl = document.getElementById('code');
   var copyBtn = document.getElementById('copy');
+  var copyLabel = copyBtn.querySelector('.label');
   var openApp = document.getElementById('openApp');
 
   if(code){
@@ -103,7 +222,11 @@ footer a{color:#2563eb;text-decoration:none;font-weight:600}
   }
 
   copyBtn.addEventListener('click', function(){
-    var done = function(){ copyBtn.textContent = 'Copied!'; setTimeout(function(){ copyBtn.textContent = 'Copy code'; }, 1500); };
+    var done = function(){
+      copyBtn.classList.add('done');
+      copyLabel.textContent = 'Copied!';
+      setTimeout(function(){ copyBtn.classList.remove('done'); copyLabel.textContent = 'Copy code'; }, 1600);
+    };
     if(navigator.clipboard){ navigator.clipboard.writeText(code).then(done, done); }
     else { done(); }
   });
