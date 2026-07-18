@@ -34,6 +34,10 @@ yarn-error.log*
 .env*
 !.env.example
 
+# secrets (Google Play service-account key for the google-play MCP server, etc.)
+/.secrets
+*service-account*.json
+
 # vercel
 .vercel
 

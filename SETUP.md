@@ -110,6 +110,43 @@ flag and redeploy to bring it back. Browser-side, RLS-protected — the two
 
 > The service-role key bypasses RLS — it lives ONLY in server env, never shipped to the browser. All Supabase reads happen in Server Components / Route Handlers.
 
+## Google Play Console MCP server (dev tooling, optional)
+
+`.mcp.json` wires up a **`google-play`** [MCP](https://modelcontextprotocol.io) server
+([`google-play-mcp`](https://github.com/Jang-myoung-gyoon/google-play-mcp), Android
+Publisher API v3) so an MCP client — Claude Code, or any editor that reads `.mcp.json` —
+can query and manage the Android app (currently in closed testing). It's **dev-only
+tooling**: it is not imported by the Next.js app, has nothing to do with Vercel, and is
+inert until the two vars below are set. The server is Python-based and bootstraps its own
+venv on first run via `npx`, so you need `python3` + `pip` on PATH.
+
+**What it can do** — read: `get_app_info`, `list_inapp_products`, `list_subscriptions`;
+**write** (mutates Play Console): `deploy_internal` / `deploy_track` (upload an AAB),
+`promote_track_release` (move a release between tracks), and in-app-product create/
+activate/deactivate. ⚠️ The write tools can push a release to **any** track including
+**production** — while Android is closed-testing-only, treat `deploy_track` /
+`promote_track_release` with care and stick to the `internal` track.
+
+| Var | What | Where to get it |
+|---|---|---|
+| `GOOGLE_PLAY_KEY_FILE` | path to the Google Cloud **service-account JSON key** (default `.secrets/google-play-service-account.json`, git-ignored) | see below |
+| `GOOGLE_PLAY_PACKAGE_NAME` | the Android app id, e.g. `com.whichoutfit.app` | Play Console → your app → Dashboard (or the native Android repo's `applicationId`) |
+
+**One-time setup (needs a human — creating the key and granting Play access require
+your Google credentials):**
+1. **Google Cloud Console** → the project linked to Play → *APIs & Services* → enable the
+   **Google Play Android Developer API**.
+2. *IAM & Admin → Service Accounts* → create a service account → *Keys* → *Add key →
+   JSON*. Save it as `.secrets/google-play-service-account.json` (git-ignored) or point
+   `GOOGLE_PLAY_KEY_FILE` elsewhere.
+3. **Play Console** → *Users & permissions* → *Invite new users* → add that service
+   account's email and grant it access to the WhichOutfit app (Releases permissions for
+   deploy; read is enough for the `get_*`/`list_*` tools). Permission changes can take a
+   few minutes to propagate.
+4. Set `GOOGLE_PLAY_KEY_FILE` and `GOOGLE_PLAY_PACKAGE_NAME` (e.g. in `.env.local`, or
+   exported in your shell — the MCP client expands them into `.mcp.json`). In Claude Code,
+   approve the project MCP server when prompted, then `/mcp` to confirm it's connected.
+
 ## Deploy to Vercel
 1. Push this folder to a new GitHub repo (e.g. `whichoutfit-app`).
 2. Vercel → Add New Project → import that repo.

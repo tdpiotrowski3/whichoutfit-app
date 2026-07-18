@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "google-play": {
+      "command": "npx",
+      "args": ["-y", "google-play-mcp", "start"],
+      "env": {
+        "GOOGLE_PLAY_KEY_FILE": "${GOOGLE_PLAY_KEY_FILE:-.secrets/google-play-service-account.json}",
+        "GOOGLE_PLAY_PACKAGE_NAME": "${GOOGLE_PLAY_PACKAGE_NAME}"
+      }
+    }
+  }
+}
