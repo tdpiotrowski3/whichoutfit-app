@@ -1,5 +1,6 @@
 import { getUsers } from "@/lib/data";
 import { Card } from "@/components/ui";
+import { GrantPromoButton } from "./GrantPromoButton";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +28,7 @@ export default async function UsersPage() {
       <div>
         <h1 className="text-2xl font-semibold">Users</h1>
         <p className="text-sm text-[var(--wo-muted)]">{users.length} total · {premiumCount} premium. ⚠️ Apple private-relay emails may be unreachable for marketing.</p>
+        <p className="mt-1 text-xs text-[var(--wo-muted)]">Spot a low-adoption user (0 AI calls / empty closet)? Hit <strong>Give 2 weeks free</strong> to gift 14 days Premium + 15 credits — they get an in-app popup and can share for 2 more weeks.</p>
       </div>
 
       <Card>
@@ -41,6 +43,7 @@ export default async function UsersPage() {
                 <th className="py-2 pr-4 font-medium text-right">AI calls</th>
                 <th className="py-2 pr-4 font-medium text-right">Stylist/mo</th>
                 <th className="py-2 pr-4 font-medium text-right">Closet</th>
+                <th className="py-2 pl-4 font-medium text-right">Grant</th>
               </tr>
             </thead>
             <tbody>
@@ -59,10 +62,11 @@ export default async function UsersPage() {
                   <td className="py-2.5 pr-4 text-right">{u.ai_calls}</td>
                   <td className="py-2.5 pr-4 text-right">{u.free_used}</td>
                   <td className="py-2.5 pr-4 text-right">{u.closet_items}</td>
+                  <td className="py-2.5 pl-4 text-right"><GrantPromoButton userId={u.id} premium={u.premium} /></td>
                 </tr>
               ))}
               {users.length === 0 ? (
-                <tr><td colSpan={7} className="py-6 text-center text-[var(--wo-muted)]">No users yet.</td></tr>
+                <tr><td colSpan={8} className="py-6 text-center text-[var(--wo-muted)]">No users yet.</td></tr>
               ) : null}
             </tbody>
           </table>
