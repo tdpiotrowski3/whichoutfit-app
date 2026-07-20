@@ -4,7 +4,14 @@ on:
   push:
     branches: [main]
   pull_request:
+    branches: [main]
   workflow_dispatch:
+
+# A new push to a PR/branch cancels the previous still-running build instead of
+# letting both consume Actions minutes.
+concurrency:
+  group: web-build-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
