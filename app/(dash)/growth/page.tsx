@@ -18,6 +18,19 @@ const STEP_LABELS: Record<string, string> = {
   quiz_done: "Finished style quiz",
 };
 
+// Where the paywall fired (mirrors the client's paywall_shown surface tags).
+const SURFACE_LABELS: Record<string, string> = {
+  ai_limit: "Hit AI limit",
+  image_limit: "Hit image limit",
+  tagging_limit: "Hit tagging limit",
+  tryon: "Try-on",
+  cleanup: "Photo cleanup",
+  bulk: "Bulk add",
+  moment_score: "High-score moment",
+  moment_color: "Color-season moment",
+  unknown: "Other",
+};
+
 export default async function GrowthPage() {
   let g;
   try {
@@ -38,6 +51,19 @@ export default async function GrowthPage() {
   const choices = Object.entries(g.start_choices).sort((a, b) => b[1] - a[1]);
   const totalChoices = choices.reduce((sum, [, n]) => sum + n, 0);
   const steps = Object.entries(g.onboarding_steps).sort((a, b) => b[1] - a[1]);
+
+  // Activation funnel: each stage as a share of this window's signups.
+  const funnel = [
+    { label: "Signups", n: g.signups_window, activation: false },
+    { label: "Added first item", n: g.first_item_users, activation: false },
+    { label: "First AI moment", n: g.first_ai_users, activation: true },
+    { label: "Premium (active)", n: g.premium_real, activation: false },
+  ];
+  const funnelMax = Math.max(1, g.signups_window);
+  const surfaces = Object.entries(g.paywall_by_surface).sort((a, b) => b[1] - a[1]);
+  const surfaceMax = Math.max(1, ...surfaces.map(([, n]) => n));
+  const funnelInstrumented =
+    g.first_item_users + g.first_ai_users + g.paywall_shown_total + g.premium_activated_window > 0;
 
   return (
     <div className="space-y-6">
@@ -65,6 +91,30 @@ export default async function GrowthPage() {
         />
         <Stat label="Premium (real)" value={g.premium_real} sub="active, seeds excluded" accent="green" />
       </div>
+
+      <Card title="Activation funnel">
+        <div className="space-y-2">
+          {funnel.map((s) => (
+            <div key={s.label} className="flex items-center gap-3 text-sm">
+              <span className="w-40 shrink-0 text-[var(--wo-muted)]">{s.label}</span>
+              <div className="flex-1">
+                <Bar value={s.n} max={funnelMax} color={s.activation ? "var(--wo-green)" : "var(--wo-blue)"} />
+              </div>
+              <span className="w-10 text-right tabular-nums">{s.n}</span>
+              <span className="w-12 text-right tabular-nums text-[var(--wo-muted)]">
+                {pct(s.n, g.signups_window)}
+              </span>
+            </div>
+          ))}
+        </div>
+        {!funnelInstrumented && (
+          <p className="mt-3 text-xs text-[var(--wo-muted)]">
+            First-item, first-AI and paywall steps populate once installs ship the funnel-instrumented
+            build (<code>first_item</code> / <code>first_ai</code> / <code>paywall_shown</code> from the
+            track client) — same as second sessions. Signups &amp; Premium are live now.
+          </p>
+        )}
+      </Card>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card title="Signups by day">
@@ -103,6 +153,30 @@ export default async function GrowthPage() {
         </Card>
       </div>
 
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card title="Paywall shown by surface">
+          {surfaces.length === 0 ? (
+            <p className="text-sm text-[var(--wo-muted)]">
+              No paywall views in this window yet — populates once the instrumented build ships.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {surfaces.map(([s, n]) => (
+                <div key={s} className="flex items-center gap-3 text-sm">
+                  <span className="w-44 shrink-0 text-[var(--wo-muted)]">{SURFACE_LABELS[s] ?? s}</span>
+                  <div className="flex-1"><Bar value={n} max={surfaceMax} color="var(--wo-teal)" /></div>
+                  <span className="w-10 text-right tabular-nums">{n}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+        <div className="grid grid-cols-2 gap-4 content-start">
+          <Stat label="Paywalls shown" value={g.paywall_shown_total} sub={`last ${g.days}d, real users`} accent="teal" />
+          <Stat label="Upgrades" value={g.premium_activated_window} sub="free→premium in-session" accent="green" />
+        </div>
+      </div>
+
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Stat label="Referral redemptions" value={g.referral_redemptions} accent="teal" />
         <Stat label="Activated (any time)" value={g.activated_ever} sub="of this window's signups" />
@@ -116,8 +190,10 @@ export default async function GrowthPage() {
 
       <p className="text-xs text-[var(--wo-muted)]">
         Data: <code>admin_growth()</code> over <code>usage_events</code> (<code>ai_call</code> from the AI proxy;{" "}
-        <code>app_open</code> / <code>onboarding_step</code> from the <code>track</code> function). Second-session and
-        onboarding numbers populate as users install builds ≥ the one shipping funnel instrumentation.
+        <code>app_open</code> / <code>onboarding_step</code> / <code>first_item</code> / <code>first_ai</code> /{" "}
+        <code>paywall_shown</code> / <code>premium_activated</code> from the <code>track</code> function). The
+        activation, second-session, and revenue-funnel numbers populate as users install builds ≥ the one
+        shipping funnel instrumentation; Signups and active Premium are live now.
       </p>
     </div>
   );
