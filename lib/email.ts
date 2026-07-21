@@ -44,17 +44,70 @@ function unsubscribeUrl(baseUrl: string, token: string): string {
   return `${baseUrl}/api/unsubscribe?token=${encodeURIComponent(token)}`;
 }
 
-/** Wrap the admin's message with the compliant footer (postal address + unsubscribe). */
-function wrap(bodyHtml: string, unsubUrl: string, address: string): string {
-  return `<div style="font-family:system-ui,-apple-system,sans-serif;font-size:15px;line-height:1.6;color:#10141b">
+// Brand tokens mirrored from public/style.css (blue→teal gradient, ink text,
+// light canvas). Email HTML must be table-based with inline styles: many clients
+// (notably Outlook) strip <style> blocks, flexbox, and unknown CSS.
+const FONT = "'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
+const GRADIENT = "linear-gradient(135deg,#2E6BFF 0%,#0FA3A3 100%)";
+
+/**
+ * Wrap the admin's message in the WhichOutfit-branded shell (logo header,
+ * gradient accent, surface card) plus the CAN-SPAM footer (postal address +
+ * unsubscribe). `baseUrl` serves the hosted app icon used as the logo mark.
+ */
+function wrap(bodyHtml: string, unsubUrl: string, address: string, baseUrl: string): string {
+  const logo = `${baseUrl}/apple-touch-icon.png`;
+  return `<!--[if mso]><style>body,table,td{font-family:Arial,Helvetica,sans-serif !important}</style><![endif]-->
+<div style="display:none;max-height:0;overflow:hidden;opacity:0">WhichOutfit — the digital closet that builds your outfits for you.</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F5F7FB;margin:0;padding:0;width:100%">
+  <tr>
+    <td align="center" style="padding:32px 16px">
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;background:#FFFFFF;border:1px solid #E2E8F0;border-radius:20px;overflow:hidden">
+        <!-- gradient accent bar -->
+        <tr><td style="height:5px;line-height:5px;font-size:0;background:#2E6BFF;background-image:${GRADIENT}">&nbsp;</td></tr>
+        <!-- header / logo -->
+        <tr>
+          <td style="padding:26px 32px 22px 32px;border-bottom:1px solid #EEF2F8">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td style="padding-right:12px;vertical-align:middle">
+                  <img src="${logo}" width="40" height="40" alt="WhichOutfit" style="display:block;width:40px;height:40px;border-radius:11px" />
+                </td>
+                <td style="vertical-align:middle">
+                  <span style="font-family:${FONT};font-size:22px;font-weight:800;letter-spacing:-.02em;color:#10141B">Which<span style="color:#0FA3A3">Outfit</span></span>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <!-- body -->
+        <tr>
+          <td style="padding:34px 32px 30px 32px;font-family:${FONT};font-size:15px;line-height:1.65;color:#10141B">
 ${bodyHtml}
-<hr style="margin:28px 0 12px;border:none;border-top:1px solid #e2e8f0" />
-<p style="font-size:12px;color:#5c6b7a;line-height:1.5">
-You're receiving this because you opted in to WhichOutfit emails.
-<a href="${unsubUrl}" style="color:#5c6b7a">Unsubscribe</a>.<br/>
-${escapeHtml(address)}
-</p>
-</div>`;
+          </td>
+        </tr>
+        <!-- footer -->
+        <tr>
+          <td style="padding:22px 32px 28px 32px;border-top:1px solid #EEF2F8;background:#F5F7FB">
+            <p style="margin:0;font-family:${FONT};font-size:12px;line-height:1.6;color:#5C6B7A">
+              You're receiving this because you opted in to WhichOutfit emails.
+              <a href="${unsubUrl}" style="color:#2E6BFF;text-decoration:underline">Unsubscribe</a>.<br/>
+              ${escapeHtml(address)}
+            </p>
+          </td>
+        </tr>
+      </table>
+      <!-- wordmark under the card -->
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px">
+        <tr>
+          <td align="center" style="padding:18px 16px 4px 16px;font-family:${FONT};font-size:12px;color:#9AA7B6">
+            Which<span style="color:#5C6B7A">Outfit</span> · your smart digital closet
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>`;
 }
 
 /**
@@ -81,7 +134,7 @@ export async function sendMarketing(opts: {
         from: cfg.from,
         to: r.email,
         subject: opts.subject,
-        html: wrap(opts.bodyHtml, unsubUrl, cfg.address),
+        html: wrap(opts.bodyHtml, unsubUrl, cfg.address, cfg.baseUrl),
         headers: {
           "List-Unsubscribe": `<${unsubUrl}>`,
           "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
