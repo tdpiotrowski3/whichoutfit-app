@@ -92,7 +92,7 @@ ${bodyHtml}
             <p style="margin:0;font-family:${FONT};font-size:12px;line-height:1.6;color:#5C6B7A">
               You're receiving this because you opted in to WhichOutfit emails.
               <a href="${unsubUrl}" style="color:#2E6BFF;text-decoration:underline">Unsubscribe</a>.<br/>
-              ${escapeHtml(address)}
+              <span style="color:#C4CDD8">${escapeHtml(address)}</span>
             </p>
           </td>
         </tr>
@@ -101,7 +101,7 @@ ${bodyHtml}
       <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px">
         <tr>
           <td align="center" style="padding:18px 16px 4px 16px;font-family:${FONT};font-size:12px;color:#9AA7B6">
-            Which<span style="color:#5C6B7A">Outfit</span> · your smart digital closet
+            Which<span style="color:#5C6B7A">Outfit</span> &middot; your smart digital closet
           </td>
         </tr>
       </table>
