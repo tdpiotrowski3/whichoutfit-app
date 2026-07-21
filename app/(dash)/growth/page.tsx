@@ -88,6 +88,10 @@ export default async function GrowthPage() {
   const kFactor = g.signups_window > 0 ? referralInstalls / g.signups_window : 0;
   const perSharer = sharers > 0 ? referralInstalls / sharers : 0;
 
+  // Revenue funnel: paywall impressions broken down by delight-moment surface.
+  const paywallSurfaces = Object.entries(g.paywall_by_surface).sort((a, b) => b[1] - a[1]);
+  const maxPaywallSurface = Math.max(1, ...paywallSurfaces.map(([, n]) => n));
+
   return (
     <div className="space-y-6">
       <div>
@@ -123,13 +127,16 @@ export default async function GrowthPage() {
         </p>
         <div className="space-y-3">
           <FunnelStage label="Signed up" value={g.signups_window} top={g.signups_window} prev={null} color="var(--wo-blue)" />
-          <FunnelStage label="First AI moment (24h)" value={g.activated_day1} top={g.signups_window} prev={g.signups_window} color="var(--wo-teal)" />
-          <FunnelStage label="Activated (any time)" value={g.activated_ever} top={g.signups_window} prev={g.signups_window} color="var(--wo-teal)" />
+          <FunnelStage label="Added first item" value={g.first_item_users} top={g.signups_window} prev={g.signups_window} color="var(--wo-teal)" />
+          <FunnelStage label="First AI moment" value={g.activated_ever} top={g.signups_window} prev={g.signups_window} color="var(--wo-teal)" />
           <FunnelStage label="Came back (2nd session)" value={g.second_session_users} top={g.signups_window} prev={g.activated_ever} color="var(--wo-green)" />
         </div>
         <p className="mt-4 text-xs text-[var(--wo-muted)]">
-          Second-session counts need <code>app_open</code> events from the track client — they fill
-          in as users install funnel-instrumented builds. North star: <strong>40%+ first-AI on day 1</strong>.
+          Day-1 activation: <strong>{pct(g.activated_day1, g.signups_window)}</strong> hit AI within 24h
+          (north star 40%+). <code>first_item</code> and second-session steps need the track client — they
+          fill in as users install funnel-instrumented builds; <code>First AI moment</code> already counts
+          real <code>ai_call</code>s, so a lower &ldquo;first item&rdquo; above it just means older builds
+          skipped that event.
         </p>
       </Card>
 
@@ -207,6 +214,42 @@ export default async function GrowthPage() {
             accent={convertedPaid > 0 ? "green" : "muted"}
           />
         </div>
+      </Card>
+
+      <Card title="Revenue funnel">
+        <p className="mb-4 text-sm text-[var(--wo-muted)]">
+          Where buying pressure lands. Paywall impressions → activations in this window, and which
+          delight-moment surface converts. Populates as installs ship the <code>paywall_shown</code> /{" "}
+          <code>premium_activated</code> events.
+        </p>
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+          <Stat label="Paywalls shown" value={g.paywall_shown_total} accent="blue" />
+          <Stat label="Premium activated" value={g.premium_activated_window} sub="in this window" accent="green" />
+          <Stat
+            label="Paywall → premium"
+            value={pct(g.premium_activated_window, g.paywall_shown_total)}
+            sub="window conversion"
+            accent={g.premium_activated_window > 0 ? "green" : "muted"}
+          />
+        </div>
+        {paywallSurfaces.length > 0 ? (
+          <div className="mt-5 space-y-2">
+            <div className="text-xs font-medium uppercase tracking-wide text-[var(--wo-muted)]">
+              Paywall impressions by surface
+            </div>
+            {paywallSurfaces.map(([surface, n]) => (
+              <div key={surface} className="flex items-center gap-3 text-sm">
+                <span className="w-44 shrink-0 text-[var(--wo-muted)]">{surface}</span>
+                <div className="flex-1"><Bar value={n} max={maxPaywallSurface} color="var(--wo-blue)" /></div>
+                <span className="w-10 text-right tabular-nums">{n}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-4 text-sm text-[var(--wo-muted)]">
+            No paywall impressions yet — fills in once installs fire <code>paywall_shown</code> with a surface.
+          </p>
+        )}
       </Card>
 
       <p className="text-xs text-[var(--wo-muted)]">

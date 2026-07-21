@@ -317,6 +317,14 @@ export type Growth = {
   referral_redemptions: number;
   premium_real: number;
   product_searches: number;
+  /** Window signups that fired the explicit first_item / first_ai activation
+   *  events (track client, funnel-instrumented builds → 0 until those ship). */
+  first_item_users: number;
+  first_ai_users: number;
+  /** Revenue funnel (events in the window, real users). */
+  paywall_by_surface: Record<string, number>;
+  paywall_shown_total: number;
+  premium_activated_window: number;
 };
 
 export async function getGrowth(days = 30): Promise<Growth> {
