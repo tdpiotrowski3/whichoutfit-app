@@ -22,7 +22,8 @@ type Body = {
 
 /** Build the email body HTML from the admin's plain-text message (escaped). */
 function bodyHtml(message: string): string {
-  return `<p>${escapeHtml(message).replace(/\n/g, "<br/>")}</p>`;
+  return `<p style="margin:0 0 20px 0">${escapeHtml(message).replace(/\n/g, "<br/>")}</p>
+<a href="https://whichoutfit.app" style="display:inline-block;background:#2E6BFF;background-image:linear-gradient(135deg,#2E6BFF 0%,#0FA3A3 100%);color:#FFFFFF;font-weight:700;font-size:14px;text-decoration:none;padding:12px 26px;border-radius:999px">Open WhichOutfit</a>`;
 }
 
 export async function POST(req: Request) {
