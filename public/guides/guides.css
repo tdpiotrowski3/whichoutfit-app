@@ -1,0 +1,396 @@
+/* ============================================================
+   WhichOutfit — style guide library
+   Extends style.css. Defines nothing style.css already defines,
+   and reuses its tokens (--blue, --grad, --text, --r-lg, …) so
+   the guides inherit the shipped design system rather than
+   forking it. The main site is light-only; these follow suit.
+   ============================================================ */
+
+.guide {
+  padding: 132px 0 96px;
+  background: var(--bg);
+}
+
+.guide-container {
+  max-width: 760px;
+}
+
+/* The index is a card grid, not prose — it wants more room than a
+   reading measure. Articles stay at 760px for line length. */
+.guide-container.is-index {
+  max-width: 1040px;
+}
+
+/* ── breadcrumb ───────────────────────────────────────── */
+.crumbs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: .82rem;
+  font-weight: 600;
+  color: var(--text2, #5C6B7A);
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+}
+
+.crumbs a {
+  color: var(--text2, #5C6B7A);
+  text-decoration: none;
+  transition: color .2s var(--ease);
+}
+
+.crumbs a:hover { color: var(--blue); }
+.crumbs span[aria-hidden] { opacity: .45; }
+.crumbs [aria-current] { color: var(--text); }
+
+/* ── header ───────────────────────────────────────────── */
+.guide-head { margin-bottom: 40px; }
+
+.guide-head .eyebrow {
+  color: var(--text2, #5C6B7A);
+  margin-bottom: 16px;
+}
+
+.guide-head h1 {
+  font-size: clamp(2rem, 5.4vw, 3rem);
+  line-height: 1.1;
+  letter-spacing: -.03em;
+  font-weight: 800;
+  margin: 0 0 20px;
+  text-wrap: balance;
+}
+
+.guide-dek {
+  font-size: 1.16rem;
+  line-height: 1.62;
+  color: var(--text2, #5C6B7A);
+  margin: 0;
+  max-width: 62ch;
+}
+
+/* ── the one rule ─────────────────────────────────────── */
+.guide-rule {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--blue);
+  border-radius: var(--r-lg);
+  padding: 26px 30px;
+  margin-bottom: 44px;
+  box-shadow: var(--shadow-card);
+}
+
+.rule-label {
+  font-size: .74rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .14em;
+  color: var(--blue);
+  margin: 0 0 10px;
+}
+
+.guide-rule p {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.68;
+  color: var(--text);
+}
+
+/* ── table of contents ────────────────────────────────── */
+.guide-toc {
+  background: var(--muted);
+  border-radius: var(--r-md);
+  padding: 22px 28px;
+  margin-bottom: 48px;
+}
+
+.toc-label {
+  font-size: .74rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .14em;
+  color: var(--text2, #5C6B7A);
+  margin: 0 0 12px;
+}
+
+.guide-toc ol {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.guide-toc li { font-size: .95rem; }
+
+.guide-toc a {
+  color: var(--text);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color .2s var(--ease), color .2s var(--ease);
+}
+
+.guide-toc a:hover {
+  color: var(--blue);
+  border-bottom-color: currentColor;
+}
+
+/* ── body sections ────────────────────────────────────── */
+.guide-section {
+  margin-bottom: 44px;
+  scroll-margin-top: 96px;
+}
+
+.guide-section h2 {
+  font-size: 1.5rem;
+  line-height: 1.26;
+  letter-spacing: -.02em;
+  font-weight: 800;
+  margin: 0 0 14px;
+  text-wrap: balance;
+}
+
+.guide-section p {
+  font-size: 1.04rem;
+  line-height: 1.74;
+  color: var(--text);
+  margin: 0 0 16px;
+  max-width: 68ch;
+}
+
+.guide-section p:last-child { margin-bottom: 0; }
+
+.guide-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.guide-list li {
+  position: relative;
+  padding-left: 26px;
+  font-size: 1.02rem;
+  line-height: 1.68;
+  max-width: 68ch;
+}
+
+.guide-list li::before {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: .68em;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--grad);
+}
+
+.guide-list strong { font-weight: 700; }
+
+/* ── FAQ ──────────────────────────────────────────────── */
+.guide-faq {
+  border-top: 1px solid var(--border);
+  padding-top: 36px;
+}
+
+.faq-block {
+  padding: 18px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.faq-block:last-child { border-bottom: 0; }
+
+.faq-block h3 {
+  font-size: 1.06rem;
+  font-weight: 700;
+  letter-spacing: -.01em;
+  margin: 0 0 8px;
+}
+
+.faq-block p {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--text2, #5C6B7A);
+  max-width: 68ch;
+}
+
+/* ── CTA ──────────────────────────────────────────────── */
+.guide-cta {
+  background: radial-gradient(760px 340px at 82% -20%, rgba(46, 107, 255, .14) 0%, transparent 62%),
+              radial-gradient(620px 320px at 6% 116%, rgba(15, 163, 163, .12) 0%, transparent 62%),
+              var(--dark);
+  color: var(--dark-t);
+  border-radius: var(--r-xl);
+  padding: 44px 40px;
+  margin: 56px 0;
+  text-align: center;
+}
+
+.cta-kicker {
+  font-size: .74rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .14em;
+  background: var(--grad-t);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin: 0 0 14px;
+}
+
+.cta-body {
+  font-size: 1.14rem;
+  line-height: 1.6;
+  margin: 0 auto 26px;
+  max-width: 46ch;
+  color: var(--dark-t);
+}
+
+.cta-fine {
+  font-size: .84rem;
+  margin: 18px 0 0;
+  opacity: .6;
+}
+
+.guide-cta .btn-primary { text-decoration: none; }
+
+/* ── related ──────────────────────────────────────────── */
+.guide-related {
+  border-top: 1px solid var(--border);
+  padding-top: 36px;
+}
+
+.guide-related h2 {
+  font-size: 1.3rem;
+  font-weight: 800;
+  letter-spacing: -.02em;
+  margin: 0 0 22px;
+}
+
+.rel-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 16px;
+}
+
+.rel-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 20px 22px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  text-decoration: none;
+  color: var(--text);
+  box-shadow: var(--shadow-card);
+  transition: transform .22s var(--ease), box-shadow .22s var(--ease);
+}
+
+.rel-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-card-hover);
+}
+
+.rel-title {
+  font-weight: 700;
+  font-size: .99rem;
+  line-height: 1.36;
+  letter-spacing: -.01em;
+}
+
+.rel-meta {
+  font-size: .8rem;
+  font-weight: 600;
+  color: var(--text2, #5C6B7A);
+}
+
+/* ── index grid ───────────────────────────────────────── */
+.guide-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  margin-top: 8px;
+}
+
+.guide-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 28px 30px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  text-decoration: none;
+  color: var(--text);
+  box-shadow: var(--shadow-card);
+  transition: transform .22s var(--ease), box-shadow .22s var(--ease);
+}
+
+.guide-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-card-hover);
+}
+
+.guide-card-meta {
+  font-size: .76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  color: var(--text2, #5C6B7A);
+}
+
+.guide-card-title {
+  font-size: 1.2rem;
+  font-weight: 800;
+  line-height: 1.26;
+  letter-spacing: -.02em;
+  text-wrap: balance;
+}
+
+.guide-card-dek {
+  font-size: .95rem;
+  line-height: 1.6;
+  color: var(--text2, #5C6B7A);
+  flex: 1;
+}
+
+.guide-card-go {
+  font-size: .88rem;
+  font-weight: 700;
+  color: var(--blue);
+  margin-top: 4px;
+}
+
+/* ── a11y + motion ────────────────────────────────────── */
+a:focus-visible,
+.btn:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .guide-card,
+  .rel-card,
+  .btn {
+    transition: none;
+  }
+  .guide-card:hover,
+  .rel-card:hover,
+  .btn:hover {
+    transform: none;
+  }
+}
+
+/* ── responsive ───────────────────────────────────────── */
+@media (max-width: 720px) {
+  .guide { padding: 108px 0 72px; }
+  .guide-rule { padding: 22px 22px; }
+  .guide-toc { padding: 18px 22px; }
+  .guide-cta { padding: 34px 24px; border-radius: var(--r-lg); }
+  .guide-card { padding: 24px 24px; }
+}
