@@ -2,3 +2,4 @@ User-agent: *
 Allow: /
 
 Sitemap: https://whichoutfit.app/sitemap.xml
+Sitemap: https://whichoutfit.app/sitemap-guides.xml
