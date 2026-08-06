@@ -190,10 +190,16 @@ footer a{color:#2456D6;font-weight:700}
   // Install CTA target. When the poll link carries the owner's referral code
   // (?ref=CODE), send voters through the owner's redeem link — whichoutfit.app/r/CODE
   // grants Premium to BOTH sides (our own comp system, no Apple Offer Code needed),
-  // so the install is attributed and rewarded. Otherwise fall back to the listing.
+  // so the install is attributed and rewarded. That page picks the right store
+  // itself. Without a ref we go straight to a store, so pick it here: the
+  // fallback was hard-wired to the App Store, which sent every Android voter to
+  // a page they cannot install from.
+  var STORE_URL = /android/i.test(navigator.userAgent || '')
+    ? 'https://play.google.com/store/apps/details?id=app.whichoutfit'
+    : 'https://apps.apple.com/us/app/whichoutfit/id6778094125';
   var REDEEM_URL = ref
     ? 'https://whichoutfit.app/r/' + encodeURIComponent(ref)
-    : 'https://apps.apple.com/us/app/whichoutfit/id6778094125';
+    : STORE_URL;
   var root = document.getElementById('poll');
   var extra = document.getElementById('extra');
   var titleEl = document.getElementById('title');
@@ -205,7 +211,7 @@ footer a{color:#2456D6;font-weight:700}
   // A poll link carries the owner's referral code, so the reward is the real
   // two-sided comp grant (see r.html) — 2 weeks of Premium + 15 free photo
   // cleanups, NOT "a month". Only promise it when there's actually a code to
-  // redeem; without a ref the CTA just points at the App Store listing.
+  // redeem; without a ref the CTA just points at the store listing.
   if (ref) {
     document.getElementById('ctaHead').textContent = 'Get 2 weeks of Premium — free';
     document.getElementById('ctaSub').textContent = "Your AI stylist for the wardrobe you already own. Redeem your friend's code for 2 weeks of Premium + 15 free photo cleanups.";
