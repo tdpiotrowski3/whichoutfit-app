@@ -5,17 +5,17 @@ Next.js (App Router) app deployed to **Vercel**, serving three surfaces by
 hostname. The native apps live in their own repos; everything shares one
 Supabase backend.
 
-## Platform status (July 2026)
+## Platform status (August 2026)
 
 | Platform | Status | Where |
 |---|---|---|
-| **iOS** | **Live — the current focus** | [App Store](https://apps.apple.com/us/app/whichoutfit/id6778094125) |
-| Android | Private testing only (closed track) | Google Play Console |
+| **iOS** | **Live** | [App Store](https://apps.apple.com/us/app/whichoutfit/id6778094125) |
+| **Android** | **Live — production access granted 2026-08-06** | [Google Play](https://play.google.com/store/apps/details?id=app.whichoutfit) |
 | Web app | Built but **hidden** ("coming soon" page) | `app.whichoutfit.app` |
 
-Short term the effort goes into growing iOS. Android and the web app stay
-"coming soon", but everything backend-side (Supabase schema, RLS, edge
-functions, auth) is built cross-platform so they can ship later without rework.
+Both phone platforms are now public. The web app stays "coming soon", but
+everything backend-side (Supabase schema, RLS, edge functions, auth) is built
+cross-platform so it can ship later without rework.
 
 ## The three web surfaces (this repo)
 
@@ -40,8 +40,9 @@ Daily Vercel crons (`vercel.json`): App Store sync, social sync, Mercury sync.
   Route Handlers only (bypasses RLS; never shipped to the browser).
 - **Consumer webapp** and the native apps talk to Supabase directly with the
   publishable/anon key and rely on RLS.
-- **Payments**: Apple IAP (live), Google Play Billing (Android testing),
-  Paddle (reserved for web).
+- **Payments**: Apple IAP (live), Google Play Billing (Android — wired and
+  server-verified via the `play-verify` edge function; Play Console products
+  must exist before the paywall can charge), Paddle (reserved for web).
 - **Email**: Resend for marketing sends + ops alerts (admin dashboard).
 
 See `SETUP.md` for local dev, environment variables, and deploy steps.
