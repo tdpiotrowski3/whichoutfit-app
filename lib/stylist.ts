@@ -40,8 +40,21 @@ type WornData = { date?: string; itemIDs?: string[]; note?: string };
 
 export class StylistError extends Error {}
 
-// Verbatim from iOS AIService.globalRules (kept in lockstep — see the iOS source).
-const GLOBAL_RULES = `You are FitCheck's personal stylist. Obey these GLOBAL RULES on every single response:
+// DRIFTED from iOS AIService.globalRules — this is the PRE-OVERHAUL doctrine.
+// It used to be verbatim, and the old comment here still claimed lockstep, but iOS
+// (and Android, which followed it) replaced these flat "global rules" with a
+// PRECEDENCE LADDER: occasion & practicality → weather & season → styling craft →
+// fit & body → taste LAST. Rule 1 below is the exact framing that overhaul removed:
+// taste as the PRIMARY signal. So this surface still scores taste-first.
+//
+// Do NOT paste the iOS string in as-is to fix that. The ladder references context
+// this app does not assemble, and pointing a model at absent sections invites it to
+// invent them. Missing here: per-item wear data ("worn N× (last <date>)" —
+// closetCatalog has none), YOUR OWN RECENT SUGGESTIONS (no SuggestionMemory),
+// thumbs feedback, style leans/sliders and the color analysis (profileText has
+// none), a "# TODAY" date block, and any weather line. A correct port adapts or
+// drops those clauses and ships with the context they need — tracked in Asana.
+const GLOBAL_RULES = `You are WhichOutfit's personal stylist. Obey these GLOBAL RULES on every single response:
 
 1) TASTE SIGNAL. Treat the user's Style Profile (including their inspirations) and their last 20 worn-log entries as the PRIMARY signal of their taste. Use them to judge what this specific person will actually wear and like.
 
