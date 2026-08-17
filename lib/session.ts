@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import crypto from "crypto";
+import { sessionSecret } from "./secret";
 
 // Minimal HMAC-signed cookie auth for the single admin (you). No DB sessions.
 // Runs in the Node runtime (server components + route handlers), not edge
@@ -11,12 +12,8 @@ const PAYLOAD = "admin";
 // to a value anyone can read in this repo and use to forge the admin cookie.
 // Missing secret => no session can be signed or verified (login shows an
 // error, dashboard pages treat everyone as signed out — no crash loop).
-function secret(): string | null {
-  const s = process.env.SESSION_SECRET;
-  if (s) return s;
-  if (process.env.NODE_ENV !== "production") return "insecure-dev-secret-change-me";
-  return null;
-}
+// The lookup itself lives in ./secret so unsubscribe.ts cannot drift from it.
+const secret = sessionSecret;
 
 export function signToken(): string {
   const key = secret();
