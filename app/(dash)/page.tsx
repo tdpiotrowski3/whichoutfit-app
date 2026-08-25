@@ -65,13 +65,25 @@ export default async function OverviewPage() {
           </div>
         </Card>
 
-        <Card title="Revenue (App Store)">
+        <Card title="Revenue (App Store + Play)">
           <div className="grid grid-cols-2 gap-4">
-            <Stat label="Subscriptions" value={o.iap_subscriptions} accent="green" />
-            <Stat label="Credit packs" value={o.iap_credit_packs} accent="green" />
+            <Stat
+              label="Subscriptions"
+              value={o.iap_subscriptions}
+              accent="green"
+              sub={`${o.iap_subscriptions_ios} App Store · ${o.iap_subscriptions_android} Play`}
+            />
+            <Stat
+              label="Credit packs"
+              value={o.iap_credit_packs}
+              accent="green"
+              sub={`${o.iap_credit_packs_ios} App Store · ${o.iap_credit_packs_android} Play`}
+            />
           </div>
           <p className="mt-4 text-xs text-[var(--wo-muted)]">
-            Transaction counts from the IAP ledger. Dollar amounts &amp; payouts live in App Store Connect.
+            Transaction counts from the IAP ledger, split by platform. Android billing isn&apos;t live yet
+            (Play service-account + RTDN setup still pending), so the Play side reads 0 until then. Dollar
+            amounts &amp; payouts live in App Store Connect / Play Console.
           </p>
         </Card>
       </div>
