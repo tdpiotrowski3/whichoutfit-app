@@ -1,0 +1,10 @@
+Copyright (c) 2026 WhichOutfit LLC. All rights reserved.
+
+This repository and everything in it — source code, assets, prompts, data
+schemas and documentation — is proprietary and confidential to WhichOutfit LLC
+(Michigan). No license, express or implied, is granted to use, copy, modify,
+distribute or create derivative works from any part of it without prior
+written permission from WhichOutfit LLC.
+
+Third-party components remain under their own licenses, as declared by their
+package managers (Gradle / Swift Package Manager / npm).
