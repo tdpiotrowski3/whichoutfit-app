@@ -13,6 +13,11 @@ export type Overview = {
   worn_outfits: number;
   iap_subscriptions: number;
   iap_credit_packs: number;
+  /** Platform breakdown of the two counters above (App Store vs Play). */
+  iap_subscriptions_ios: number;
+  iap_subscriptions_android: number;
+  iap_credit_packs_ios: number;
+  iap_credit_packs_android: number;
   ai_calls_total: number;
   ai_calls_30d: number;
   ai_limit_hits_30d: number;
@@ -121,7 +126,7 @@ export async function getAppstore(days = 30): Promise<AppstoreRow[]> {
 // a few days old is normal *as long as the cron is still running*. We track two
 // independent signals:
 //   • latestDay age — how far behind Apple's published data we are (lag).
-//   • last-run age  — when the sync last successfully wrote (max updated_at).
+//   • last-run age — when the sync last successfully wrote (max updated_at).
 // A stalled cron (no successful write in >26h) is the real failure — that's when
 // Apple auth has likely been revoked and totals go silently wrong. Plain Apple
 // lag while the cron keeps running is not alarming.
