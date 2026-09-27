@@ -67,13 +67,13 @@ data flows; the sandbox token works against sandbox data in the meantime.
 **Receipt ingestion (Gemini extraction + Gmail auto-import).** Powers the "Drop a
 receipt to autofill" box on the Add-expense form and the "Sync Gmail" button /
 daily `gmail-sync` cron. Uses the SAME model backend the app already runs on
-(gemini-2.5-flash). Receipt parsing is inert until `GEMINI_API_KEY` is set;
+(gemini-3.1-flash-lite). Receipt parsing is inert until `GEMINI_API_KEY` is set;
 Gmail import is inert until all four `GMAIL_*` vars are set.
 
 | Var | What | Where to get it |
 |---|---|---|
 | `GEMINI_API_KEY` | Gemini API key for receipt (PDF/image) extraction — **same value already used by the Supabase `ai` edge function**, just add it to Vercel too (edge-function secrets are separate) | Google AI Studio → API Keys |
-| `GEMINI_MODEL` | (optional) override model; default `gemini-2.5-flash` | — |
+| `GEMINI_MODEL` | (optional) override model; default `gemini-3.1-flash-lite` | — |
 | `GMAIL_CLIENT_ID` | Google OAuth client id | Google Cloud Console → APIs & Services → Credentials |
 | `GMAIL_CLIENT_SECRET` | Google OAuth client secret | same |
 | `GMAIL_REFRESH_TOKEN` | offline refresh token for your Gmail account | OAuth consent once with scope `gmail.readonly` (see below) |
