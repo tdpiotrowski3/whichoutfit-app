@@ -9,7 +9,7 @@ Supabase backend.
 
 | Platform | Status | Where |
 |---|---|---|
-| **iOS** | **Live — 2.0** (2026-09-15); 2.1 in TestFlight | [App Store](https://apps.apple.com/us/app/whichoutfit/id6778094125) |
+| **iOS** | **Live — 2.0** (2026-09-15); 2.1 in progress on `main` | [App Store](https://apps.apple.com/us/app/whichoutfit/id6778094125) |
 | **Android** | **Live** (production since 2026-08-06); 2.1.0 build cut 2026-09-27 | [Google Play](https://play.google.com/store/apps/details?id=app.whichoutfit) |
 | Web app | Built but **hidden** ("coming soon" page) | `app.whichoutfit.app` |
 
