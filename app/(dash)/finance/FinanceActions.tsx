@@ -46,7 +46,10 @@ export function FinanceActions({ rows }: { rows: ExpenseRow[] }) {
       const res = await fetch("/api/mercury/sync", { method: "POST" });
       const j = await res.json();
       if (!res.ok || j.ok === false) throw new Error(j.error || "Sync failed");
-      setStatus({ ok: true, text: `Synced ${j.inserted} new transaction${j.inserted === 1 ? "" : "s"} from Mercury (${j.accounts} account${j.accounts === 1 ? "" : "s"}).` });
+      const settled = j.settlements
+        ? ` ${j.settlements} card settlement${j.settlements === 1 ? " was" : "s were"} ignored (transfers, not purchases).`
+        : "";
+      setStatus({ ok: true, text: `Synced ${j.inserted} new transaction${j.inserted === 1 ? "" : "s"} from Mercury (${j.accounts} account${j.accounts === 1 ? "" : "s"}).${settled}` });
       router.refresh();
     } catch (err) {
       setStatus({ ok: false, text: err instanceof Error ? err.message : "Sync failed" });
