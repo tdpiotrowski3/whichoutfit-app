@@ -4,6 +4,7 @@ import { getFeatureSegment } from "@/lib/data";
 import { admin } from "@/lib/supabase";
 import { emailConfig, escapeHtml, sendMarketing, type Recipient } from "@/lib/email";
 import { unsubscribeToken } from "@/lib/unsubscribe";
+import { sessionSecret } from "@/lib/secret";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -32,6 +33,17 @@ export async function POST(req: Request) {
   }
   if (!emailConfig()) {
     return NextResponse.json({ error: "Email not configured" }, { status: 503 });
+  }
+  // Checked up front, next to the other preconditions, rather than letting
+  // unsubscribeToken() throw mid-send. Every recipient's unsubscribe link is
+  // HMAC-signed with this, so without it the only options are an un-recallable
+  // email carrying forgeable opt-out links, or no email — and a send that half
+  // completed before throwing would be the worst of both.
+  if (!sessionSecret()) {
+    return NextResponse.json(
+      { error: "SESSION_SECRET is not set — refusing to send with unsignable unsubscribe links" },
+      { status: 503 },
+    );
   }
 
   const body = (await req.json().catch(() => null)) as Body | null;
