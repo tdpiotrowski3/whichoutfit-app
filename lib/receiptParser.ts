@@ -3,12 +3,12 @@
 // Gmail auto-ingest (lib/gmail.ts). Server-only: requires GEMINI_API_KEY.
 //
 // We reuse the SAME model backend the app already runs on (the Supabase `ai`
-// edge function calls gemini-2.5-flash with GEMINI_API_KEY). The webapp needs
+// edge function calls gemini-3.1-flash-lite with GEMINI_API_KEY). The webapp needs
 // its own copy of GEMINI_API_KEY in Vercel env — edge-function secrets are
 // separate. Raw fetch, no SDK (matching lib/mercury.ts). Structured JSON is
 // enforced with Gemini's responseSchema so parsing is reliable.
 
-const DEFAULT_MODEL = "gemini-2.5-flash";
+const DEFAULT_MODEL = "gemini-3.1-flash-lite";
 function endpoint(model: string): string {
   return `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 }
@@ -89,7 +89,12 @@ async function callGemini(parts: Part[]): Promise<ExtractedReceipt> {
         responseMimeType: "application/json",
         responseSchema: SCHEMA,
         temperature: 0,
-        thinkingConfig: { thinkingBudget: 0 }, // flash 2.5: skip hidden thinking → fast + cheap
+        // Skip hidden thinking → fast + cheap. The field is model-generation
+        // specific: 2.5 takes thinkingConfig.thinkingBudget, 3.x replaced it with
+        // thinkingLevel, and sending the wrong shape 400s the whole request.
+        ...(model.startsWith("gemini-3")
+          ? { thinkingLevel: "minimal" }
+          : { thinkingConfig: { thinkingBudget: 0 } }),
       },
     }),
   });

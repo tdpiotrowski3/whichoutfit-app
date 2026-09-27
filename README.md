@@ -5,15 +5,17 @@ Next.js (App Router) app deployed to **Vercel**, serving three surfaces by
 hostname. The native apps live in their own repos; everything shares one
 Supabase backend.
 
-## Platform status (August 2026)
+## Platform status (September 2026)
 
 | Platform | Status | Where |
 |---|---|---|
-| **iOS** | **Live** | [App Store](https://apps.apple.com/us/app/whichoutfit/id6778094125) |
-| **Android** | **Live — production access granted 2026-08-06** | [Google Play](https://play.google.com/store/apps/details?id=app.whichoutfit) |
+| **iOS** | **Live — 2.0** (2026-09-15); 2.1 in TestFlight | [App Store](https://apps.apple.com/us/app/whichoutfit/id6778094125) |
+| **Android** | **Live** (production since 2026-08-06); 2.1.0 build cut 2026-09-27 | [Google Play](https://play.google.com/store/apps/details?id=app.whichoutfit) |
 | Web app | Built but **hidden** ("coming soon" page) | `app.whichoutfit.app` |
 
-Both phone platforms are now public. The web app stays "coming soon", but
+Both phone platforms are public. The system overview (architecture, security model, how to
+build/test/ship) lives in the backend repo's `README.md` (`tdpiotrowski3/FitCheck`), with a
+transfer checklist in `docs/TRANSFER-CHECKLIST.md`. Tests here: `npm test` (Vitest). The web app stays "coming soon", but
 everything backend-side (Supabase schema, RLS, edge functions, auth) is built
 cross-platform so it can ship later without rework.
 
