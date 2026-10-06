@@ -88,13 +88,14 @@ async function callGemini(parts: Part[]): Promise<ExtractedReceipt> {
       generationConfig: {
         responseMimeType: "application/json",
         responseSchema: SCHEMA,
-        temperature: 0,
-        // Skip hidden thinking → fast + cheap. The field is model-generation
-        // specific: 2.5 takes thinkingConfig.thinkingBudget, 3.x replaced it with
-        // thinkingLevel, and sending the wrong shape 400s the whole request.
-        ...(model.startsWith("gemini-3")
-          ? { thinkingLevel: "minimal" }
-          : { thinkingConfig: { thinkingBudget: 0 } }),
+        // No temperature/topP/topK: ignored since Gemini 3.6 Flash and a 400 on
+        // newer models. Skip hidden thinking → fast + cheap. thinkingLevel lives
+        // INSIDE thinkingConfig (a bare field on generationConfig is a 400).
+        // Only 2.x takes thinkingBudget; it 400s on post-3.x models, so anything
+        // not 2.x gets thinkingLevel.
+        thinkingConfig: model.startsWith("gemini-2")
+          ? { thinkingBudget: 0 }
+          : { thinkingLevel: "minimal" },
       },
     }),
   });
