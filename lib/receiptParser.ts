@@ -95,7 +95,7 @@ async function callGemini(parts: Part[]): Promise<ExtractedReceipt> {
         // not 2.x gets thinkingLevel.
         thinkingConfig: model.startsWith("gemini-2")
           ? { thinkingBudget: 0 }
-          : { thinkingLevel: "minimal" },
+          : { thinkingLevel: "low" },
       },
     }),
   });
