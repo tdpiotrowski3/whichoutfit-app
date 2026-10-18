@@ -368,3 +368,54 @@ export async function getRedemptions(days = 30, code: string | null = null): Pro
   if (error) throw error;
   return data as Redemptions;
 }
+
+// --- Social publishing queue + click attribution ---
+// Backed by public.social_posts and the public.social_clicks_daily view
+// (RLS-on, service-role-only — see FitCheck/supabase/social_publishing.sql).
+
+export type SocialPostDbRow = {
+  id: string;
+  clip_id: string;
+  platform: "instagram" | "tiktok";
+  caption: string;
+  hashtags: string | null;
+  video_url: string | null;
+  campaign: string | null;
+  scheduled_for: string;
+  status: "queued" | "publishing" | "posted" | "failed" | "manual";
+  platform_post_id: string | null;
+  attempts: number;
+  error: string | null;
+  posted_at: string | null;
+};
+
+/** The queue, soonest slot first. Covers every status so failures stay visible. */
+export async function getSocialPosts(limit = 40): Promise<SocialPostDbRow[]> {
+  const { data, error } = await admin()
+    .from("social_posts")
+    .select("id,clip_id,platform,caption,hashtags,video_url,campaign,scheduled_for,status,platform_post_id,attempts,error,posted_at")
+    .order("scheduled_for", { ascending: true })
+    .limit(limit);
+  if (error) throw error;
+  return (data ?? []) as SocialPostDbRow[];
+}
+
+export type SocialClickRow = {
+  day: string;
+  campaign: string;
+  platform: string | null;
+  clip_id: string | null;
+  clicks: number;
+};
+
+/** Clicks per campaign per day, newest first. */
+export async function getSocialClicks(days = 30): Promise<SocialClickRow[]> {
+  const since = new Date(Date.now() - days * 86_400_000).toISOString().slice(0, 10);
+  const { data, error } = await admin()
+    .from("social_clicks_daily")
+    .select("*")
+    .gte("day", since)
+    .order("day", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as SocialClickRow[];
+}

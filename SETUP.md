@@ -64,6 +64,31 @@ data flows; the sandbox token works against sandbox data in the meantime.
 > mint/refresh tokens out-of-band — they are NOT needed by the running app and
 > must never be committed.
 
+**Social publishing (Instagram auto-publish + the tracked /go link).** The Social
+tab's publish queue drains on the `social-publish` cron every 15 minutes. It
+needs NO new variables: it reuses `META_ACCESS_TOKEN` + `IG_USER_ID` from the
+table above, and is inert until both are set.
+
+Two things that are easy to get wrong:
+
+- **No App Review is needed to publish to your OWN Instagram account.** Meta's
+  Standard Access — the default level, scoped to accounts holding a role on your
+  app — covers it. App Review and Business Verification are for publishing to
+  accounts you don't own. What IS required: the target must be a **Business**
+  account linked to a Facebook Page, and the token holder must have a role on
+  the app.
+- **TikTok cannot be automated yet and the queue does not try.** The Content
+  Posting API forces an unaudited Direct Post to PRIVATE visibility, so
+  publishing TikTok from here would post videos nobody can see. TikTok rows sit
+  at status `manual` and get posted by hand. The way in, when it's wanted, is
+  the draft/inbox upload endpoint — it is exempt from the privacy restriction
+  and lands the video in the TikTok app's drafts for a human to post.
+
+The clip itself must be at a **publicly fetchable** URL (`social_posts.video_url`)
+because Meta's servers download it themselves — a signed or private URL fails at
+container creation with a vague error. The rendered mp4s are gitignored and live
+on the Mac, so upload them to a public Supabase Storage bucket first.
+
 **Receipt ingestion (Gemini extraction + Gmail auto-import).** Powers the "Drop a
 receipt to autofill" box on the Add-expense form and the "Sync Gmail" button /
 daily `gmail-sync` cron. Uses the SAME model backend the app already runs on
