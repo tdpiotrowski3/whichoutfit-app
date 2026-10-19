@@ -1,6 +1,7 @@
 import { admin } from "@/lib/supabase";
 import { fetchTikTokDaily } from "@/lib/tiktok";
 import { fetchInstagramDaily } from "@/lib/meta";
+import { syncPostStats } from "@/lib/socialPostStats";
 import type { SocialMetricRow } from "@/lib/social";
 
 // Shared social-metrics sync, used by BOTH the daily Vercel cron and the admin
@@ -11,7 +12,7 @@ const PLATFORMS: { name: string; fetch: (days: number) => Promise<SocialMetricRo
   { name: "instagram", fetch: fetchInstagramDaily },
 ];
 
-export type SocialSyncResult = { upserted: Record<string, number>; errors: string[] };
+export type SocialSyncResult = { upserted: Record<string, number>; posts: number; errors: string[] };
 
 /** Best-effort: a failed or unconfigured platform never blocks the other. */
 export async function runSocialSync(days = 14): Promise<SocialSyncResult> {
@@ -36,5 +37,15 @@ export async function runSocialSync(days = 14): Promise<SocialSyncResult> {
     }
   }
 
-  return { upserted, errors };
+  // Per-Reel results for the posts we published.
+  let posts = 0;
+  try {
+    const r = await syncPostStats();
+    posts = r.updated;
+    errors.push(...r.errors.map((m) => `post stats: ${m}`));
+  } catch (e) {
+    errors.push(`post stats: ${(e as Error).message}`);
+  }
+
+  return { upserted, posts, errors };
 }
