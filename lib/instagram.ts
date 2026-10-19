@@ -146,3 +146,61 @@ export async function remainingQuota(): Promise<number | null> {
     return null;
   }
 }
+
+// --- Read side for our own posts: per-Reel results ----------------------------
+
+export type ReelStats = {
+  views: number | null;
+  reach: number | null;
+  likes: number | null;
+  comments: number | null;
+  saves: number | null;
+  shares: number | null;
+};
+
+const REEL_INSIGHTS = ["views", "reach", "saved", "shares"] as const;
+
+/**
+ * Results for one published Reel. Likes and comments come off the media object;
+ * the rest are insights (needs instagram_manage_insights). Each insight is asked
+ * for on its own, because Meta rejects the whole request when any one metric is
+ * unavailable for that media or API version. A metric that fails comes back
+ * null rather than failing the post. Throws only when the token itself is bad.
+ */
+export async function fetchReelStats(mediaId: string): Promise<ReelStats> {
+  const e = env();
+  if (!e) throw new InstagramError("Instagram is not configured.");
+
+  const get = async (url: string) => {
+    const res = await fetch(url, { cache: "no-store" });
+    const json = (await res.json().catch(() => ({}))) as Record<string, unknown> & {
+      error?: { message?: string; code?: number };
+    };
+    if (json.error?.code === 190) throw new InstagramError(json.error.message ?? "Access token rejected.");
+    return res.ok && !json.error ? json : null;
+  };
+
+  const num = (v: unknown): number | null => (typeof v === "number" && Number.isFinite(v) ? v : null);
+
+  const base = await get(
+    `${BASE}/${mediaId}?${new URLSearchParams({ fields: "like_count,comments_count", access_token: e.token })}`
+  );
+
+  const insight: Record<string, number | null> = {};
+  for (const metric of REEL_INSIGHTS) {
+    const json = await get(
+      `${BASE}/${mediaId}/insights?${new URLSearchParams({ metric, access_token: e.token })}`
+    );
+    const data = (json?.data as { name?: string; values?: { value?: unknown }[] }[] | undefined) ?? [];
+    insight[metric] = num(data[0]?.values?.[0]?.value);
+  }
+
+  return {
+    views: insight.views,
+    reach: insight.reach,
+    likes: num(base?.like_count),
+    comments: num(base?.comments_count),
+    saves: insight.saved,
+    shares: insight.shares,
+  };
+}
