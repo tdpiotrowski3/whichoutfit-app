@@ -1,6 +1,7 @@
 import { admin } from "./supabase";
 import { fetchSalesRange } from "./appstore";
 import { syncAnalytics } from "./appstoreAnalytics";
+import { syncCampaigns } from "./appstoreCampaigns";
 
 // Shared App Store sync: pull the last 14 days of Sales (Tier 1) + Analytics
 // (Tier 2) and upsert into public.appstore_metrics by day. Called by both the
@@ -12,6 +13,7 @@ export type AppstoreSyncResult = {
   downloads: number;
   redownloads: number;
   analytics: { days: number; note: string; discovered?: { name: string; category: string }[] };
+  campaigns: { rows: number; note: string };
 };
 
 export async function syncAppstore(): Promise<AppstoreSyncResult> {
@@ -47,5 +49,12 @@ export async function syncAppstore(): Promise<AppstoreSyncResult> {
     analytics = { days: 0, note: e instanceof Error ? e.message : "analytics failed" };
   }
 
-  return { sales_days: rows.length, ...totals, analytics };
+  let campaigns: AppstoreSyncResult["campaigns"] = { rows: 0, note: "skipped" };
+  try {
+    campaigns = await syncCampaigns();
+  } catch (e) {
+    campaigns = { rows: 0, note: e instanceof Error ? e.message : "campaign sync failed" };
+  }
+
+  return { sales_days: rows.length, ...totals, analytics, campaigns };
 }

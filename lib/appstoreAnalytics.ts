@@ -43,7 +43,7 @@ export async function ensureOngoingRequest(): Promise<string | null> {
 
 type Report = { id: string; name: string; category: string };
 
-async function listReports(reqId: string): Promise<Report[]> {
+export async function listReports(reqId: string): Promise<Report[]> {
   const out: Report[] = [];
   let url: string | null = `/analyticsReportRequests/${reqId}/reports?limit=200`;
   while (url) {
@@ -56,7 +56,7 @@ async function listReports(reqId: string): Promise<Report[]> {
   return out;
 }
 
-async function latestDailyInstanceId(reportId: string): Promise<string | null> {
+export async function latestDailyInstanceId(reportId: string): Promise<string | null> {
   const r = await api(`/analyticsReports/${reportId}/instances?filter[granularity]=DAILY&limit=30`);
   if (!r.ok) return null;
   const j = await r.json();
@@ -65,7 +65,7 @@ async function latestDailyInstanceId(reportId: string): Promise<string | null> {
   return insts[0]?.id ?? null;
 }
 
-async function instanceCsvs(instanceId: string): Promise<string[]> {
+export async function instanceCsvs(instanceId: string): Promise<string[]> {
   const r = await api(`/analyticsReportInstances/${instanceId}/segments?limit=100`);
   if (!r.ok) return [];
   const j = await r.json();
