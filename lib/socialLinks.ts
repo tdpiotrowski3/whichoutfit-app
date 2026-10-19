@@ -17,6 +17,17 @@ function providerToken(): string | null {
 }
 
 /**
+ * The campaign name Apple sees. Apple only reports a campaign once it has 5+
+ * first-time downloads, which one post rarely reaches at our volume, so Apple
+ * gets the platform ("instagram", "tiktok") and the per-post detail stays in
+ * our own click log (social_clicks keeps the full campaign). Anything without a
+ * known platform prefix passes through unchanged.
+ */
+export function appleCampaign(campaign: string): string {
+  return platformFromCampaign(campaign) ?? campaign;
+}
+
+/**
  * The App Store listing. The destination is HARD-CODED on purpose: taking it
  * from a query parameter would turn our own domain into an open redirect,
  * which is precisely the primitive a phishing link wants to borrow.
@@ -28,7 +39,7 @@ function providerToken(): string | null {
 export function appStoreURL(campaign: string | null, pt: string | null = providerToken()): string {
   const u = new URL(`https://apps.apple.com/us/app/whichoutfit/id${APP_STORE_ID}`);
   if (campaign && pt) u.searchParams.set("pt", pt);
-  if (campaign) u.searchParams.set("ct", campaign);
+  if (campaign) u.searchParams.set("ct", appleCampaign(campaign));
   u.searchParams.set("mt", "8");
   return u.toString();
 }

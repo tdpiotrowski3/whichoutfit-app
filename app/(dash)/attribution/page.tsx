@@ -57,7 +57,7 @@ export default async function AttributionPage() {
                   <th className="py-2 pr-4 font-medium">Campaign</th>
                   <th className="py-2 pr-4 font-medium text-right">Views</th>
                   <th className="py-2 pr-4 font-medium text-right">Clicks</th>
-                  <th className="py-2 pr-4 font-medium text-right">iPhone downloads</th>
+                  <th className="py-2 pr-4 font-medium text-right">iPhone (est.)</th>
                   <th className="py-2 pr-4 font-medium text-right">Android installs</th>
                   <th className="py-2 pr-4 font-medium text-right">Activated</th>
                   <th className="py-2 pr-4 font-medium text-right">Paid</th>
@@ -69,7 +69,7 @@ export default async function AttributionPage() {
                     <td className="py-2.5 pr-4 font-mono text-xs">{r.campaign}</td>
                     <td className="py-2.5 pr-4 text-right">{fmt(r.views)}</td>
                     <td className="py-2.5 pr-4 text-right">{fmt(r.clicks)}</td>
-                    <td className="py-2.5 pr-4 text-right">{fmt(r.ios_downloads)}</td>
+                    <td className="py-2.5 pr-4 text-right">{r.ios_est ? `~${fmt(r.ios_est)}` : "—"}</td>
                     <td className="py-2.5 pr-4 text-right">{fmt(r.android_installs)}</td>
                     <td className="py-2.5 pr-4 text-right">{fmt(r.android_activated)}</td>
                     <td className="py-2.5 pr-4 text-right">{fmt(r.android_paid)}</td>
@@ -80,9 +80,41 @@ export default async function AttributionPage() {
           </div>
         )}
         <p className="mt-4 text-xs text-[var(--wo-muted)]">
-          iPhone numbers are Apple&apos;s campaign totals (Apple never identifies individual users, so activation and
-          paid are tracked per person on Android only). Apple&apos;s own App Analytics → Campaigns shows iPhone sales per campaign.
+          iPhone per post is an estimate: Apple only reports a campaign once it reaches 5 downloads, so it gets one
+          campaign per platform, split here by each post&apos;s share of iPhone clicks. Activation and paid are tracked per
+          person on Android only.
         </p>
+      </Card>
+
+      <Card title="Apple campaigns (actual)">
+        {a.apple.length === 0 ? (
+          <p className="text-sm text-[var(--wo-muted)]">
+            No Apple campaign data yet. A campaign appears about two days after it passes 5 first-time downloads.
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-[var(--wo-border)] text-left text-xs uppercase tracking-wide text-[var(--wo-muted)]">
+                  <th className="py-2 pr-4 font-medium">Apple campaign</th>
+                  <th className="py-2 pr-4 font-medium text-right">iPhone clicks</th>
+                  <th className="py-2 pr-4 font-medium text-right">First-time downloads</th>
+                  <th className="py-2 pr-4 font-medium text-right">Click → download</th>
+                </tr>
+              </thead>
+              <tbody>
+                {a.apple.map((g) => (
+                  <tr key={g.campaign} className="border-b border-[var(--wo-border)] last:border-0">
+                    <td className="py-2.5 pr-4 font-mono text-xs">{g.campaign}</td>
+                    <td className="py-2.5 pr-4 text-right">{fmt(g.ios_clicks)}</td>
+                    <td className="py-2.5 pr-4 text-right">{fmt(g.downloads)}</td>
+                    <td className="py-2.5 pr-4 text-right">{pct(g.downloads, g.ios_clicks)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </Card>
     </div>
   );

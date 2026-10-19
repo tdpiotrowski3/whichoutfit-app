@@ -4,6 +4,7 @@
 // arrives from the open internet before it becomes a database row.
 import { describe, expect, it } from "vitest";
 import {
+  appleCampaign,
   appStoreURL,
   cleanCampaign,
   clipFromCampaign,
@@ -16,14 +17,21 @@ import {
 describe("appStoreURL", () => {
   it("always lands on our App Store listing", () => {
     expect(appStoreURL("ig_12_scan_item", null)).toBe(
-      "https://apps.apple.com/us/app/whichoutfit/id6778094125?ct=ig_12_scan_item&mt=8"
+      "https://apps.apple.com/us/app/whichoutfit/id6778094125?ct=instagram&mt=8"
     );
   });
 
   it("adds the provider token so Apple counts it as a campaign", () => {
     expect(appStoreURL("ig_12_scan_item", "123456")).toBe(
-      "https://apps.apple.com/us/app/whichoutfit/id6778094125?pt=123456&ct=ig_12_scan_item&mt=8"
+      "https://apps.apple.com/us/app/whichoutfit/id6778094125?pt=123456&ct=instagram&mt=8"
     );
+  });
+
+  it("gives Apple the platform, not the post, so campaigns clear Apple's 5-download floor", () => {
+    expect(appleCampaign("ig_12_scan_item")).toBe("instagram");
+    expect(appleCampaign("ig_bio")).toBe("instagram");
+    expect(appleCampaign("tt_05_trip_packing")).toBe("tiktok");
+    expect(appleCampaign("newsletter_oct")).toBe("newsletter_oct");
   });
 
   it("carries no ct or pt when there is no campaign", () => {
