@@ -1,4 +1,7 @@
-# Drains the Instagram posting queue every 15 minutes.
+# BACKUP for the daily Vercel cron (vercel.json), which is the main trigger.
+# GitHub runs these schedules irregularly, so this is a safety net, not the clock.
+# Each call can wait up to ~4 minutes while a Reel finishes processing.
+#
 #
 # Why this lives here and not in vercel.json: Vercel's Hobby plan fails any
 # deployment with a cron more frequent than daily, and the publisher needs two
@@ -25,7 +28,7 @@ permissions: {}
 jobs:
   publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 3
+    timeout-minutes: 6
     steps:
       - name: Call the publish endpoint
         env:
@@ -35,7 +38,7 @@ jobs:
             echo "::error::CRON_SECRET repo secret is not set"
             exit 1
           fi
-          curl --silent --show-error --fail-with-body --max-time 90 \
+          curl --silent --show-error --fail-with-body --max-time 290 \
             -H "Authorization: Bearer $CRON_SECRET" \
             https://admin.whichoutfit.app/api/cron/social-publish
           echo
