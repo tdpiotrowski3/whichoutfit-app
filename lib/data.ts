@@ -387,13 +387,20 @@ export type SocialPostDbRow = {
   attempts: number;
   error: string | null;
   posted_at: string | null;
+  views: number | null;
+  reach: number | null;
+  likes: number | null;
+  comments: number | null;
+  saves: number | null;
+  shares: number | null;
+  stats_updated_at: string | null;
 };
 
 /** The queue, soonest slot first. Covers every status so failures stay visible. */
 export async function getSocialPosts(limit = 40): Promise<SocialPostDbRow[]> {
   const { data, error } = await admin()
     .from("social_posts")
-    .select("id,clip_id,platform,caption,hashtags,video_url,campaign,scheduled_for,status,platform_post_id,attempts,error,posted_at")
+    .select("id,clip_id,platform,caption,hashtags,video_url,campaign,scheduled_for,status,platform_post_id,attempts,error,posted_at,views,reach,likes,comments,saves,shares,stats_updated_at")
     .order("scheduled_for", { ascending: true })
     .limit(limit);
   if (error) throw error;
