@@ -6,30 +6,36 @@ import {
   isInstagramPublishConfigured,
 } from "@/lib/instagram";
 
-// Drains public.social_posts. Shared by the Vercel cron and the admin
+// Drains public.social_posts. Shared by the cron route and the admin
 // "Publish due now" button, same arrangement as lib/socialSync.ts.
 //
-// ONE TRANSITION PER ROW PER RUN. Instagram needs tens of seconds to transcode
-// a Reel and a serverless function gets 60, so this never waits on a container:
-// a run either creates one or checks one, and the next run picks it up. Call it
-// often (every 15 min) and a post goes out within ~15 min of its slot.
+// A Reel goes out in three steps: hand Instagram the video (a "container"),
+// wait while Meta downloads and transcodes it, then publish. When the caller
+// passes `waitUntil`, a run does all three in one go, polling the container
+// until it is ready or the deadline passes. That is what lets a single daily
+// Vercel cron (all the Hobby plan allows) post on the day it is due. Without a
+// deadline it does one step per row and the next run picks it up, so a
+// half-finished post is never lost either way.
 //
 //   queued ──create container──▶ publishing ──FINISHED──▶ posted
-//      ▲                              │
-//      └───── create failed ──────────┘ (until attempts runs out → failed)
+//     ▲                              │
+//     └───── create failed ──────────┘  (until attempts runs out → failed)
 //
 // TikTok rows are never touched. The Content Posting API's Direct Post endpoint
 // forces every video to PRIVATE until the app passes TikTok's audit, so posting
 // them from here would publish things nobody can see. They sit at 'manual' and
-// the morning reminder hands them over. See supabase/social_publishing.sql.
+// the morning reminder email (lib/tiktokReminder.ts) hands them over.
 
 const MAX_ATTEMPTS = 4;
 
-/** Rows per run. Each costs 1–2 Graph calls, so this stays far inside 60s. */
+/** Rows per run. A run only ever has a post or two due, so this is generous. */
 const BATCH = 5;
 
 /** A 'publishing' row with no container this old is a crashed claim, not a transcode. */
 const STALE_CLAIM_MS = 10 * 60_000;
+
+/** How often to re-check a container while waiting on Meta's transcode. */
+const POLL_MS = 8_000;
 
 export type SocialPostRow = {
   id: string;
@@ -57,6 +63,11 @@ export type PublishResult = {
   errors: string[];
 };
 
+export type PublishOptions = {
+  /** Epoch ms. If set, wait on each container until it publishes or this passes. */
+  waitUntil?: number;
+};
+
 /** Instagram wants one text field, so the hashtags ride at the end of the caption. */
 export function fullCaption(row: Pick<SocialPostRow, "caption" | "hashtags">): string {
   return row.hashtags?.trim() ? `${row.caption.trim()}\n\n${row.hashtags.trim()}` : row.caption.trim();
@@ -64,7 +75,7 @@ export function fullCaption(row: Pick<SocialPostRow, "caption" | "hashtags">): s
 
 /**
  * Claim a row for this run by flipping queued → publishing, conditional on it
- * STILL being queued. Two overlapping cron runs would otherwise both create a
+ * STILL being queued. Two overlapping runs would otherwise both create a
  * container for the same post and the second one would publish a duplicate.
  * Returns false when another run got there first.
  */
@@ -95,7 +106,55 @@ async function backOff(row: SocialPostRow, message: string): Promise<"failed" | 
   return done ? "failed" : "queued";
 }
 
-export async function runSocialPublish(now = new Date()): Promise<PublishResult> {
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Check a container once and act on what it says. When `waitUntil` is set,
+ * keep checking until it settles or time runs out.
+ */
+async function advance(
+  row: SocialPostRow,
+  containerId: string,
+  out: PublishResult,
+  waitUntil?: number
+): Promise<void> {
+  for (;;) {
+    const { status, detail } = await containerStatus(containerId);
+
+    if (status === "FINISHED") {
+      const mediaId = await publishContainer(containerId);
+      await patch(row.id, {
+        status: "posted",
+        platform_post_id: mediaId,
+        posted_at: new Date().toISOString(),
+        error: null,
+      });
+      out.posted.push(row.clip_id);
+      return;
+    }
+    if (status === "PUBLISHED") {
+      // Published on a previous run that died before writing the row back.
+      await patch(row.id, { status: "posted", posted_at: new Date().toISOString(), error: null });
+      out.posted.push(row.clip_id);
+      return;
+    }
+    if (status === "ERROR" || status === "EXPIRED") {
+      const state = await backOff(row, `container ${status}: ${detail ?? "no detail"}`);
+      if (state === "failed") out.failed.push({ clip: row.clip_id, error: detail ?? status });
+      else out.pending.push(row.clip_id);
+      return;
+    }
+
+    // IN_PROGRESS: wait and look again, or leave it for the next run.
+    if (!waitUntil || Date.now() + POLL_MS > waitUntil) {
+      out.pending.push(row.clip_id);
+      return;
+    }
+    await sleep(POLL_MS);
+  }
+}
+
+export async function runSocialPublish(now = new Date(), opts: PublishOptions = {}): Promise<PublishResult> {
   const out: PublishResult = { posted: [], pending: [], failed: [], skipped: [], errors: [] };
 
   if (!isInstagramPublishConfigured()) {
@@ -115,31 +174,9 @@ export async function runSocialPublish(now = new Date()): Promise<PublishResult>
 
   for (const row of (data ?? []) as SocialPostRow[]) {
     try {
-      // --- already at the platform: check the transcode -------------------
+      // --- already at the platform: check (and maybe wait on) the transcode --
       if (row.status === "publishing" && row.container_id) {
-        const { status, detail } = await containerStatus(row.container_id);
-
-        if (status === "FINISHED") {
-          const mediaId = await publishContainer(row.container_id);
-          await patch(row.id, {
-            status: "posted",
-            platform_post_id: mediaId,
-            posted_at: new Date().toISOString(),
-            error: null,
-          });
-          out.posted.push(row.clip_id);
-        } else if (status === "PUBLISHED") {
-          // Published on a previous run that died before writing the row back.
-          // Not an error — reconcile and move on.
-          await patch(row.id, { status: "posted", posted_at: new Date().toISOString(), error: null });
-          out.posted.push(row.clip_id);
-        } else if (status === "ERROR" || status === "EXPIRED") {
-          const state = await backOff(row, `container ${status}: ${detail ?? "no detail"}`);
-          if (state === "failed") out.failed.push({ clip: row.clip_id, error: detail ?? status });
-          else out.pending.push(row.clip_id);
-        } else {
-          out.pending.push(row.clip_id); // IN_PROGRESS — next run
-        }
+        await advance(row, row.container_id, out, opts.waitUntil);
         continue;
       }
 
@@ -166,16 +203,19 @@ export async function runSocialPublish(now = new Date()): Promise<PublishResult>
         continue;
       }
 
+      let containerId: string;
       try {
-        const containerId = await createReelContainer(row.video_url, fullCaption(row));
+        containerId = await createReelContainer(row.video_url, fullCaption(row));
         await patch(row.id, { container_id: containerId });
-        out.pending.push(row.clip_id); // publishes on a later run, once transcoded
       } catch (e) {
         const msg = (e as Error).message;
         const state = await backOff({ ...row, attempts: row.attempts + 1 }, msg);
         if (state === "failed") out.failed.push({ clip: row.clip_id, error: msg });
         else out.pending.push(row.clip_id);
+        continue;
       }
+
+      await advance({ ...row, attempts: row.attempts + 1 }, containerId, out, opts.waitUntil);
     } catch (e) {
       // Never let one bad row stop the batch.
       out.errors.push(`${row.clip_id}: ${(e as Error).message}`);

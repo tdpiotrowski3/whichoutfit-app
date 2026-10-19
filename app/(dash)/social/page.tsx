@@ -59,16 +59,19 @@ function fmtSlot(iso: string): string {
 }
 
 /**
- * The publish queue. Instagram rows drain themselves on the every-15-minutes cron; TikTok
- * rows are 'manual' by design — the Content Posting API forces an unaudited
- * Direct Post to private, so posting them from here would publish videos nobody
- * can see. They show up here so they can be posted by hand on time.
+ * The publish queue. Instagram rows post themselves (daily Vercel cron, with
+ * the GitHub Actions run as backup) and pick up per-Reel results on the daily
+ * sync. TikTok rows are 'manual' by design: the Content Posting API forces an
+ * unaudited Direct Post to private, so they get a morning reminder email and a
+ * download link here instead.
  */
 function QueueCard({ posts }: { posts: SocialPostDbRow[] }) {
   const upcoming = posts.filter((p) => p.status !== "posted");
-  const posted = posts.filter((p) => p.status === "posted").length;
+  const postedRows = posts.filter((p) => p.status === "posted");
   const failed = posts.filter((p) => p.status === "failed");
   const manual = upcoming.filter((p) => p.status === "manual").length;
+  const total = (k: "views" | "likes" | "saves" | "shares") =>
+    postedRows.some((p) => p[k] != null) ? postedRows.reduce((a, p) => a + (p[k] ?? 0), 0) : null;
 
   return (
     <Card
@@ -87,18 +90,27 @@ function QueueCard({ posts }: { posts: SocialPostDbRow[] }) {
       ) : (
         <div className="space-y-5">
           <div className="grid gap-4 sm:grid-cols-4">
-            <Stat label="Posted" value={fmt(posted)} accent="green" />
-            <Stat label="Scheduled" value={fmt(upcoming.length - manual)} accent="blue" />
+            <Stat label="Posted" value={fmt(postedRows.length)} accent="green" />
+            <Stat label="Scheduled" value={fmt(upcoming.length - manual - failed.length)} accent="blue" />
             <Stat label="By hand (TikTok)" value={fmt(manual)} accent="muted" />
             <Stat label="Failed" value={fmt(failed.length)} accent={failed.length ? "teal" : "muted"} />
           </div>
+
+          {postedRows.length ? (
+            <div className="grid gap-4 sm:grid-cols-4">
+              <Stat label="Reel views" value={fmt(total("views"))} accent="blue" />
+              <Stat label="Likes" value={fmt(total("likes"))} accent="teal" />
+              <Stat label="Saves" value={fmt(total("saves"))} accent="green" />
+              <Stat label="Shares" value={fmt(total("shares"))} accent="muted" />
+            </div>
+          ) : null}
 
           {failed.length ? (
             <ul className="space-y-1 rounded-lg bg-[var(--wo-bg)] p-3 text-xs">
               {failed.map((f) => (
                 <li key={f.id}>
                   <span className="font-medium">{f.clip_id}</span>
-                  <span className="text-[var(--wo-muted)]"> — {f.error ?? "no reason recorded"}</span>
+                  <span className="text-[var(--wo-muted)]"> ({f.platform}): {f.error ?? "no reason recorded"}</span>
                 </li>
               ))}
             </ul>
@@ -111,23 +123,47 @@ function QueueCard({ posts }: { posts: SocialPostDbRow[] }) {
                   <th className="py-2 pr-4 font-medium">Slot</th>
                   <th className="py-2 pr-4 font-medium">Clip</th>
                   <th className="py-2 pr-4 font-medium">Where</th>
-                  <th className="py-2 pr-4 font-medium">Campaign</th>
                   <th className="py-2 pr-4 font-medium">Status</th>
+                  <th className="py-2 pr-4 font-medium text-right">Views</th>
+                  <th className="py-2 pr-4 font-medium text-right">Reach</th>
+                  <th className="py-2 pr-4 font-medium text-right">Likes</th>
+                  <th className="py-2 pr-4 font-medium text-right">Comments</th>
+                  <th className="py-2 pr-4 font-medium text-right">Saves</th>
+                  <th className="py-2 pr-4 font-medium text-right">Shares</th>
+                  <th className="py-2 pr-4 font-medium">Clip file</th>
                 </tr>
               </thead>
               <tbody>
-                {posts.slice(0, 20).map((p) => (
+                {posts.map((p) => (
                   <tr key={p.id} className="border-b border-[var(--wo-border)] last:border-0">
-                    <td className="py-2.5 pr-4 text-[var(--wo-muted)]">{fmtSlot(p.scheduled_for)}</td>
+                    <td className="py-2.5 pr-4 whitespace-nowrap text-[var(--wo-muted)]">{fmtSlot(p.scheduled_for)}</td>
                     <td className="py-2.5 pr-4 font-medium">{p.clip_id}</td>
                     <td className="py-2.5 pr-4 capitalize">{p.platform}</td>
-                    <td className="py-2.5 pr-4 font-mono text-xs text-[var(--wo-muted)]">{p.campaign ?? "—"}</td>
                     <td className="py-2.5 pr-4"><StatusPill status={p.status} /></td>
+                    <td className="py-2.5 pr-4 text-right">{fmt(p.views)}</td>
+                    <td className="py-2.5 pr-4 text-right">{fmt(p.reach)}</td>
+                    <td className="py-2.5 pr-4 text-right">{fmt(p.likes)}</td>
+                    <td className="py-2.5 pr-4 text-right">{fmt(p.comments)}</td>
+                    <td className="py-2.5 pr-4 text-right">{fmt(p.saves)}</td>
+                    <td className="py-2.5 pr-4 text-right">{fmt(p.shares)}</td>
+                    <td className="py-2.5 pr-4 text-xs">
+                      {p.video_url ? (
+                        <a href={p.video_url} target="_blank" rel="noreferrer" className="text-[var(--wo-blue)] hover:underline">
+                          {p.platform === "tiktok" && p.status === "manual" ? "Download to post" : "View"}
+                        </a>
+                      ) : (
+                        <span className="text-[var(--wo-muted)]">—</span>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+          <p className="text-xs text-[var(--wo-muted)]">
+            Reel results refresh once a day with the social sync (or press Sync now). TikTok stats aren&apos;t tracked
+            until TikTok posting is connected.
+          </p>
         </div>
       )}
     </Card>
