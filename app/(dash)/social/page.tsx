@@ -14,8 +14,7 @@ import { isInstagramConfigured } from "@/lib/meta";
 import { isInstagramPublishConfigured } from "@/lib/instagram";
 import { SocialSyncButton } from "@/components/SocialSyncButton";
 import { SocialPublishButton } from "@/components/SocialPublishButton";
-import { SocialIdeaActions, DraftIdeasButton } from "@/components/SocialIdeaActions";
-import { runwayDays, RUNWAY_DAYS } from "@/lib/contentEngine/schedule";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -62,88 +61,15 @@ function fmtSlot(iso: string): string {
   });
 }
 
-/**
- * The content engine (lib/contentEngine). The weekly cron tops the queue up
- * with re-posts of proven clips and drafts new ideas here; approved ideas are
- * filmed or re-narrated on the Mac (`./engine.py` in FitCheck
- * tools/capture-engine/social) and booked into the calendar automatically.
- */
-function EngineCard({ ideas, posts }: { ideas: SocialIdeaDbRow[] | null; posts: SocialPostDbRow[] }) {
-  const queued = posts.filter((p) => p.platform === "instagram" && (p.status === "queued" || p.status === "publishing"));
-  const runway = runwayDays(new Date(), queued.map((p) => new Date(p.scheduled_for)));
-  const waiting = (ideas ?? []).filter((i) => i.status === "proposed");
-  const inFlight = (ideas ?? []).filter((i) => i.status === "approved" || i.status === "rendering" || i.status === "failed");
-  const made = (ideas ?? []).filter((i) => i.status === "rendered").slice(0, 5);
-
+/** The content engine moved to its own page; this keeps the way there obvious. */
+function EngineCard({ ideas }: { ideas: SocialIdeaDbRow[] | null }) {
+  const waiting = (ideas ?? []).filter((i) => i.status === "proposed" || i.status === "failed").length;
   return (
-    <Card title="Content engine" right={ideas ? <DraftIdeasButton /> : null}>
-      {ideas === null ? (
-        <p className="text-sm text-[var(--wo-muted)]">
-          Not set up yet: apply <span className="font-mono text-xs">FitCheck/supabase/social_engine.sql</span> to create
-          the ideas table.
-        </p>
-      ) : (
-        <div className="space-y-5">
-          <div className="grid gap-4 sm:grid-cols-4">
-            <Stat
-              label="Queue reaches"
-              value={`${runway}d`}
-              sub={runway < RUNWAY_DAYS ? "short — the Monday run tops it up" : "ahead"}
-              accent={runway < RUNWAY_DAYS ? "teal" : "green"}
-            />
-            <Stat label="Ideas to review" value={fmt(waiting.length)} accent="blue" />
-            <Stat label="Approved / rendering" value={fmt(inFlight.filter((i) => i.status !== "failed").length)} accent="muted" />
-            <Stat label="Made by the engine" value={fmt((ideas ?? []).filter((i) => i.status === "rendered").length)} accent="green" />
-          </div>
-
-          {waiting.length === 0 ? (
-            <p className="text-sm text-[var(--wo-muted)]">
-              No ideas waiting. New ones are drafted every Monday from what is performing, or press Draft ideas now.
-            </p>
-          ) : (
-            <ul className="space-y-4">
-              {waiting.map((i) => (
-                <li key={i.id} className="space-y-3 rounded-xl border border-[var(--wo-border)] p-4">
-                  <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <span className="font-medium">{i.title}</span>
-                    <span className="font-mono text-xs text-[var(--wo-muted)]">
-                      {i.template}
-                      {Object.keys(i.inputs ?? {}).length ? ` · ${Object.values(i.inputs).join(", ")}` : ""}
-                      {i.closet && i.closet !== "original" ? ` · ${i.closet} closet` : ""}
-                    </span>
-                  </div>
-                  {i.rationale ? <p className="text-xs text-[var(--wo-muted)]">{i.rationale}</p> : null}
-                  <ol className="list-decimal space-y-0.5 pl-5 text-sm">
-                    {i.voiceover.map((l, n) => (
-                      <li key={n}>{l}</li>
-                    ))}
-                  </ol>
-                  <SocialIdeaActions id={i.id} captions={i.captions} pick={i.caption_pick} />
-                </li>
-              ))}
-            </ul>
-          )}
-
-          {inFlight.length ? (
-            <ul className="space-y-1 text-sm">
-              {inFlight.map((i) => (
-                <li key={i.id}>
-                  <span className="font-medium">{i.title}</span>{" "}
-                  <span className="text-[var(--wo-muted)]">— {i.status === "failed" ? `failed: ${i.error ?? "no detail"}` : i.status}</span>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-          {inFlight.some((i) => i.status === "approved") ? (
-            <p className="text-xs text-[var(--wo-muted)]">
-              To film and queue approved ideas, run <span className="font-mono">./engine.py</span> in FitCheck/tools/capture-engine/social on the Mac.
-            </p>
-          ) : null}
-          {made.length ? (
-            <p className="text-xs text-[var(--wo-muted)]">Recently made: {made.map((i) => i.clip_id).join(", ")}</p>
-          ) : null}
-        </div>
-      )}
+    <Card title="Content engine" right={<Link href="/content" className="text-sm font-medium text-[var(--wo-blue)] hover:underline">Open Content Studio →</Link>}>
+      <p className="text-sm text-[var(--wo-muted)]">
+        Making, reviewing and scheduling videos lives in the Content Studio.
+        {waiting ? ` ${waiting} video idea${waiting === 1 ? " is" : "s are"} waiting for review.` : ""}
+      </p>
     </Card>
   );
 }
@@ -343,7 +269,7 @@ export default async function SocialPage() {
         </div>
       </div>
 
-      <EngineCard ideas={ideas} posts={posts} />
+      <EngineCard ideas={ideas} />
       <QueueCard posts={posts} />
       <ClicksCard clicks={clicks} />
 

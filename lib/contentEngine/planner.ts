@@ -227,7 +227,7 @@ Never mention price, Premium, subscriptions, or downloading — a call-to-action
 const CAPTION_SYSTEM = `${VOICE_RULES}
 You write Instagram Reel captions for clips that already exist. One caption per clip: one or two sentences, a hook first, under 150 characters, no hashtags (they are added separately). Make it clearly different from the previous caption you are shown — a different angle, not a rewording.`;
 
-const IDEA_SCHEMA = {
+export const IDEA_SCHEMA = {
   type: "OBJECT",
   properties: {
     ideas: {
@@ -254,7 +254,7 @@ const IDEA_SCHEMA = {
   required: ["ideas"],
 };
 
-const IDEA_SYSTEM = `${VOICE_RULES}
+export const IDEA_SYSTEM = `${VOICE_RULES}
 
 You plan short vertical clips (15–30s) for WhichOutfit's Instagram and TikTok. Each idea uses one TEMPLATE from the catalog and writes a fresh voiceover for it.
 
@@ -342,7 +342,7 @@ ${catalog}`;
 /** A persona closet is offered once it is mostly stocked; an empty one would film an empty closet. */
 const MIN_STOCKED = 8;
 
-async function availableClosets(): Promise<string[]> {
+export async function availableClosets(): Promise<string[]> {
   const out = ["original"];
   for (const p of PERSONAS) {
     if (p.key === "original") continue;
@@ -357,7 +357,7 @@ async function availableClosets(): Promise<string[]> {
   return out;
 }
 
-function templateBrief(t: Template): string {
+export function templateBrief(t: Template): string {
   const beats = t.beats
     .map((b, i) => `  beat ${i + 1} (${(b.end - b.start).toFixed(1)}s, ≤${syllableBudget(b)} syl) was: "${b.was}"`)
     .join("\n");

@@ -14,6 +14,7 @@ const TABS = [
   { href: "/finance", label: "Finance" },
   { href: "/users", label: "Users" },
   { href: "/marketing", label: "Marketing" },
+  { href: "/content", label: "Content Studio" },
   { href: "/social", label: "Social & Ads" },
 ];
 
