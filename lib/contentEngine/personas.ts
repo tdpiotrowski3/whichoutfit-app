@@ -39,6 +39,14 @@ export type Persona = {
   /** For the planner: who this closet reads as, and what occasions suit it. */
   describe: string;
   wardrobe: WardrobeItem[];
+  /**
+   * "owner" = a real person's own account (CAPTURE_OWNER_EMAIL), filmed as-is:
+   * never seeded, and the app runs READ-ONLY on it during capture (no push, no
+   * photo uploads, no cut-out rewrites), because it is real data.
+   */
+  account?: "owner";
+  /** Narrator for clips filmed on this closet (a Gemini prebuilt voice). */
+  voice?: string;
 };
 
 const item = (
@@ -60,22 +68,11 @@ export const PERSONAS: Persona[] = [
   },
   {
     key: "menswear",
-    label: "Classic menswear",
-    describe: "Clean, classic menswear: oxford shirts, chinos, a chore jacket, loafers. Suits work, dates, weddings, weekends away.",
-    wardrobe: [
-      item("oxford", "White Oxford Button-Down Shirt", "Top", "White", ["button-down", "oxford", "long sleeve", "smart casual", "work", "classic"], "Men's", "Cotton"),
-      item("tee", "Heather Grey Crew Neck T-Shirt", "Top", "Grey", ["crew neck", "short sleeve", "casual", "everyday", "basic"], "Men's", "Cotton"),
-      item("sweater", "Navy Merino Crew Sweater", "Top", "Navy", ["knit", "crew neck", "smart casual", "fall", "winter", "layering"], "Men's", "Wool"),
-      item("polo", "Olive Knit Polo Shirt", "Top", "Olive", ["polo", "knit", "short sleeve", "smart casual", "summer"], "Men's", "Cotton"),
-      item("chinos", "Khaki Slim Chinos", "Bottom", "Khaki", ["chinos", "slim fit", "smart casual", "work", "classic"], "Men's", "Cotton"),
-      item("jeans", "Dark Indigo Straight Jeans", "Bottom", "Indigo", ["jeans", "straight leg", "casual", "everyday"], "Men's", "Denim"),
-      item("trousers", "Charcoal Wool Trousers", "Bottom", "Charcoal", ["trousers", "tailored", "formal", "work", "wedding"], "Men's", "Wool"),
-      item("chore", "Navy Cotton Chore Jacket", "Outerwear", "Navy", ["chore jacket", "workwear", "casual", "spring", "fall", "layering"], "Men's", "Cotton"),
-      item("blazer", "Grey Unstructured Blazer", "Outerwear", "Grey", ["blazer", "unstructured", "smart casual", "formal", "work"], "Men's", "Wool"),
-      item("loafers", "Brown Leather Penny Loafers", "Shoes", "Brown", ["loafers", "leather", "smart casual", "formal"], "Men's", "Leather"),
-      item("sneakers", "White Leather Low-Top Sneakers", "Shoes", "White", ["sneakers", "minimal", "casual", "everyday"], "Men's", "Leather"),
-      item("watch", "Silver Field Watch with Brown Strap", "Accessory", "Silver", ["watch", "classic", "everyday"], "Men's", "Leather"),
-    ],
+    label: "Menswear (the owner's real closet)",
+    describe: "A real, lived-in menswear closet of 250+ pieces: tees, henleys, button-ups, chinos, jeans, performance pants, sweatshirts, loafers. Suits work, dates, weddings, travel, weekends.",
+    wardrobe: [],
+    account: "owner",
+    voice: "Algieba", // Gemini's "smooth" male voice: a menswear closet gets a man's voice
   },
   {
     key: "streetwear",
@@ -138,15 +135,33 @@ export const PERSONAS: Persona[] = [
 const REVIEWER_EMAIL = "whichoutfitreview@test.com";
 
 /**
- * The sign-in email for a persona: the reviewer for `original`, otherwise
+ * The sign-in email for a persona: the reviewer for `original`, the owner's own
+ * address (CAPTURE_OWNER_EMAIL) for an owner-backed persona, otherwise
  * "<local>+capture-<key>@<domain>" built from CAPTURE_EMAIL_BASE. Throws when
- * the base is unset — persona accounts are simply off until it is configured.
+ * the needed address is unset — that persona is simply off until configured.
  */
-export function personaEmail(key: string, base = process.env.CAPTURE_EMAIL_BASE): string {
+export function personaEmail(
+  key: string,
+  base = process.env.CAPTURE_EMAIL_BASE,
+  owner = process.env.CAPTURE_OWNER_EMAIL
+): string {
   if (key === "original") return REVIEWER_EMAIL;
+  if (getPersona(key)?.account === "owner") {
+    const o = owner?.trim().toLowerCase();
+    if (!o || !/^[^@\s]+@[^@\s]+$/.test(o)) throw new Error("CAPTURE_OWNER_EMAIL is not set");
+    return o;
+  }
   const m = base?.trim().match(/^([^@+\s]+)@([^@\s]+)$/);
   if (!m) throw new Error("CAPTURE_EMAIL_BASE is not set (an address like you@example.com)");
   return `${m[1]}+capture-${key}@${m[2]}`.toLowerCase();
+}
+
+/** The narrators the engine may use; the voice endpoint accepts nothing else. */
+export const VOICES = ["Sulafat", "Algieba", "Achird", "Umbriel"] as const;
+
+/** Who narrates a clip filmed on this closet. Re-cuts are on `original`, so Sulafat. */
+export function voiceFor(closet: string | null | undefined): string {
+  return getPersona(closet ?? "original")?.voice ?? "Sulafat";
 }
 
 export function getPersona(key: string): Persona | undefined {

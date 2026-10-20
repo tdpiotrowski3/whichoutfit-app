@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { speak, GeminiError } from "@/lib/contentEngine/gemini";
 import { engineAuthorized, errorMessage } from "@/lib/contentEngine/auth";
+import { VOICES } from "@/lib/contentEngine/personas";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -13,12 +14,15 @@ export const maxDuration = 60;
 // retries. The daily quota never reaches here — speak() moves to the next model.
 export async function POST(req: Request) {
   if (!engineAuthorized(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const { line } = (await req.json().catch(() => ({}))) as { line?: string };
+  const { line, voice } = (await req.json().catch(() => ({}))) as { line?: string; voice?: string };
+  if (voice && !(VOICES as readonly string[]).includes(voice)) {
+    return NextResponse.json({ error: `voice must be one of ${VOICES.join(", ")}` }, { status: 400 });
+  }
   if (!line?.trim() || line.length > 400) {
     return NextResponse.json({ error: "Need a line of narration (1–400 chars)." }, { status: 400 });
   }
   try {
-    return NextResponse.json(await speak(line.trim()));
+    return NextResponse.json(await speak(line.trim(), voice));
   } catch (e) {
     if (e instanceof GeminiError && e.status === 429) {
       const wait = Math.ceil(e.retryAfter ?? 20);

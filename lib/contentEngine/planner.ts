@@ -5,7 +5,7 @@ import { sendAdminAlert } from "@/lib/alert";
 import { generateJson } from "./gemini";
 import { TEMPLATES, getTemplate, syllableBudget, type Template } from "./templates";
 import { featureOf, scoreClip, validateIdea, type RawIdea } from "./rules";
-import { PERSONAS } from "./personas";
+import { PERSONAS, voiceFor } from "./personas";
 import { seededSlots } from "./personaAccounts";
 import { nextSlots, runwayDays, slotsToFill, RUNWAY_DAYS } from "./schedule";
 
@@ -344,6 +344,11 @@ async function availableClosets(): Promise<string[]> {
   const out = ["original"];
   for (const p of PERSONAS) {
     if (p.key === "original") continue;
+    if (p.account === "owner") {
+      // A real closet is never seeded; it's available once its address is configured.
+      if (process.env.CAPTURE_OWNER_EMAIL) out.push(p.key);
+      continue;
+    }
     const have = await seededSlots(p.key).catch(() => []);
     if (have.length >= Math.min(MIN_STOCKED, p.wardrobe.length)) out.push(p.key);
   }
@@ -470,12 +475,12 @@ export async function runSocialPlan(now = new Date()): Promise<PlanResult> {
 }
 
 /** For the engine's GET /jobs: approved ideas with everything the Mac needs to render them. */
-export async function approvedJobs(): Promise<(IdeaRow & { job: Template })[]> {
+export async function approvedJobs(): Promise<(IdeaRow & { job: Template; voice: string })[]> {
   const { data, error } = await admin().from("social_ideas").select("*").eq("status", "approved").order("created_at");
   if (error) throw error;
   return ((data ?? []) as IdeaRow[]).flatMap((i) => {
     const t = getTemplate(i.template);
-    return t ? [{ ...i, job: t }] : [];
+    return t ? [{ ...i, job: t, voice: voiceFor(i.closet) }] : [];
   });
 }
 

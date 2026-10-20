@@ -9,9 +9,12 @@ import { getPersona, itemId, personaEmail, type Persona, type WardrobeItem } fro
 export async function ensurePersonaUser(p: Persona): Promise<string> {
   const db = admin();
   const email = personaEmail(p.key);
-  const { data: created, error } = await db.auth.admin.createUser({ email, email_confirm: true });
-  if (created?.user?.id) return created.user.id;
-  if (error && !/registered|exists/i.test(error.message)) throw error;
+  // A real person's account is found, never created.
+  if (p.account !== "owner") {
+    const { data: created, error } = await db.auth.admin.createUser({ email, email_confirm: true });
+    if (created?.user?.id) return created.user.id;
+    if (error && !/registered|exists/i.test(error.message)) throw error;
+  }
   // Already there: page through users for the email (a handful of pages at our size).
   for (let page = 1; page <= 20; page++) {
     const { data, error: listErr } = await db.auth.admin.listUsers({ page, perPage: 200 });
@@ -25,24 +28,36 @@ export async function ensurePersonaUser(p: Persona): Promise<string> {
 
 /**
  * A fresh one-time code for the capture account, the same way reviewer-login
- * mints one for the reviewer. Also grants unlimited entitlement: without
- * Premium the app neither syncs the closet down nor lets the AI features run
- * unmetered, and both are what gets filmed.
+ * mints one for the reviewer. Also makes sure the account has Premium: without
+ * it the app neither syncs the closet down nor runs the AI features unmetered,
+ * and both are what gets filmed.
+ *
+ * Premium is only ADDED where the account has no entitlement row at all. An
+ * existing row is never touched: the owner-backed persona is a real account
+ * with a real paid subscription, and overwriting its premium_until would
+ * corrupt real billing data (and the paying-subscriber count).
+ *
+ * `readOnly` tells capture.sh to run the app read-only on this account;
+ * `syncWait` is how long to let its closet come down after a fresh install.
  */
-export async function personaOtp(key: string): Promise<{ email: string; otp: string }> {
+export async function personaOtp(key: string): Promise<{ email: string; otp: string; readOnly: boolean; syncWait: number }> {
   const p = getPersona(key);
   if (!p) throw new Error(`unknown persona ${key}`);
   const db = admin();
   const uid = await ensurePersonaUser(p);
   const { error: entErr } = await db
     .from("entitlements")
-    .upsert({ user_id: uid, premium_until: "2099-01-01T00:00:00Z", image_unlimited: true }, { onConflict: "user_id" });
+    .upsert(
+      { user_id: uid, premium_until: "2099-01-01T00:00:00Z", image_unlimited: true },
+      { onConflict: "user_id", ignoreDuplicates: true }
+    );
   if (entErr) throw entErr;
   const email = personaEmail(p.key);
   const { data, error } = await db.auth.admin.generateLink({ type: "magiclink", email });
   const otp = data?.properties?.email_otp;
   if (error || !otp) throw error ?? new Error("could not mint a code");
-  return { email, otp };
+  const owner = p.account === "owner";
+  return { email, otp, readOnly: owner, syncWait: owner ? 90 : 30 };
 }
 
 /** The ClothingItem document the iOS/Android apps decode (Models.swift). */
