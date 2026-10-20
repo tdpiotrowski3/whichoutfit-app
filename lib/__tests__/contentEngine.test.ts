@@ -141,10 +141,10 @@ describe("persona closets", () => {
     expect(() => personaEmail("streetwear", "owner+x@example.com")).toThrow(/CAPTURE_EMAIL_BASE/);
   });
 
-  it("films the owner-backed closet on the owner's own address, never a plus-address", () => {
-    expect(personaEmail("menswear", "owner@example.com", "Me@Example.com")).toBe("me@example.com");
-    expect(() => personaEmail("menswear", "owner@example.com", undefined)).toThrow(/CAPTURE_OWNER_EMAIL/);
-    expect(getPersona("menswear")!.wardrobe).toHaveLength(0); // a real closet is never seeded
+  it("signs a cloned closet in as its own capture account, never the owner's", () => {
+    expect(personaEmail("menswear", "owner@example.com")).toBe("owner+capture-menswear@example.com");
+    expect(getPersona("menswear")!.cloneFrom).toBe("owner");
+    expect(getPersona("menswear")!.wardrobe).toHaveLength(0); // copied, never generated
   });
 
   it("gives a menswear closet a male narrator and everything else the default", () => {

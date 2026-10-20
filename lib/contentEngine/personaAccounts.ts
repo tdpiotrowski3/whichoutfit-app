@@ -7,23 +7,26 @@ import { getPersona, itemId, personaEmail, type Persona, type WardrobeItem } fro
 
 /** The capture account's user id, creating it (confirmed) the first time. */
 export async function ensurePersonaUser(p: Persona): Promise<string> {
-  const db = admin();
   const email = personaEmail(p.key);
-  // A real person's account is found, never created.
-  if (p.account !== "owner") {
-    const { data: created, error } = await db.auth.admin.createUser({ email, email_confirm: true });
-    if (created?.user?.id) return created.user.id;
-    if (error && !/registered|exists/i.test(error.message)) throw error;
-  }
-  // Already there: page through users for the email (a handful of pages at our size).
+  const { data: created, error } = await admin().auth.admin.createUser({ email, email_confirm: true });
+  if (created?.user?.id) return created.user.id;
+  if (error && !/registered|exists/i.test(error.message)) throw error;
+  const id = await findUserId(email);
+  if (!id) throw new Error(`capture user for ${p.key} not found after create`);
+  return id;
+}
+
+/** A user id by email, paging the admin list (a handful of pages at our size). */
+async function findUserId(email: string): Promise<string | null> {
+  const db = admin();
   for (let page = 1; page <= 20; page++) {
     const { data, error: listErr } = await db.auth.admin.listUsers({ page, perPage: 200 });
     if (listErr) throw listErr;
-    const hit = data.users.find((u) => (u.email ?? "").toLowerCase() === email);
+    const hit = data.users.find((u) => (u.email ?? "").toLowerCase() === email.toLowerCase());
     if (hit) return hit.id;
     if (data.users.length < 200) break;
   }
-  throw new Error(`capture user for ${p.key} not found after create`);
+  return null;
 }
 
 /**
@@ -32,13 +35,14 @@ export async function ensurePersonaUser(p: Persona): Promise<string> {
  * it the app neither syncs the closet down nor runs the AI features unmetered,
  * and both are what gets filmed.
  *
- * Premium is only ADDED where the account has no entitlement row at all. An
- * existing row is never touched: the owner-backed persona is a real account
- * with a real paid subscription, and overwriting its premium_until would
- * corrupt real billing data (and the paying-subscriber count).
+ * Premium is only ADDED where the account has no entitlement row at all; an
+ * existing row is never touched. Nothing should ever point this at a real
+ * account, but if it did, overwriting premium_until would corrupt real billing
+ * data (the owner's own row is a real paid subscription).
  *
- * `readOnly` tells capture.sh to run the app read-only on this account;
- * `syncWait` is how long to let its closet come down after a fresh install.
+ * `readOnly` would tell capture.sh to run the app pull-only (for a real
+ * account; none of the personas is one now); `syncWait` is how long to let the
+ * closet come down after a fresh install — longer for a big cloned closet.
  */
 export async function personaOtp(key: string): Promise<{ email: string; otp: string; readOnly: boolean; syncWait: number }> {
   const p = getPersona(key);
@@ -56,8 +60,7 @@ export async function personaOtp(key: string): Promise<{ email: string; otp: str
   const { data, error } = await db.auth.admin.generateLink({ type: "magiclink", email });
   const otp = data?.properties?.email_otp;
   if (error || !otp) throw error ?? new Error("could not mint a code");
-  const owner = p.account === "owner";
-  return { email, otp, readOnly: owner, syncWait: owner ? 90 : 30 };
+  return { email, otp, readOnly: false, syncWait: p.cloneFrom ? 90 : 30 };
 }
 
 /** The ClothingItem document the iOS/Android apps decode (Models.swift). */
@@ -122,4 +125,117 @@ export async function seededSlots(persona: string): Promise<string[]> {
   const { data, error } = await admin().from("closet_items").select("id").eq("user_id", uid).is("deleted_at", null);
   if (error) throw error;
   return (data ?? []).map((r) => ids.get((r as { id: string }).id)).filter((s): s is string => !!s);
+}
+
+// --- cloning the owner's closet ------------------------------------------------
+//
+// A persona with cloneFrom: "owner" films on a COPY of the owner's real closet:
+// rows copied as-is (same item ids, which are only unique per user), primary
+// photos copied server-side in Storage. The owner's account is only ever read.
+// Extra photos (kept originals) are not copied and are dropped from the copy, so
+// the copy never references an object it doesn't have.
+
+const CLONE_BATCH = 25;
+
+export type CloneResult = { copied: number; total: number; next: number | null; removed: number };
+
+/**
+ * Copy one batch of the owner's live closet, starting at `offset` (stable order
+ * by id). The last batch also removes anything in the persona's closet that is
+ * no longer in the owner's, so re-running mirrors it — including the generated
+ * items an earlier menswear closet had.
+ */
+export async function cloneCloset(persona: string, offset = 0): Promise<CloneResult> {
+  const p = getPersona(persona);
+  if (!p?.cloneFrom) throw new Error(`${persona} is not a cloned closet`);
+  const ownerEmail = process.env.CAPTURE_OWNER_EMAIL?.trim();
+  if (!ownerEmail) throw new Error("CAPTURE_OWNER_EMAIL is not set");
+  const ownerId = await findUserId(ownerEmail);
+  if (!ownerId) throw new Error("owner account not found");
+  const uid = await ensurePersonaUser(p);
+  if (uid === ownerId) throw new Error("refusing to clone a closet onto itself");
+
+  const db = admin();
+  const { count, error: cErr } = await db
+    .from("closet_items")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", ownerId)
+    .is("deleted_at", null);
+  if (cErr) throw cErr;
+  const total = count ?? 0;
+
+  const { data, error } = await db
+    .from("closet_items")
+    .select("id,data")
+    .eq("user_id", ownerId)
+    .is("deleted_at", null)
+    .order("id")
+    .range(offset, offset + CLONE_BATCH - 1);
+  if (error) throw error;
+  const rows = (data ?? []) as { id: string; data: Record<string, unknown> }[];
+
+  const storage = db.storage.from(BUCKET);
+  let copied = 0;
+  for (const r of rows) {
+    const ref = typeof r.data.imageRef === "string" ? r.data.imageRef : null;
+    if (ref) {
+      const to = `${uid.toLowerCase()}/${ref}.img`;
+      await storage.remove([to]); // copy() won't overwrite; a re-run refreshes the photo
+      const { error: cpErr } = await storage.copy(`${ownerId.toLowerCase()}/${ref}.img`, to);
+      if (cpErr && !/not.?found/i.test(cpErr.message)) throw cpErr;
+      if (cpErr) continue; // the owner's row points at a missing photo; skip it rather than ship a blank tile
+    }
+    const { error: upErr } = await db.from("closet_items").upsert(
+      {
+        id: r.id,
+        user_id: uid,
+        data: { ...r.data, extraImageRefs: [] },
+        updated_at: new Date().toISOString(),
+        deleted_at: null,
+      },
+      { onConflict: "user_id,id" }
+    );
+    if (upErr) throw upErr;
+    copied++;
+  }
+
+  const next = offset + rows.length < total ? offset + rows.length : null;
+  let removed = 0;
+  if (next === null) {
+    const { data: ownerIds, error: idErr } = await db.from("closet_items").select("id").eq("user_id", ownerId).is("deleted_at", null);
+    if (idErr) throw idErr;
+    const keep = new Set((ownerIds ?? []).map((x) => (x as { id: string }).id));
+    const { data: mine, error: mErr } = await db.from("closet_items").select("id,data").eq("user_id", uid).is("deleted_at", null);
+    if (mErr) throw mErr;
+    const staleRows = ((mine ?? []) as { id: string; data: { imageRef?: string } }[]).filter((x) => !keep.has(x.id));
+    const stale = staleRows.map((x) => x.id);
+    if (stale.length) {
+      // Their photos go too: closet-images already leaks orphans (FitCheck CLAUDE.md).
+      const paths = staleRows.flatMap((x) => (x.data.imageRef ? [`${uid.toLowerCase()}/${x.data.imageRef}.img`] : []));
+      if (paths.length) await storage.remove(paths);
+      // Soft delete, the way the apps do, so a synced device drops them too.
+      const { error: dErr } = await db
+        .from("closet_items")
+        .update({ deleted_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+        .eq("user_id", uid)
+        .in("id", stale);
+      if (dErr) throw dErr;
+      removed = stale.length;
+    }
+  }
+  return { copied, total, next, removed };
+}
+
+/** Live items in a persona's closet, for the planner's "is it stocked?" check. */
+export async function closetSize(persona: string): Promise<number> {
+  const p = getPersona(persona);
+  if (!p) return 0;
+  const uid = await ensurePersonaUser(p);
+  const { count, error } = await admin()
+    .from("closet_items")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", uid)
+    .is("deleted_at", null);
+  if (error) throw error;
+  return count ?? 0;
 }

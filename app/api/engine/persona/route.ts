@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { engineAuthorized, errorMessage } from "@/lib/contentEngine/auth";
 import { PERSONAS, getPersona, garmentPrompt, personaEmail } from "@/lib/contentEngine/personas";
-import { personaOtp, signItemImage, commitItem, seededSlots } from "@/lib/contentEngine/personaAccounts";
+import { personaOtp, signItemImage, commitItem, seededSlots, cloneCloset } from "@/lib/contentEngine/personaAccounts";
 import { generateImage } from "@/lib/contentEngine/gemini";
 
 export const runtime = "nodejs";
@@ -15,9 +15,11 @@ export const maxDuration = 90;
 //   {action: "garment", persona, slot}   → a generated product photo (base64), not stored
 //   {action: "sign", persona, slot}      → signed upload URL for the item's cut-out photo
 //   {action: "commit", persona, slot}    → write the closet row once the photo is up
+//   {action: "clone", persona, offset}   → copy the next batch of the owner's closet into a
+//                                          cloneFrom persona; returns `next` until done
 export async function POST(req: Request) {
   if (!engineAuthorized(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const b = (await req.json().catch(() => ({}))) as { action?: string; persona?: string; slot?: string };
+  const b = (await req.json().catch(() => ({}))) as { action?: string; persona?: string; slot?: string; offset?: number };
 
   try {
     if (b.action === "list") {
@@ -43,6 +45,10 @@ export async function POST(req: Request) {
 
     const p = b.persona ? getPersona(b.persona) : undefined;
     if (!p) return NextResponse.json({ error: "Unknown persona." }, { status: 400 });
+
+    if (b.action === "clone") {
+      return NextResponse.json(await cloneCloset(p.key, Math.max(0, Number(b.offset) || 0)));
+    }
 
     if (b.action === "otp") {
       // The original closet is the reviewer account, which signs in through reviewer-login.

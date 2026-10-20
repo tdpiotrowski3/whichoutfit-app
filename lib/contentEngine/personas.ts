@@ -40,11 +40,12 @@ export type Persona = {
   describe: string;
   wardrobe: WardrobeItem[];
   /**
-   * "owner" = a real person's own account (CAPTURE_OWNER_EMAIL), filmed as-is:
-   * never seeded, and the app runs READ-ONLY on it during capture (no push, no
-   * photo uploads, no cut-out rewrites), because it is real data.
+   * "owner" = this closet is a COPY of the owner's real closet (the account at
+   * CAPTURE_OWNER_EMAIL), made by `./engine.py --clone-closet`. Filming signs in
+   * as the persona's own capture account, never the owner's, so nothing a
+   * capture run does can touch the real account.
    */
-  account?: "owner";
+  cloneFrom?: "owner";
   /** Narrator for clips filmed on this closet (a Gemini prebuilt voice). */
   voice?: string;
 };
@@ -68,10 +69,10 @@ export const PERSONAS: Persona[] = [
   },
   {
     key: "menswear",
-    label: "Menswear (the owner's real closet)",
+    label: "Menswear (a copy of the owner's real closet)",
     describe: "A real, lived-in menswear closet of 250+ pieces: tees, henleys, button-ups, chinos, jeans, performance pants, sweatshirts, loafers. Suits work, dates, weddings, travel, weekends.",
     wardrobe: [],
-    account: "owner",
+    cloneFrom: "owner",
     voice: "Algieba", // Gemini's "smooth" male voice: a menswear closet gets a man's voice
   },
   {
@@ -135,22 +136,13 @@ export const PERSONAS: Persona[] = [
 const REVIEWER_EMAIL = "whichoutfitreview@test.com";
 
 /**
- * The sign-in email for a persona: the reviewer for `original`, the owner's own
- * address (CAPTURE_OWNER_EMAIL) for an owner-backed persona, otherwise
+ * The sign-in email for a persona: the reviewer for `original`, otherwise
  * "<local>+capture-<key>@<domain>" built from CAPTURE_EMAIL_BASE. Throws when
- * the needed address is unset — that persona is simply off until configured.
+ * the base is unset — persona accounts are simply off until it is configured.
+ * A cloned closet signs in the same way: never as the account it was copied from.
  */
-export function personaEmail(
-  key: string,
-  base = process.env.CAPTURE_EMAIL_BASE,
-  owner = process.env.CAPTURE_OWNER_EMAIL
-): string {
+export function personaEmail(key: string, base = process.env.CAPTURE_EMAIL_BASE): string {
   if (key === "original") return REVIEWER_EMAIL;
-  if (getPersona(key)?.account === "owner") {
-    const o = owner?.trim().toLowerCase();
-    if (!o || !/^[^@\s]+@[^@\s]+$/.test(o)) throw new Error("CAPTURE_OWNER_EMAIL is not set");
-    return o;
-  }
   const m = base?.trim().match(/^([^@+\s]+)@([^@\s]+)$/);
   if (!m) throw new Error("CAPTURE_EMAIL_BASE is not set (an address like you@example.com)");
   return `${m[1]}+capture-${key}@${m[2]}`.toLowerCase();

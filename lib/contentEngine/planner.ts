@@ -6,7 +6,7 @@ import { generateJson } from "./gemini";
 import { TEMPLATES, getTemplate, syllableBudget, type Template } from "./templates";
 import { featureOf, scoreClip, validateIdea, type RawIdea } from "./rules";
 import { PERSONAS, voiceFor } from "./personas";
-import { seededSlots } from "./personaAccounts";
+import { seededSlots, closetSize } from "./personaAccounts";
 import { nextSlots, runwayDays, slotsToFill, RUNWAY_DAYS } from "./schedule";
 
 // The content engine's brain. Runs weekly from /api/cron/social-plan and does
@@ -344,9 +344,9 @@ async function availableClosets(): Promise<string[]> {
   const out = ["original"];
   for (const p of PERSONAS) {
     if (p.key === "original") continue;
-    if (p.account === "owner") {
-      // A real closet is never seeded; it's available once its address is configured.
-      if (process.env.CAPTURE_OWNER_EMAIL) out.push(p.key);
+    if (p.cloneFrom) {
+      // A cloned closet is never seeded; it's available once the copy exists.
+      if ((await closetSize(p.key).catch(() => 0)) >= MIN_STOCKED) out.push(p.key);
       continue;
     }
     const have = await seededSlots(p.key).catch(() => []);
