@@ -9,13 +9,13 @@ const TABS = [
   { href: "/growth", label: "Growth" },
   { href: "/attribution", label: "Attribution" },
   { href: "/redemptions", label: "Redemptions" },
-  { href: "/ai", label: "AI Consumption" },
+  { href: "/ai", label: "AI Usage" },
   { href: "/appstore", label: "App Store" },
   { href: "/finance", label: "Finance" },
   { href: "/users", label: "Users" },
   { href: "/marketing", label: "Marketing" },
-  { href: "/content", label: "Content Studio" },
-  { href: "/social", label: "Social & Ads" },
+  { href: "/content", label: "Studio" },
+  { href: "/social", label: "Social" },
 ];
 
 export function Nav() {
@@ -51,7 +51,7 @@ export function Nav() {
                 <Link
                   key={t.href}
                   href={t.href}
-                  className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                  className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
                     active ? "bg-white text-[var(--wo-blue)] shadow-sm" : "text-[var(--wo-muted)] hover:text-[var(--wo-text)]"
                   }`}
                 >
@@ -63,7 +63,7 @@ export function Nav() {
         </div>
 
         {/* Desktop sign-out. */}
-        <button onClick={logout} className="hidden text-sm font-medium text-[var(--wo-muted)] hover:text-[var(--wo-text)] md:block">
+        <button onClick={logout} className="hidden shrink-0 whitespace-nowrap text-sm font-medium text-[var(--wo-muted)] hover:text-[var(--wo-text)] md:block">
           Sign out
         </button>
 

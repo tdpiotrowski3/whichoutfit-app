@@ -426,13 +426,15 @@ export type SocialIdeaDbRow = {
   rationale: string | null;
   clip_id: string | null;
   error: string | null;
+  updated_at?: string | null;
+  source?: string | null;
 };
 
 /** Null when the table doesn't exist yet, so the Social tab still renders. */
 export async function getSocialIdeas(limit = 30): Promise<SocialIdeaDbRow[] | null> {
   const { data, error } = await admin()
     .from("social_ideas")
-    .select("id,created_at,status,template,inputs,closet,title,voiceover,captions,caption_pick,hashtags,rationale,clip_id,error")
+    .select("id,created_at,updated_at,status,template,inputs,closet,title,voiceover,captions,caption_pick,hashtags,rationale,source,clip_id,error")
     .neq("status", "rejected")
     .order("created_at", { ascending: false })
     .limit(limit);
