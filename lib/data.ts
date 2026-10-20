@@ -407,6 +407,39 @@ export async function getSocialPosts(limit = 40): Promise<SocialPostDbRow[]> {
   return (data ?? []) as SocialPostDbRow[];
 }
 
+// --- Content engine ideas ---
+// Backed by public.social_ideas (FitCheck/supabase/social_engine.sql), written
+// by lib/contentEngine/planner.ts. Undecided first, then the most recent.
+
+export type SocialIdeaDbRow = {
+  id: string;
+  created_at: string;
+  status: "proposed" | "approved" | "rejected" | "rendering" | "rendered" | "failed";
+  template: string;
+  inputs: Record<string, string>;
+  closet: string;
+  title: string;
+  voiceover: string[];
+  captions: string[];
+  caption_pick: number;
+  hashtags: string | null;
+  rationale: string | null;
+  clip_id: string | null;
+  error: string | null;
+};
+
+/** Null when the table doesn't exist yet, so the Social tab still renders. */
+export async function getSocialIdeas(limit = 30): Promise<SocialIdeaDbRow[] | null> {
+  const { data, error } = await admin()
+    .from("social_ideas")
+    .select("id,created_at,status,template,inputs,closet,title,voiceover,captions,caption_pick,hashtags,rationale,clip_id,error")
+    .neq("status", "rejected")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) return null;
+  return (data ?? []) as SocialIdeaDbRow[];
+}
+
 export type SocialClickRow = {
   day: string;
   campaign: string;
