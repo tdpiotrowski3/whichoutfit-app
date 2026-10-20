@@ -3,7 +3,7 @@ import { isAuthed } from "@/lib/session";
 import { admin } from "@/lib/supabase";
 import { errorMessage } from "@/lib/contentEngine/auth";
 import { draftIdeas } from "@/lib/contentEngine/planner";
-import { editIdea, requestVideo, type IdeaEdit, type VideoRequest } from "@/lib/contentEngine/studio";
+import { editIdea, requestVideo, briefToIdea, rewriteIdea, setSetting, type IdeaEdit, type VideoRequest } from "@/lib/contentEngine/studio";
 
 export const runtime = "nodejs";
 export const maxDuration = 90;
@@ -13,16 +13,26 @@ export const maxDuration = 90;
 //   {action: "edit", id, edit}                 — change the script, captions, closet or input
 //   {action: "request", request}               — draft one video for exactly what was asked
 //   {action: "cancel", id}                     — take an approved idea back to review
+//   {action: "brief", brief}                   — the agent: plain words in, one idea out
+//   {action: "rewrite", id, note}              — redo a script from a note
+//   {action: "autopilot", on}                  — weekly ideas skip review
 //   {action: "draft"}                          — draft a fresh batch now
 export async function POST(req: Request) {
   if (!(await isAuthed())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = (await req.json().catch(() => ({}))) as {
     action?: string; id?: string; pick?: number; edit?: IdeaEdit; request?: VideoRequest;
+    brief?: string; note?: string; on?: boolean;
   };
 
   try {
     if (body.action === "draft") return NextResponse.json(await draftIdeas());
     if (body.action === "request" && body.request) return NextResponse.json({ idea: await requestVideo(body.request) });
+    if (body.action === "brief" && body.brief) return NextResponse.json(await briefToIdea(body.brief));
+    if (body.action === "rewrite" && body.id) return NextResponse.json({ idea: await rewriteIdea(body.id, body.note ?? "") });
+    if (body.action === "autopilot") {
+      await setSetting("autopilot", body.on === true);
+      return NextResponse.json({ ok: true });
+    }
     if (body.action === "edit" && body.id && body.edit) return NextResponse.json({ idea: await editIdea(body.id, body.edit) });
   } catch (e) {
     return NextResponse.json({ error: errorMessage(e, "failed") }, { status: 400 });

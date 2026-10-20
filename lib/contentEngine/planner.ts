@@ -325,12 +325,15 @@ TEMPLATE CATALOG:
 ${catalog}`;
 
   const r = await generateJson<{ ideas: RawIdea[] }>(IDEA_SYSTEM, prompt, IDEA_SCHEMA);
+  // Autopilot (Content Studio switch): the weekly ideas skip review and go straight to the Mac.
+  const { data: ap } = await db.from("studio_settings").select("value").eq("key", "autopilot").maybeSingle();
+  const autopilot = ap?.value === true;
   const rows: Record<string, unknown>[] = [];
   const dropped: string[] = [];
   for (const raw of r.ideas ?? []) {
     const v = validateIdea(raw, closets);
     if (typeof v === "string") dropped.push(`${raw.title || raw.template}: ${v}`);
-    else rows.push({ ...v, status: "proposed", source: "planner" });
+    else rows.push({ ...v, status: autopilot ? "approved" : "proposed", source: "planner" });
   }
   if (rows.length) {
     const { error: insErr } = await db.from("social_ideas").insert(rows);
