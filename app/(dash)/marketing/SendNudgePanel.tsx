@@ -20,6 +20,32 @@ export function SendNudgePanel({
   const [testEmail, setTestEmail] = useState("");
   const [busy, setBusy] = useState<Mode | null>(null);
   const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
+  const [angle, setAngle] = useState("");
+  const [drafting, setDrafting] = useState(false);
+
+  // Ask the AI for a draft (or a different take on the current one). It only
+  // fills the fields — sending still goes through the test-first buttons below.
+  async function draft() {
+    setDrafting(true);
+    setStatus(null);
+    try {
+      const res = await fetch("/api/marketing/draft", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ feature, featureLabel, angle, current: message.trim() ? { subject, message } : undefined }),
+      });
+      const data = await res.json();
+      if (!res.ok) setStatus({ ok: false, text: data.error ?? "Couldn't draft it." });
+      else {
+        setSubject(data.subject);
+        setMessage(data.message);
+      }
+    } catch {
+      setStatus({ ok: false, text: "Network error" });
+    } finally {
+      setDrafting(false);
+    }
+  }
 
   const canCompose = subject.trim().length > 0 && message.trim().length > 0;
 
@@ -63,6 +89,25 @@ export function SendNudgePanel({
           <code>MARKETING_PHYSICAL_ADDRESS</code>, and <code>PUBLIC_BASE_URL</code> in Vercel to enable sending.
         </p>
       ) : null}
+
+      <div className="flex flex-wrap items-center gap-2 rounded-lg bg-[var(--wo-bg)] p-2">
+        <input
+          className={`${input} min-w-0 flex-1`}
+          placeholder='Optional direction, e.g. "short and playful" or "tie it to the holidays"'
+          value={angle}
+          onChange={(e) => setAngle(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") draft(); }}
+          disabled={drafting}
+        />
+        <button
+          onClick={draft}
+          disabled={drafting}
+          className="shrink-0 rounded-lg px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+          style={{ background: "linear-gradient(120deg, var(--wo-blue), var(--wo-teal))" }}
+        >
+          {drafting ? "Writing…" : message.trim() ? "✦ Rewrite" : "✦ Draft it for me"}
+        </button>
+      </div>
 
       <input
         className={input}
