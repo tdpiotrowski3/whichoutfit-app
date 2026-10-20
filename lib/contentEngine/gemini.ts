@@ -16,7 +16,7 @@ const TEXT_MODELS = [process.env.ENGINE_TEXT_MODEL || "gemini-3.8-flash", "gemin
  */
 const TTS_MODELS = [process.env.ENGINE_TTS_MODEL || "gemini-3.1-flash-tts-preview", "gemini-2.5-flash-preview-tts"];
 
-/** The narrator. Warm and unhurried, the nearest Gemini voice to CapCut's Calm Host. */
+/** The default narrator (warm, female), nearest to CapCut's Calm Host. Closets can override it (personas.ts). */
 export const VOICE = process.env.ENGINE_VOICE || "Sulafat";
 
 function key(): string {
@@ -131,6 +131,7 @@ export type Speech = {
   sampleRate: number;
   /** Which model actually spoke — a voice that changes partway through a batch is worth knowing. */
   model: string;
+  voice: string;
 };
 
 /**
@@ -138,11 +139,13 @@ export type Speech = {
  * and never last, because a trailing word like "start" or "so" can read as an
  * instruction and make the model answer in text (a 400) instead of speaking.
  */
-export async function speak(line: string): Promise<Speech> {
+export async function speak(line: string, voice: string = VOICE): Promise<Speech> {
   // Pace matters as much as tone: narration is laid onto fixed footage, and the
   // first live test with "unhurried" in this note ran ~2.8 syllables/sec against
   // the ~4.4 the beats are budgeted for, so every script overran its clip.
-  const prompt = `Say this like a warm, friendly host in a short social video, at a brisk, natural conversational pace: "${line}" (read only the quoted words)`;
+  // "Talking to a friend", not "host": the owner wants it relatable and not
+  // AI-sounding, and an announcer read is the most synthetic-sounding style.
+  const prompt = `Say this casually, like you're telling a friend about something you just tried — relaxed, smooth and natural, not like an announcer or an ad, at a brisk conversational pace: "${line}" (read only the quoted words)`;
   let last: unknown;
   for (const model of TTS_MODELS) {
     try {
@@ -150,14 +153,14 @@ export async function speak(line: string): Promise<Speech> {
         contents: [{ role: "user", parts: [{ text: prompt }] }],
         generationConfig: {
           responseModalities: ["AUDIO"],
-          speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: VOICE } } },
+          speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } },
         },
       });
       const cands = json.candidates as { content?: { parts?: { inlineData?: { mimeType?: string; data?: string } }[] } }[];
       const inline = cands?.[0]?.content?.parts?.find((p) => p.inlineData?.data)?.inlineData;
       if (!inline?.data) throw new GeminiError(`Gemini ${model} returned no audio`, 502);
       const rate = Number(inline.mimeType?.match(/rate=(\d+)/)?.[1] ?? 24000);
-      return { pcm: inline.data, sampleRate: rate, model };
+      return { pcm: inline.data, sampleRate: rate, model, voice };
     } catch (e) {
       last = e;
       if (!(e instanceof GeminiError && (e.status === 404 || isDailyQuota(e)))) throw e;

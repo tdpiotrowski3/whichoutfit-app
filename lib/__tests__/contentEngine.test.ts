@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { nextSlots, runwayDays, slotsToFill } from "../contentEngine/schedule";
 import { countSyllables, syllableBudget, TEMPLATES, getTemplate } from "../contentEngine/templates";
 import { featureOf, scoreClip, validateIdea } from "../contentEngine/rules";
-import { PERSONAS, getPersona, itemId, garmentPrompt, personaEmail } from "../contentEngine/personas";
+import { PERSONAS, VOICES, getPersona, itemId, garmentPrompt, personaEmail, voiceFor } from "../contentEngine/personas";
 
 const iso = (d: Date) => d.toISOString();
 
@@ -135,10 +135,23 @@ describe("persona closets", () => {
   });
 
   it("builds persona emails as plus-addresses on the configured mailbox", () => {
-    expect(personaEmail("menswear", "owner@example.com")).toBe("owner+capture-menswear@example.com");
+    expect(personaEmail("streetwear", "owner@example.com")).toBe("owner+capture-streetwear@example.com");
     expect(personaEmail("original", undefined)).toBe("whichoutfitreview@test.com");
-    expect(() => personaEmail("menswear", undefined)).toThrow(/CAPTURE_EMAIL_BASE/);
-    expect(() => personaEmail("menswear", "owner+x@example.com")).toThrow(/CAPTURE_EMAIL_BASE/);
+    expect(() => personaEmail("streetwear", undefined)).toThrow(/CAPTURE_EMAIL_BASE/);
+    expect(() => personaEmail("streetwear", "owner+x@example.com")).toThrow(/CAPTURE_EMAIL_BASE/);
+  });
+
+  it("signs a cloned closet in as its own capture account, never the owner's", () => {
+    expect(personaEmail("menswear", "owner@example.com")).toBe("owner+capture-menswear@example.com");
+    expect(getPersona("menswear")!.cloneFrom).toBe("owner");
+    expect(getPersona("menswear")!.wardrobe).toHaveLength(0); // copied, never generated
+  });
+
+  it("gives a menswear closet a male narrator and everything else the default", () => {
+    expect(voiceFor("menswear")).toBe("Algieba");
+    expect(voiceFor("original")).toBe("Sulafat");
+    expect(voiceFor(null)).toBe("Sulafat");
+    for (const p of PERSONAS) expect(VOICES).toContain(voiceFor(p.key));
   });
 
   it("gives every persona unique slots", () => {
@@ -146,8 +159,8 @@ describe("persona closets", () => {
   });
 
   it("shoots light garments on grey so the cut-out doesn't eat them", () => {
-    const white = getPersona("menswear")!.wardrobe.find((w) => w.slot === "oxford")!;
-    const navy = getPersona("menswear")!.wardrobe.find((w) => w.slot === "chore")!;
+    const white = getPersona("minimal")!.wardrobe.find((w) => w.slot === "whitetee")!;
+    const navy = getPersona("polished")!.wardrobe.find((w) => w.slot === "stripe")!;
     expect(garmentPrompt(white)).toMatch(/grey/);
     expect(garmentPrompt(navy)).toMatch(/pure white/);
   });
