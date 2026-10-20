@@ -10,6 +10,8 @@ import { SocialSyncButton } from "@/components/SocialSyncButton";
 import { SocialPublishButton } from "@/components/SocialPublishButton";
 import { TrendChart, BarList, type TrendSeries } from "@/components/charts/TrendChart";
 import { PostCalendar, type CalendarPost } from "@/components/social/PostCalendar";
+import { Connections } from "@/components/social/Connections";
+import type { Connection } from "@/lib/socialHealth";
 
 
 // Social & Ads: how the accounts and the posts are doing. Making videos lives in
@@ -102,10 +104,11 @@ export type SocialData = {
   clicks: SocialClickRow[];
   ideas: SocialIdeaDbRow[] | null;
   configured: { instagram: boolean; instagramPublish: boolean; tiktok: boolean };
+  connections: Connection[];
 };
 
 /** The whole page, from its data — the route loads it (app/(dash)/social/page.tsx). */
-export function SocialView({ now, rows, posts, clicks, ideas, configured }: SocialData) {
+export function SocialView({ now, rows, posts, clicks, ideas, configured, connections }: SocialData) {
   const titles = new Map((ideas ?? []).filter((i) => i.clip_id).map((i) => [i.clip_id!, i.title]));
   const cut = new Date(now.getTime() - 30 * 86_400_000).toISOString().slice(0, 10);
   const cut60 = new Date(now.getTime() - 60 * 86_400_000).toISOString().slice(0, 10);
@@ -162,10 +165,13 @@ export function SocialView({ now, rows, posts, clicks, ideas, configured }: Soci
   const today = now.toLocaleDateString("en-CA", { timeZone: "America/Chicago" });
   const spend = sumBy(cur, "spend");
   const waiting = (ideas ?? []).filter((i) => i.status === "proposed" || i.status === "failed").length;
+  const conn = (k: Connection["key"]) => connections.find((c) => c.key === k);
+  const working = (k: Connection["key"]) => conn(k)?.state === "ok" || conn(k)?.state === "partial";
   const connected = [
-    { label: "Instagram", on: configured.instagram, note: configured.instagramPublish ? "auto-posts" : "stats only" },
-    { label: "TikTok", on: configured.tiktok, note: "post by hand" },
+    { label: "Instagram", on: working("instagram"), set: configured.instagram, note: configured.instagramPublish ? "auto-posts" : "stats only" },
+    { label: "TikTok", on: working("tiktok"), set: configured.tiktok, note: "post by hand" },
   ];
+  const broken = connections.filter((c) => c.key !== "instagram_ads" && c.state !== "ok");
 
   return (
     <div className="space-y-6">
@@ -176,7 +182,8 @@ export function SocialView({ now, rows, posts, clicks, ideas, configured }: Soci
             {connected.map((c, i) => (
               <span key={c.label}>
                 {i ? " · " : ""}
-                {c.label} {c.on ? <span className="text-[var(--wo-green)]">connected</span> : "not connected"}
+                {c.label}{" "}
+                {c.on ? <span className="text-[var(--wo-green)]">connected</span> : c.set ? <span className="text-[var(--wo-red,#e5484d)]">not working</span> : "not connected"}
                 {c.on ? ` (${c.note})` : ""}
               </span>
             ))}
@@ -191,6 +198,12 @@ export function SocialView({ now, rows, posts, clicks, ideas, configured }: Soci
           <SocialSyncButton />
         </div>
       </div>
+
+      {broken.length ? (
+        <Card title="Connections" right={<span className="text-xs text-[var(--wo-muted)]">checked live just now</span>}>
+          <Connections connections={connections} />
+        </Card>
+      ) : null}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Stat
@@ -244,6 +257,12 @@ export function SocialView({ now, rows, posts, clicks, ideas, configured }: Soci
       <Card>
         <QueueTable posts={posts} titles={titles} />
       </Card>
+
+      {broken.length === 0 ? (
+        <Card title="Connections" right={<span className="text-xs text-[var(--wo-muted)]">checked live just now</span>}>
+          <Connections connections={connections} />
+        </Card>
+      ) : null}
     </div>
   );
 }

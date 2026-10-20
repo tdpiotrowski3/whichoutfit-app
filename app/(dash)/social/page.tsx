@@ -13,6 +13,8 @@ import { isTikTokConfigured } from "@/lib/tiktok";
 import { isInstagramConfigured } from "@/lib/meta";
 import { isInstagramPublishConfigured } from "@/lib/instagram";
 import { SocialView } from "@/components/social/SocialView";
+import { socialHealth } from "@/lib/socialHealth";
+import type { Connection } from "@/lib/socialHealth";
 
 export const dynamic = "force-dynamic";
 
@@ -24,8 +26,9 @@ export default async function SocialPage() {
   let posts: SocialPostDbRow[] = [];
   let clicks: SocialClickRow[] = [];
   let ideas: SocialIdeaDbRow[] | null = null;
+  let connections: Connection[] = [];
   try {
-    [rows, posts, clicks, ideas] = await Promise.all([getSocialMetrics(60), getSocialPosts(400), getSocialClicks(60), getSocialIdeas(100)]);
+    [rows, posts, clicks, ideas, connections] = await Promise.all([getSocialMetrics(60), getSocialPosts(400), getSocialClicks(60), getSocialIdeas(100), socialHealth()]);
   } catch {
     return (
       <Card title="Not configured">
@@ -41,6 +44,7 @@ export default async function SocialPage() {
       posts={posts}
       clicks={clicks}
       ideas={ideas}
+      connections={connections}
       configured={{ instagram: isInstagramConfigured(), instagramPublish: isInstagramPublishConfigured(), tiktok: isTikTokConfigured() }}
     />
   );
