@@ -109,6 +109,7 @@ function EngineCard({ ideas, posts }: { ideas: SocialIdeaDbRow[] | null; posts: 
                     <span className="font-mono text-xs text-[var(--wo-muted)]">
                       {i.template}
                       {Object.keys(i.inputs ?? {}).length ? ` · ${Object.values(i.inputs).join(", ")}` : ""}
+                      {i.closet && i.closet !== "original" ? ` · ${i.closet} closet` : ""}
                     </span>
                   </div>
                   {i.rationale ? <p className="text-xs text-[var(--wo-muted)]">{i.rationale}</p> : null}

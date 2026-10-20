@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import { nextSlots, runwayDays, slotsToFill } from "../contentEngine/schedule";
 import { countSyllables, syllableBudget, TEMPLATES, getTemplate } from "../contentEngine/templates";
 import { featureOf, scoreClip, validateIdea } from "../contentEngine/rules";
+import { PERSONAS, getPersona, itemId, garmentPrompt, personaEmail } from "../contentEngine/personas";
 
 const iso = (d: Date) => d.toISOString();
 
@@ -122,5 +123,57 @@ describe("featureOf / scoreClip", () => {
     const base = { views: 0, likes: 0, saves: 0, shares: 0, clicks: 0, installs: 0 };
     expect(scoreClip({ ...base, installs: 1 })).toBeGreaterThan(scoreClip({ ...base, views: 200 }));
     expect(scoreClip({ ...base, clicks: 1 })).toBe(25);
+  });
+});
+
+describe("persona closets", () => {
+  it("derives a stable, app-shaped id per persona + slot", () => {
+    const a = itemId("menswear", "oxford");
+    expect(a).toBe(itemId("menswear", "oxford"));
+    expect(a).not.toBe(itemId("streetwear", "oxford"));
+    expect(a).toMatch(/^[0-9A-F]{8}-[0-9A-F]{4}-5[0-9A-F]{3}-[89AB][0-9A-F]{3}-[0-9A-F]{12}$/);
+  });
+
+  it("builds persona emails as plus-addresses on the configured mailbox", () => {
+    expect(personaEmail("menswear", "owner@example.com")).toBe("owner+capture-menswear@example.com");
+    expect(personaEmail("original", undefined)).toBe("whichoutfitreview@test.com");
+    expect(() => personaEmail("menswear", undefined)).toThrow(/CAPTURE_EMAIL_BASE/);
+    expect(() => personaEmail("menswear", "owner+x@example.com")).toThrow(/CAPTURE_EMAIL_BASE/);
+  });
+
+  it("gives every persona unique slots", () => {
+    for (const p of PERSONAS) expect(new Set(p.wardrobe.map((w) => w.slot)).size).toBe(p.wardrobe.length);
+  });
+
+  it("shoots light garments on grey so the cut-out doesn't eat them", () => {
+    const white = getPersona("menswear")!.wardrobe.find((w) => w.slot === "oxford")!;
+    const navy = getPersona("menswear")!.wardrobe.find((w) => w.slot === "chore")!;
+    expect(garmentPrompt(white)).toMatch(/grey/);
+    expect(garmentPrompt(navy)).toMatch(/pure white/);
+  });
+
+  const flow = {
+    template: "flow:trip_packing",
+    inputs: [{ name: "city", value: "Chicago, IL" }],
+    title: "Chicago in November",
+    voiceover: ["Packing for Chicago in November.", "So type the city.", "Chicago, Illinois.", "A forecast, a capsule, a plan per day."],
+    captions: ["A"],
+    hashtags: "#whichoutfit",
+    rationale: "r",
+  };
+
+  it("keeps a flow on the closet it asked for, if that closet is stocked", () => {
+    const v = validateIdea({ ...flow, closet: "menswear" }, ["original", "menswear"]);
+    expect(typeof v === "object" && v.closet).toBe("menswear");
+    expect(validateIdea({ ...flow, closet: "streetwear" }, ["original", "menswear"])).toMatch(/not available/);
+  });
+
+  it("always films a recut on the original closet", () => {
+    const recut = getTemplate("recut:01_rate_outfit")!;
+    const v = validateIdea(
+      { ...flow, template: recut.key, inputs: [], closet: "menswear", voiceover: recut.beats.map(() => "A short line.") },
+      ["original", "menswear"]
+    );
+    expect(typeof v === "object" && v.closet).toBe("original");
   });
 });

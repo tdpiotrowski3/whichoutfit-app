@@ -417,6 +417,7 @@ export type SocialIdeaDbRow = {
   status: "proposed" | "approved" | "rejected" | "rendering" | "rendered" | "failed";
   template: string;
   inputs: Record<string, string>;
+  closet: string;
   title: string;
   voiceover: string[];
   captions: string[];
@@ -431,7 +432,7 @@ export type SocialIdeaDbRow = {
 export async function getSocialIdeas(limit = 30): Promise<SocialIdeaDbRow[] | null> {
   const { data, error } = await admin()
     .from("social_ideas")
-    .select("id,created_at,status,template,inputs,title,voiceover,captions,caption_pick,hashtags,rationale,clip_id,error")
+    .select("id,created_at,status,template,inputs,closet,title,voiceover,captions,caption_pick,hashtags,rationale,clip_id,error")
     .neq("status", "rejected")
     .order("created_at", { ascending: false })
     .limit(limit);

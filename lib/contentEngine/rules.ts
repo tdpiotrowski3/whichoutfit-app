@@ -8,6 +8,7 @@ import { getTemplate, syllableBudget, countSyllables } from "./templates";
 export type IdeaFields = {
   template: string;
   inputs: Record<string, string>;
+  closet: string;
   title: string;
   voiceover: string[];
   captions: string[];
@@ -39,6 +40,7 @@ export function scoreClip(s: { views: number; likes: number; saves: number; shar
 export type RawIdea = {
   template: string;
   inputs: { name: string; value: string }[];
+  closet?: string;
   title: string;
   voiceover: string[];
   captions: string[];
@@ -51,7 +53,7 @@ export type RawIdea = {
  * dropped. A line may run TWO syllables over its budget — the counter is
  * approximate and the Mac re-measures the real audio — but no more.
  */
-export function validateIdea(raw: RawIdea): IdeaFields | string {
+export function validateIdea(raw: RawIdea, closets: string[] = ["original"]): IdeaFields | string {
   const t = getTemplate(raw.template);
   if (!t) return `unknown template ${raw.template}`;
   const inputs: Record<string, string> = {};
@@ -63,11 +65,16 @@ export function validateIdea(raw: RawIdea): IdeaFields | string {
     const over = countSyllables(lines[i]) - syllableBudget(t.beats[i]);
     if (over > 2) return `line ${i + 1} is ${over} syllables over its beat`;
   }
+  // Re-cuts are existing footage, so they are on the closet they were shot on.
+  // A flow is filmed fresh, on any closet that is actually stocked.
+  const closet = t.kind === "recut" ? "original" : raw.closet?.trim() || "original";
+  if (!closets.includes(closet)) return `closet ${closet} is not available`;
   const captions = (raw.captions ?? []).map((c) => c.trim()).filter(Boolean).slice(0, 3);
   if (captions.length === 0) return "no captions";
   return {
     template: t.key,
     inputs,
+    closet,
     title: (raw.title || t.key).slice(0, 80),
     voiceover: lines,
     captions,

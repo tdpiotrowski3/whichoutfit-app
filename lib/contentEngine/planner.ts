@@ -4,6 +4,8 @@ import { sendAdminAlert } from "@/lib/alert";
 import { generateJson } from "./gemini";
 import { TEMPLATES, getTemplate, syllableBudget, type Template } from "./templates";
 import { featureOf, scoreClip, validateIdea, type RawIdea } from "./rules";
+import { PERSONAS } from "./personas";
+import { seededSlots } from "./personaAccounts";
 import { nextSlots, runwayDays, slotsToFill, RUNWAY_DAYS } from "./schedule";
 
 // The content engine's brain. Runs weekly from /api/cron/social-plan and does
@@ -34,6 +36,7 @@ export type IdeaRow = {
   status: "proposed" | "approved" | "rejected" | "rendering" | "rendered" | "failed";
   template: string;
   inputs: Record<string, string>;
+  closet: string;
   title: string;
   voiceover: string[];
   captions: string[];
@@ -236,13 +239,14 @@ const IDEA_SCHEMA = {
             type: "ARRAY",
             items: { type: "OBJECT", properties: { name: { type: "STRING" }, value: { type: "STRING" } }, required: ["name", "value"] },
           },
+          closet: { type: "STRING" },
           title: { type: "STRING" },
           voiceover: { type: "ARRAY", items: { type: "STRING" } },
           captions: { type: "ARRAY", items: { type: "STRING" } },
           hashtags: { type: "STRING" },
           rationale: { type: "STRING" },
         },
-        required: ["template", "inputs", "title", "voiceover", "captions", "hashtags", "rationale"],
+        required: ["template", "inputs", "closet", "title", "voiceover", "captions", "hashtags", "rationale"],
       },
     },
   },
@@ -260,6 +264,7 @@ Voiceover rules — these are hard limits, the narration is synthesized and laid
 - Each line must match what is on screen during that beat (the "was:" text is the line that used to play there). Change the angle, the hook and the wording, never the facts on screen.
 - Beat 1 is the hook: a situation the viewer recognizes, said in a way that makes them stay.
 - The last beat lands the payoff on screen.
+- Closet: "recut" ideas are always "original" (the footage already exists). For "flow" ideas pick a closet from CLOSETS whose style suits the input — a menswear closet for a groom's-party occasion, streetwear for a concert — and spread flow ideas across different closets so the feed doesn't show one wardrobe every time. Never describe the person; talk about the clothes and the occasion.
 - For "flow" templates, the new input replaces what the footage originally showed (e.g. a new occasion instead of "outdoor summer wedding"); say the new input where the old line said the old one, and never mention the old one.
 
 Captions: exactly three options — [0] hook/curiosity, [1] plain and useful, [2] personal or POV. Each under 150 characters, no hashtags.
@@ -273,11 +278,11 @@ export async function draftIdeas(count = IDEAS_PER_WEEK, now = new Date()): Prom
   const db = admin();
   const { data: recent, error } = await db
     .from("social_ideas")
-    .select("template,inputs,title,status")
+    .select("template,inputs,closet,title,status")
     .order("created_at", { ascending: false })
     .limit(60);
   if (error) throw error;
-  const ideas = (recent ?? []) as Pick<IdeaRow, "template" | "inputs" | "title" | "status">[];
+  const ideas = (recent ?? []) as Pick<IdeaRow, "template" | "inputs" | "closet" | "title" | "status">[];
   const pending = ideas.filter((i) => i.status === "proposed").length;
   if (pending >= MAX_PENDING_IDEAS) return { drafted: 0, skipped: `${pending} ideas already waiting for a decision`, dropped: [] };
 
@@ -296,7 +301,9 @@ export async function draftIdeas(count = IDEAS_PER_WEEK, now = new Date()): Prom
     : "- No posted results yet. Favour the features with the most concrete payoff on screen (a score, a price, a palette).";
 
   const catalog = TEMPLATES.map((t) => templateBrief(t)).join("\n\n");
-  const done = ideas.map((i) => `- ${i.template} ${JSON.stringify(i.inputs)} "${i.title}" (${i.status})`).join("\n") || "- none yet";
+  const done = ideas.map((i) => `- ${i.template} ${JSON.stringify(i.inputs)} on ${i.closet} "${i.title}" (${i.status})`).join("\n") || "- none yet";
+  const closets = await availableClosets();
+  const closetBrief = PERSONAS.filter((p) => closets.includes(p.key)).map((p) => `- ${p.key}: ${p.describe}`).join("\n");
   const month = now.toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "America/Chicago" });
 
   const prompt = `Today is ${month}. Draft ${count} new clip ideas.
@@ -308,6 +315,9 @@ ${perf}
 ALREADY PLANNED OR MADE — do not repeat a template with the same inputs or the same angle:
 ${done}
 
+CLOSETS (flow ideas only; recuts are "original"):
+${closetBrief}
+
 TEMPLATE CATALOG:
 ${catalog}`;
 
@@ -315,7 +325,7 @@ ${catalog}`;
   const rows: Record<string, unknown>[] = [];
   const dropped: string[] = [];
   for (const raw of r.ideas ?? []) {
-    const v = validateIdea(raw);
+    const v = validateIdea(raw, closets);
     if (typeof v === "string") dropped.push(`${raw.title || raw.template}: ${v}`);
     else rows.push({ ...v, status: "proposed", source: "planner" });
   }
@@ -324,6 +334,19 @@ ${catalog}`;
     if (insErr) throw insErr;
   }
   return { drafted: rows.length, dropped };
+}
+
+/** A persona closet is offered once it is mostly stocked; an empty one would film an empty closet. */
+const MIN_STOCKED = 8;
+
+async function availableClosets(): Promise<string[]> {
+  const out = ["original"];
+  for (const p of PERSONAS) {
+    if (p.key === "original") continue;
+    const have = await seededSlots(p.key).catch(() => []);
+    if (have.length >= Math.min(MIN_STOCKED, p.wardrobe.length)) out.push(p.key);
+  }
+  return out;
 }
 
 function templateBrief(t: Template): string {

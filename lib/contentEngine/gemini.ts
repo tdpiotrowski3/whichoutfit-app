@@ -85,6 +85,46 @@ export async function generateJson<T>(system: string, prompt: string, schema: un
   throw last;
 }
 
+/**
+ * Image models, as in FitCheck _shared/gemini.ts: nano-banana first, capped at
+ * 40s because newer image models stall 80–95s on roughly one call in seven, then
+ * the fallback. `minimal` thinking is ~8s and plenty for a product shot.
+ */
+const IMAGE_MODELS = [process.env.ENGINE_IMAGE_MODEL || "gemini-nano-banana-2.1", "gemini-3.1-flash-lite-image"];
+const IMAGE_TIMEOUT_MS = 40_000;
+
+export type GeneratedImage = { data: string; mimeType: string; model: string };
+
+/** One generated image (base64), for the persona closets. */
+export async function generateImage(prompt: string): Promise<GeneratedImage> {
+  let last: unknown;
+  for (const model of IMAGE_MODELS) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), IMAGE_TIMEOUT_MS);
+    try {
+      const res = await fetch(`${BASE}/${model}:generateContent`, {
+        method: "POST",
+        signal: ctrl.signal,
+        headers: { "x-goog-api-key": key(), "content-type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts: [{ text: prompt }] }],
+          generationConfig: { responseModalities: ["IMAGE"], thinkingConfig: { thinkingLevel: "minimal" } },
+        }),
+      });
+      if (!res.ok) throw new GeminiError(`Gemini ${model} ${res.status}: ${(await res.text()).slice(0, 300)}`, res.status);
+      const json = (await res.json()) as { candidates?: { content?: { parts?: { inlineData?: { mimeType?: string; data?: string } }[] } }[] };
+      const img = json.candidates?.[0]?.content?.parts?.find((p) => p.inlineData?.data)?.inlineData;
+      if (!img?.data) throw new GeminiError(`Gemini ${model} returned no image`, 502);
+      return { data: img.data, mimeType: img.mimeType ?? "image/png", model };
+    } catch (e) {
+      last = e; // timeout, retired model, or a bad generation: the fallback gets one go
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  throw last;
+}
+
 export type Speech = {
   /** Raw 16-bit little-endian mono PCM, base64. */
   pcm: string;
