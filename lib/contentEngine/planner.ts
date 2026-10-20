@@ -1,4 +1,5 @@
 import { admin } from "@/lib/supabase";
+import { errorMessage } from "./auth";
 import { getAttribution } from "@/lib/attribution";
 import { sendAdminAlert } from "@/lib/alert";
 import { generateJson } from "./gemini";
@@ -450,20 +451,20 @@ export async function runSocialPlan(now = new Date()): Promise<PlanResult> {
   try {
     refill = await refillRunway(now);
   } catch (e) {
-    refill = { error: e instanceof Error ? e.message : String(e) };
+    refill = { error: errorMessage(e) };
   }
   let ideas: PlanResult["ideas"];
   try {
     ideas = await draftIdeas(IDEAS_PER_WEEK, now);
   } catch (e) {
-    ideas = { error: e instanceof Error ? e.message : String(e) };
+    ideas = { error: errorMessage(e) };
   }
   let digest: PlanResult["digest"];
   try {
     const { subject, html } = await digestHtml(now, refill, ideas);
     digest = await sendAdminAlert(subject, html);
   } catch (e) {
-    digest = { sent: false, reason: e instanceof Error ? e.message : String(e) };
+    digest = { sent: false, reason: errorMessage(e) };
   }
   return { refill, ideas, digest };
 }

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { draftIdeas } from "@/lib/contentEngine/planner";
-import { engineAuthorized } from "@/lib/contentEngine/auth";
+import { engineAuthorized, errorMessage } from "@/lib/contentEngine/auth";
 
 export const runtime = "nodejs";
 export const maxDuration = 90;
@@ -12,6 +12,6 @@ export async function POST(req: Request) {
   try {
     return NextResponse.json(await draftIdeas());
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "drafting failed" }, { status: 500 });
+    return NextResponse.json({ error: errorMessage(e, "drafting failed") }, { status: 500 });
   }
 }

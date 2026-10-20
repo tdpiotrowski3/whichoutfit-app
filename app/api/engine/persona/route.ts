@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { engineAuthorized } from "@/lib/contentEngine/auth";
+import { engineAuthorized, errorMessage } from "@/lib/contentEngine/auth";
 import { PERSONAS, getPersona, garmentPrompt, personaEmail } from "@/lib/contentEngine/personas";
 import { personaOtp, signItemImage, commitItem, seededSlots } from "@/lib/contentEngine/personaAccounts";
 import { generateImage } from "@/lib/contentEngine/gemini";
@@ -60,7 +60,7 @@ export async function POST(req: Request) {
     if (b.action === "sign") return NextResponse.json(await signItemImage(p.key, it.slot));
     if (b.action === "commit") return NextResponse.json(await commitItem(p.key, it.slot));
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "failed" }, { status: 500 });
+    return NextResponse.json({ error: errorMessage(e, "failed") }, { status: 500 });
   }
   return NextResponse.json({ error: "Unknown action." }, { status: 400 });
 }

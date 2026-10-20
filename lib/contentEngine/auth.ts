@@ -15,3 +15,18 @@ export function cronAuthorized(req: Request): boolean {
   if (!secret) return false;
   return req.headers.get("authorization") === `Bearer ${secret}`;
 }
+
+/**
+ * A readable message for any thrown value. Supabase errors are plain objects
+ * with a `message`, not Error instances, so `e instanceof Error` alone turns
+ * them into an anonymous "failed" — which is exactly how the first closet seed
+ * hid a primary-key mismatch.
+ */
+export function errorMessage(e: unknown, fallback = "failed"): string {
+  if (e instanceof Error) return e.message || fallback;
+  if (e && typeof e === "object" && "message" in e && typeof (e as { message: unknown }).message === "string") {
+    const o = e as { message: string; details?: string; hint?: string; code?: string };
+    return [o.message, o.details, o.hint, o.code && `(${o.code})`].filter(Boolean).join(" — ");
+  }
+  return typeof e === "string" ? e : fallback;
+}

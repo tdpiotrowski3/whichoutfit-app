@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { speak, GeminiError } from "@/lib/contentEngine/gemini";
-import { engineAuthorized } from "@/lib/contentEngine/auth";
+import { engineAuthorized, errorMessage } from "@/lib/contentEngine/auth";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -24,6 +24,6 @@ export async function POST(req: Request) {
       const wait = Math.ceil(e.retryAfter ?? 20);
       return NextResponse.json({ error: "rate limited", retryAfter: wait }, { status: 429, headers: { "retry-after": String(wait) } });
     }
-    return NextResponse.json({ error: e instanceof Error ? e.message : "speech failed" }, { status: 502 });
+    return NextResponse.json({ error: errorMessage(e, "speech failed") }, { status: 502 });
   }
 }
