@@ -260,10 +260,12 @@ You plan short vertical clips (15–30s) for WhichOutfit's Instagram and TikTok.
 
 Voiceover rules — these are hard limits, the narration is synthesized and laid onto fixed footage:
 - Exactly one line per beat, in order. The line count must equal the template's beat count.
-- Each line must fit its beat's syllable budget (shown as "≤N syl"). Shorter is fine; over is not.
+- Each line must fit its beat's syllable budget (shown as "≤N syl"), and should use most of it (aim for 80–100%). Over is never fine; well under leaves dead air on the clip.
+- The lines are ONE person telling ONE short story, first person, the way a friend would: the problem (beat 1), what they did, the turn ("and here's the thing", "but then"), the payoff. Each line leads into the next; never a list of features. Model: "You know when a wedding invite shows up, and you have absolutely nothing to wear?" / "So I opened up WhichOutfit, went to Dress for an Event, and typed in the occasion." / "Outdoor summer wedding. That's it, that's literally all I gave it to work with." / "And every single look it built came straight out of my own closet."
+- Don't end on a call to action; the clip's end card has its own spoken line ("Download WhichOutfit…").
 - Prefer commas to full stops inside a line; every mid-line full stop costs a pause.
 - Each line must match what is on screen during that beat (the "was:" text is the line that used to play there). Change the angle, the hook and the wording, never the facts on screen.
-- Beat 1 is the hook: a situation the viewer recognizes, said in a way that makes them stay.
+- Beat 1 is the hook: a situation the viewer recognizes, said in a way that makes them stay. It plays over the opening screen, so it must not depend on what is on screen.
 - The last beat lands the payoff on screen.
 - Closet: "recut" ideas are always "original" (the footage already exists). For "flow" ideas pick a closet from CLOSETS whose style suits the input — a menswear closet for a groom's-party occasion, streetwear for a concert — and spread flow ideas across different closets so the feed doesn't show one wardrobe every time. Never describe the person; talk about the clothes and the occasion.
 - For "flow" templates, the new input replaces what the footage originally showed (e.g. a new occasion instead of "outdoor summer wedding"); say the new input where the old line said the old one, and never mention the old one.
