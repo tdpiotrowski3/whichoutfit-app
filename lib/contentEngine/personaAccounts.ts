@@ -92,7 +92,7 @@ export async function commitItem(persona: string, slot: string): Promise<{ id: s
     .from("closet_items")
     .upsert(
       { id: doc.id.toLowerCase(), user_id: uid, data: doc, updated_at: new Date().toISOString(), deleted_at: null },
-      { onConflict: "id" }
+      { onConflict: "user_id,id" } // the table's primary key is (user_id, id)
     );
   if (error) throw error;
   return { id: doc.id };

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { completeIdea } from "@/lib/contentEngine/planner";
-import { engineAuthorized } from "@/lib/contentEngine/auth";
+import { engineAuthorized, errorMessage } from "@/lib/contentEngine/auth";
 
 export const runtime = "nodejs";
 
@@ -20,6 +20,6 @@ export async function POST(req: Request) {
   try {
     return NextResponse.json(await completeIdea(id, video_url));
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : "could not book the clip" }, { status: 500 });
+    return NextResponse.json({ error: errorMessage(e, "could not book the clip") }, { status: 500 });
   }
 }
