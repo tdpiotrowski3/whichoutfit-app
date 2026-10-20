@@ -149,7 +149,12 @@ export function personaEmail(key: string, base = process.env.CAPTURE_EMAIL_BASE)
 }
 
 /** The narrators the engine may use; the voice endpoint accepts nothing else. */
-export const VOICES = ["Sulafat", "Algieba", "Achird", "Umbriel"] as const;
+export const VOICES = [
+  "Sulafat",
+  // Male, for closets that want one. Kept broad so a narrator can be chosen by ear.
+  "Algieba", "Achird", "Umbriel", "Charon", "Orus", "Iapetus", "Enceladus", "Schedar",
+  "Sadachbia", "Sadaltager", "Zubenelgenubi", "Alnilam", "Algenib", "Rasalgethi", "Puck", "Fenrir",
+] as const;
 
 /** Who narrates a clip filmed on this closet. Re-cuts are on `original`, so Sulafat. */
 export function voiceFor(closet: string | null | undefined): string {
