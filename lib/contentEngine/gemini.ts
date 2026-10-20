@@ -139,7 +139,10 @@ export type Speech = {
  * instruction and make the model answer in text (a 400) instead of speaking.
  */
 export async function speak(line: string): Promise<Speech> {
-  const prompt = `Read this line as a calm, warm, friendly host talking to one person, unhurried and natural: "${line}" (read only the quoted words)`;
+  // Pace matters as much as tone: narration is laid onto fixed footage, and the
+  // first live test with "unhurried" in this note ran ~2.8 syllables/sec against
+  // the ~4.4 the beats are budgeted for, so every script overran its clip.
+  const prompt = `Say this like a warm, friendly host in a short social video, at a brisk, natural conversational pace: "${line}" (read only the quoted words)`;
   let last: unknown;
   for (const model of TTS_MODELS) {
     try {
