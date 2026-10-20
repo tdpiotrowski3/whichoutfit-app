@@ -73,7 +73,7 @@ export const PERSONAS: Persona[] = [
     describe: "A real, lived-in menswear closet of 250+ pieces: tees, henleys, button-ups, chinos, jeans, performance pants, sweatshirts, loafers. Suits work, dates, weddings, travel, weekends.",
     wardrobe: [],
     cloneFrom: "owner",
-    voice: "Algieba", // Gemini's "smooth" male voice: a menswear closet gets a man's voice
+    voice: "Schedar", // picked by ear by the owner (2026-10-20) over Charon, Orus, Iapetus, Sadachbia, Achird
   },
   {
     key: "streetwear",

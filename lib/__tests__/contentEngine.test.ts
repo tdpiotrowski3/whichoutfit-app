@@ -148,7 +148,7 @@ describe("persona closets", () => {
   });
 
   it("gives a menswear closet a male narrator and everything else the default", () => {
-    expect(voiceFor("menswear")).toBe("Algieba");
+    expect(voiceFor("menswear")).toBe("Schedar");
     expect(voiceFor("original")).toBe("Sulafat");
     expect(voiceFor(null)).toBe("Sulafat");
     for (const p of PERSONAS) expect(VOICES).toContain(voiceFor(p.key));
