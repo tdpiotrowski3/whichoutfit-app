@@ -135,17 +135,32 @@ export type Speech = {
 };
 
 /**
+ * Delivery notes, by name, so the Mac can A/B them (`voice` route's `style`)
+ * without a deploy. Every one asks for a brisk pace: narration is laid onto
+ * fixed footage, and an "unhurried" note ran ~2.8 syllables/sec against the
+ * ~4.4 the beats are budgeted for.
+ */
+export const STYLES = {
+  even: "Read this the way a real person says it out loud — ordinary sentence stress, no word punched or drawn out, no dramatic pauses, relaxed and low-key, at a brisk conversational pace:",
+  memo: "Read this like a quick, offhand voice memo to a friend — understated, a little flat, nothing emphasized more than normal speech, at a brisk pace:",
+  friend: "Say this casually, like you're telling a friend about something you just tried — relaxed, smooth and natural, not like an announcer or an ad, at a brisk conversational pace:",
+} as const;
+export type SpeechStyle = keyof typeof STYLES;
+export const DEFAULT_STYLE: SpeechStyle = "even";
+
+/**
  * Speak one line. The style note goes in the prompt; the line itself is quoted
  * and never last, because a trailing word like "start" or "so" can read as an
  * instruction and make the model answer in text (a 400) instead of speaking.
  */
-export async function speak(line: string, voice: string = VOICE): Promise<Speech> {
+export async function speak(line: string, voice: string = VOICE, style: SpeechStyle = DEFAULT_STYLE): Promise<Speech> {
   // Pace matters as much as tone: narration is laid onto fixed footage, and the
   // first live test with "unhurried" in this note ran ~2.8 syllables/sec against
   // the ~4.4 the beats are budgeted for, so every script overran its clip.
-  // "Talking to a friend", not "host": the owner wants it relatable and not
-  // AI-sounding, and an announcer read is the most synthetic-sounding style.
-  const prompt = `Say this casually, like you're telling a friend about something you just tried — relaxed, smooth and natural, not like an announcer or an ad, at a brisk conversational pace: "${line}" (read only the quoted words)`;
+  // The "friend" note alone made every voice lean hard on the most interesting
+  // word ("a GALLERY opening"), which the owner heard as fake. "even" asks for
+  // ordinary sentence stress; the others stay selectable for A/B listening.
+  const prompt = `${STYLES[style]} "${line}" (read only the quoted words)`;
   let last: unknown;
   for (const model of TTS_MODELS) {
     try {

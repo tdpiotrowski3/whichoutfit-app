@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { speak, GeminiError } from "@/lib/contentEngine/gemini";
+import { speak, GeminiError, STYLES, type SpeechStyle } from "@/lib/contentEngine/gemini";
 import { engineAuthorized, errorMessage } from "@/lib/contentEngine/auth";
 import { VOICES } from "@/lib/contentEngine/personas";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-// POST {line} → {pcm, sampleRate, model}: one narration line, spoken. The
+// POST {line, voice?, style?} → {pcm, sampleRate, model, voice}: one narration line, spoken. The
 // Gemini key stays on the server; the Mac only ever sees audio. One line per
 // request keeps every response far under Vercel's body limit.
 //
@@ -14,15 +14,18 @@ export const maxDuration = 60;
 // retries. The daily quota never reaches here — speak() moves to the next model.
 export async function POST(req: Request) {
   if (!engineAuthorized(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const { line, voice } = (await req.json().catch(() => ({}))) as { line?: string; voice?: string };
+  const { line, voice, style } = (await req.json().catch(() => ({}))) as { line?: string; voice?: string; style?: string };
   if (voice && !(VOICES as readonly string[]).includes(voice)) {
     return NextResponse.json({ error: `voice must be one of ${VOICES.join(", ")}` }, { status: 400 });
+  }
+  if (style && !(style in STYLES)) {
+    return NextResponse.json({ error: `style must be one of ${Object.keys(STYLES).join(", ")}` }, { status: 400 });
   }
   if (!line?.trim() || line.length > 400) {
     return NextResponse.json({ error: "Need a line of narration (1–400 chars)." }, { status: 400 });
   }
   try {
-    return NextResponse.json(await speak(line.trim(), voice));
+    return NextResponse.json(await speak(line.trim(), voice, style as SpeechStyle | undefined));
   } catch (e) {
     if (e instanceof GeminiError && e.status === 429) {
       const wait = Math.ceil(e.retryAfter ?? 20);
