@@ -19,10 +19,8 @@ const FIX: Record<Connection["key"], string[]> = {
     "Redeploy, then press Sync now. This panel turns green when it works.",
   ],
   tiktok: [
-    "TikTok for Business: create a Business Center and link the @whichoutfit TikTok account (it must be a Business account).",
-    "TikTok for Developers → your app → add the Business API product with the account-insights scopes, and authorize the account.",
-    "Set TIKTOK_ACCESS_TOKEN (the long-lived token) and TIKTOK_BUSINESS_ID in Vercel (Production), then redeploy.",
-    "TikTok posting stays by hand either way: TikTok only allows automated public posts for audited apps.",
+    "Click Connect TikTok and approve WhichOutfit with the WhichOutfit TikTok account (it must be a target user on the app's sandbox at developers.tiktok.com).",
+    "Needs TIKTOK_CLIENT_KEY and TIKTOK_CLIENT_SECRET (the sandbox's credentials) in Vercel.",
   ],
   tiktok_ads: [
     "In TikTok API for Business → My apps, give the WhichOutfit app the Ads Management and Reporting scopes, then authorize it for your TikTok ad account.",
@@ -64,6 +62,11 @@ export function Connections({ connections }: { connections: Connection[] }) {
               <p className="mt-1 text-sm text-[var(--wo-muted)]">
                 Missing in Vercel: {c.missing.map((m) => <code key={m} className="mr-1 rounded bg-[var(--wo-bg)] px-1 py-0.5 text-xs">{m}</code>)}
               </p>
+            ) : null}
+            {c.connectUrl ? (
+              <a href={c.connectUrl} className="mt-2 inline-flex rounded-lg border border-[var(--wo-border)] px-3 py-1.5 text-sm font-medium hover:bg-[var(--wo-bg)]">
+                {c.state === "ok" ? "Reconnect TikTok" : "Connect TikTok"}
+              </a>
             ) : null}
             {needsFix ? (
               <details className="mt-2">

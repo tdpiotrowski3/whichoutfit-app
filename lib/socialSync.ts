@@ -1,14 +1,19 @@
 import { admin } from "@/lib/supabase";
 import { fetchTikTokDaily } from "@/lib/tiktok";
+import { fetchTikTokDisplayDaily, syncTikTokPosts } from "@/lib/tiktokDisplay";
 import { fetchInstagramDaily } from "@/lib/meta";
 import { syncPostStats } from "@/lib/socialPostStats";
-import type { SocialMetricRow } from "@/lib/social";
+import { mergeByDay, type SocialMetricRow } from "@/lib/social";
 
 // Shared social-metrics sync, used by BOTH the daily Vercel cron and the admin
 // "Sync now" button. Lives in its own module (not lib/social.ts) to avoid an
 // import cycle: lib/tiktok.ts already imports lib/social.ts.
 const PLATFORMS: { name: string; fetch: (days: number) => Promise<SocialMetricRow[]> }[] = [
-  { name: "tiktok", fetch: fetchTikTokDaily },
+  {
+    name: "tiktok",
+    // Business API (when approved) plus the Display API follower snapshot.
+    fetch: async (days) => mergeByDay([...(await fetchTikTokDaily(days)), ...(await fetchTikTokDisplayDaily())]),
+  },
   { name: "instagram", fetch: fetchInstagramDaily },
 ];
 
@@ -45,6 +50,15 @@ export async function runSocialSync(days = 14): Promise<SocialSyncResult> {
     errors.push(...r.errors.map((m) => `post stats: ${m}`));
   } catch (e) {
     errors.push(`post stats: ${(e as Error).message}`);
+  }
+
+  // TikTok videos go up by hand: match them to their posts and refresh the numbers.
+  try {
+    const r = await syncTikTokPosts();
+    posts += r.updated;
+    errors.push(...r.errors.map((m) => `tiktok posts: ${m}`));
+  } catch (e) {
+    errors.push(`tiktok posts: ${(e as Error).message}`);
   }
 
   return { upserted, posts, errors };
