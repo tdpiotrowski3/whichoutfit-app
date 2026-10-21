@@ -19,8 +19,11 @@ export function SocialSyncButton() {
       if (!res.ok) {
         setMsg(j.error || "Sync failed.");
       } else {
-        const counts = Object.entries(j.upserted ?? {}).map(([k, v]) => `${k} ${v}`).join(", ");
-        setMsg(j.errors?.length ? `Done, with issues: ${j.errors.join("; ")}` : `Synced ${counts || "0 rows"}.`);
+        const names: Record<string, string> = { tiktok: "TikTok", instagram: "Instagram" };
+        const counts = Object.entries(j.upserted ?? {})
+          .map(([k, v]) => `${names[k] ?? k} ${v} day${v === 1 ? "" : "s"}`)
+          .join(" · ");
+        setMsg(j.errors?.length ? `Updated, with ${j.errors.length} issue${j.errors.length === 1 ? "" : "s"}: ${j.errors[0]}` : `Updated — ${counts || "nothing new"}`);
         router.refresh();
       }
     } catch {

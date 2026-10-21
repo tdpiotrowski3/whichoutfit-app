@@ -32,50 +32,68 @@ const FIX: Record<Connection["key"], string[]> = {
   ],
 };
 
+const DOT: Record<Connection["key"], string> = {
+  instagram: "#2E6BFF",
+  instagram_ads: "#2E6BFF",
+  tiktok: "#eb6834",
+  tiktok_ads: "#eb6834",
+};
+
+/** The one line a tile shows: the account summary when it works, the first problem when it doesn't. */
+function headline(c: Connection): string {
+  if (c.state === "not_set" && c.missing.length) return "Not set up yet";
+  const bad = c.checks.find((k) => !k.ok);
+  if (bad) return bad.detail;
+  return c.checks[0]?.detail ?? "Working";
+}
+
 export function Connections({ connections }: { connections: Connection[] }) {
   return (
-    <ul className="divide-y divide-[var(--wo-border)]">
+    <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
       {connections.map((c) => {
         const pill = PILL[c.state];
         const needsFix = c.state !== "ok";
         return (
-          <li key={c.key} className="py-3 first:pt-0 last:pb-0">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="flex items-center gap-2">
-                <span className="font-medium">{c.label}</span>
-                {c.account ? <span className="text-sm text-[var(--wo-muted)]">{c.account}</span> : null}
+          <li key={c.key} className="flex flex-col rounded-xl border border-[var(--wo-border)] p-3.5">
+            <div className="flex items-center justify-between gap-2">
+              <span className="flex min-w-0 items-center gap-2">
+                <span className="inline-block h-2 w-2 shrink-0 rounded-full" style={{ background: DOT[c.key] }} />
+                <span className="truncate text-sm font-semibold">{c.label}</span>
               </span>
-              <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${pill.cls}`}>{pill.text}</span>
+              <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${pill.cls}`}>{pill.text}</span>
             </div>
-            {c.checks.length ? (
-              <ul className="mt-2 space-y-1 text-sm">
-                {c.checks.map((k) => (
-                  <li key={k.name} className="flex gap-2">
-                    <span className={k.ok ? "text-[var(--wo-green)]" : "text-[var(--wo-red,#e5484d)]"}>{k.ok ? "✓" : "✕"}</span>
-                    <span className="font-medium">{k.name}</span>
-                    <span className="min-w-0 text-[var(--wo-muted)]">{k.detail}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-            {c.missing.length ? (
-              <p className="mt-1 text-sm text-[var(--wo-muted)]">
-                Missing in Vercel: {c.missing.map((m) => <code key={m} className="mr-1 rounded bg-[var(--wo-bg)] px-1 py-0.5 text-xs">{m}</code>)}
-              </p>
-            ) : null}
-            {c.connectUrl ? (
-              <a href={c.connectUrl} className="mt-2 inline-flex rounded-lg border border-[var(--wo-border)] px-3 py-1.5 text-sm font-medium hover:bg-[var(--wo-bg)]">
-                {c.state === "ok" ? "Reconnect TikTok" : "Connect TikTok"}
-              </a>
-            ) : null}
-            {needsFix ? (
-              <details className="mt-2">
-                <summary className="cursor-pointer text-sm text-[var(--wo-blue)]">How to {c.state === "not_set" ? "connect" : "fix"} it</summary>
-                <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-[var(--wo-muted)]">
-                  {FIX[c.key].map((s) => <li key={s}>{s}</li>)}
-                </ol>
+            <p className={`mt-1.5 line-clamp-2 text-xs ${needsFix && c.state !== "not_set" ? "text-[var(--wo-red,#e5484d)]" : "text-[var(--wo-muted)]"}`} title={headline(c)}>
+              {headline(c)}
+            </p>
+            <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 pt-2.5">
+              {c.connectUrl && needsFix ? (
+                <a href={c.connectUrl} className="rounded-lg bg-[var(--wo-blue)] px-2.5 py-1 text-xs font-medium text-white">Connect</a>
+              ) : null}
+              <details className="group text-xs">
+                <summary className="cursor-pointer list-none text-[var(--wo-blue)] hover:underline">{needsFix ? "How to fix" : "Details"}</summary>
+                <div className="mt-2 space-y-2 text-[var(--wo-muted)]">
+                  {c.checks.length ? (
+                    <ul className="space-y-1">
+                      {c.checks.map((k) => (
+                        <li key={k.name} className="flex gap-1.5">
+                          <span className={k.ok ? "text-[var(--wo-green)]" : "text-[var(--wo-red,#e5484d)]"}>{k.ok ? "✓" : "✕"}</span>
+                          <span><b className="font-medium text-[var(--wo-text)]">{k.name}</b> {k.detail}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                  {c.missing.length ? (
+                    <p>Missing in Vercel: {c.missing.map((m) => <code key={m} className="mr-1 rounded bg-[var(--wo-bg)] px-1 py-0.5">{m}</code>)}</p>
+                  ) : null}
+                  {needsFix ? (
+                    <ol className="list-decimal space-y-1 pl-4">
+                      {FIX[c.key].map((step) => <li key={step}>{step}</li>)}
+                    </ol>
+                  ) : null}
+                  {c.connectUrl && !needsFix ? <a href={c.connectUrl} className="text-[var(--wo-blue)] hover:underline">Reconnect</a> : null}
+                </div>
               </details>
-            ) : null}
+            </div>
           </li>
         );
       })}
