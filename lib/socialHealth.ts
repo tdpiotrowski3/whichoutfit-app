@@ -1,4 +1,5 @@
 import { resolveAdAccount } from "./metaAds";
+import { accessToken, fetchProfile, fetchVideos, isTikTokAppConfigured } from "./tiktokDisplay";
 
 // Is each social connection actually working? The syncs (lib/meta.ts,
 // lib/tiktok.ts) swallow API errors so a bad token can never break a cron —
@@ -16,6 +17,8 @@ export type Connection = {
   missing: string[];
   checks: Check[];
   account?: string;
+  /** Where a "Connect" button should send the owner, for OAuth-style connections. */
+  connectUrl?: string;
 };
 
 async function graph(path: string, token: string, params: Record<string, string> = {}): Promise<{ ok: boolean; body: Record<string, unknown> }> {
@@ -82,14 +85,38 @@ export async function instagramAdsHealth(): Promise<Connection> {
 }
 
 export async function tiktokHealth(): Promise<Connection> {
+  const base = { key: "tiktok" as const, label: "TikTok" };
+  // Login Kit + Display API: the route that works without Business API approval.
+  if (isTikTokAppConfigured()) {
+    try {
+      const token = await accessToken();
+      if (!token) return { ...base, state: "not_set", missing: [], checks: [{ name: "Account", ok: false, detail: "not connected yet — use Connect TikTok below" }], connectUrl: "/api/tiktok/connect" };
+      const checks: Check[] = [];
+      let account: string | undefined;
+      try {
+        const p = await fetchProfile(token);
+        account = p.display_name;
+        checks.push({ name: "Account", ok: true, detail: `${p.display_name} · ${p.follower_count} followers · ${p.video_count} videos` });
+      } catch (e) {
+        checks.push({ name: "Account", ok: false, detail: (e as Error).message });
+      }
+      try {
+        const v = await fetchVideos(token, 20);
+        checks.push({ name: "Videos", ok: true, detail: `${v.length} readable` });
+      } catch (e) {
+        checks.push({ name: "Videos", ok: false, detail: (e as Error).message });
+      }
+      return { ...base, state: stateOf(checks), missing: [], checks, account, connectUrl: "/api/tiktok/connect" };
+    } catch (e) {
+      return { ...base, state: "failing", missing: [], checks: [{ name: "Account", ok: false, detail: (e as Error).message }], connectUrl: "/api/tiktok/connect" };
+    }
+  }
   const token = process.env.TIKTOK_ACCESS_TOKEN;
   const biz = process.env.TIKTOK_BUSINESS_ID;
-  const missing = [!token && "TIKTOK_ACCESS_TOKEN", !biz && "TIKTOK_BUSINESS_ID"].filter(Boolean) as string[];
-  const base = { key: "tiktok" as const, label: "TikTok" };
-  if (missing.length) return { ...base, state: "not_set", missing, checks: [] };
+  if (!token || !biz) return { ...base, state: "not_set", missing: ["TIKTOK_CLIENT_KEY", "TIKTOK_CLIENT_SECRET"], checks: [] };
   try {
-    const q = new URLSearchParams({ business_id: biz!, fields: JSON.stringify(["username", "followers_count"]) });
-    const res = await fetch(`https://business-api.tiktok.com/open_api/v1.3/business/get/?${q}`, { headers: { "Access-Token": token! }, cache: "no-store" });
+    const q = new URLSearchParams({ business_id: biz, fields: JSON.stringify(["username", "followers_count"]) });
+    const res = await fetch(`https://business-api.tiktok.com/open_api/v1.3/business/get/?${q}`, { headers: { "Access-Token": token }, cache: "no-store" });
     const body = (await res.json().catch(() => ({}))) as { code?: number; message?: string; data?: { username?: string; followers_count?: number } };
     const ok = body.code === 0;
     const checks = [{ name: "Account", ok, detail: ok ? `@${body.data?.username} · ${body.data?.followers_count} followers` : `${body.message ?? "error"} (code ${body.code})` }];
