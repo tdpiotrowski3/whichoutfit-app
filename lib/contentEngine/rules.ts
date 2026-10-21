@@ -1,5 +1,6 @@
 import { FOOTAGE } from "./footage";
 import { getTemplate, syllableBudget, countSyllables } from "./templates";
+import { cleanHashtags } from "./hashtags";
 
 // The content engine's pure rules — no database, no network — so they are
 // unit-tested directly (lib/__tests__/contentEngine.test.ts). planner.ts
@@ -78,7 +79,7 @@ export function validateIdea(raw: RawIdea, closets: string[] = ["original"]): Id
     title: (raw.title || t.key).slice(0, 80),
     voiceover: lines,
     captions,
-    hashtags: raw.hashtags?.trim() || null,
+    hashtags: cleanHashtags(raw.hashtags) || null,
     rationale: raw.rationale?.trim() || null,
   };
 }

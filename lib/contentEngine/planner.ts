@@ -1,4 +1,5 @@
 import { admin } from "@/lib/supabase";
+import { cleanHashtags } from "./hashtags";
 import { errorMessage } from "./auth";
 import { getAttribution } from "@/lib/attribution";
 import { sendAdminAlert } from "@/lib/alert";
@@ -198,7 +199,7 @@ export async function refillRunway(now = new Date()): Promise<RefillResult> {
         clip_id: clip,
         platform,
         caption,
-        hashtags: prev.hashtags,
+        hashtags: cleanHashtags(prev.hashtags) || null,
         video_url: prev.video_url,
         campaign: `${platform === "instagram" ? "ig" : "tt"}_${clip}`.slice(0, 64),
         scheduled_for: at,
@@ -219,13 +220,25 @@ function showsFor(clipId: string): string {
 
 // --- 2. draft new ideas ---------------------------------------------------
 
-const VOICE_RULES = `WhichOutfit is an AI stylist for the closet you already own: catalog your clothes, and it builds, rates and plans outfits from them.
-Voice: second person or first person singular, plain, specific, a little dry. Concrete numbers from the footage beat adjectives. No hype words (game-changer, obsessed, insane), no emojis, no exclamation marks in narration.
+const VOICE_RULES = `WhichOutfit builds, rates and plans outfits from the clothes you already own.
+Lead with that payoff, never the technology: don't say "AI" in narration or captions unless the clip is literally about how it works, and then once at most. The viewer cares about the outfit, the trip, the event, not the model behind it.
+Voice: second person or first person singular, plain, specific, a little dry, the way a person talks to a friend. Concrete details from the footage beat adjectives. No hype or AI-sounding words (game-changer, obsessed, insane, elevate, effortless, seamless, unlock, revolutionize, "say goodbye to", "level up"), no emojis, no exclamation marks in narration.
 Never imply gender or body type; clothing talk is gender-neutral.
 Never mention price, Premium, subscriptions, or downloading — a call-to-action end card is added automatically after every clip.`;
 
+// Shared by every caption the engine writes. Platform search reads caption
+// text, so a searchable phrase does more than any hashtag.
+const CAPTION_RULES = `Caption rules (Instagram and TikTok):
+- The first line is the hook and must work alone; only about the first 100 characters show before "more".
+- Work in one phrase people actually search, said naturally ("what to wear to a fall wedding", "capsule wardrobe for a weekend trip", "closet clean out").
+- Optionally end with one low-effort prompt that earns a comment or a save ("Which one would you wear?", "Save this for your next trip"); vary it, never the same one twice in a row.
+- Under 150 characters. No hashtags in the caption, no emojis, no em dashes.`;
+
+const HASHTAG_RULES = `Hashtags: exactly 5, lowercase, space-separated. 1–2 broad but on-niche (#outfitideas #whattowear #capsulewardrobe #closetorganization), 3–4 specific to what THIS clip shows and how someone would search for it (#weddingguestoutfit #packinglist #fallfits #thriftflip). Never: our brand (#whichoutfit), feed bait (#fyp #viral #satisfying #explore), platform names, AI/tech/app tags, or one-word giants (#fashion #style). Anything past five, or on that list, is stripped before posting.`;
+
 const CAPTION_SYSTEM = `${VOICE_RULES}
-You write Instagram Reel captions for clips that already exist. One caption per clip: one or two sentences, a hook first, under 150 characters, no hashtags (they are added separately). Make it clearly different from the previous caption you are shown — a different angle, not a rewording.`;
+${CAPTION_RULES}
+You write captions for clips that already exist. One caption per clip, clearly different from the previous caption you are shown — a different angle, not a rewording.`;
 
 export const IDEA_SCHEMA = {
   type: "OBJECT",
@@ -270,8 +283,9 @@ Voiceover rules — these are hard limits, the narration is synthesized and laid
 - Closet: "recut" ideas are always "original" (the footage already exists). For "flow" ideas pick a closet from CLOSETS whose style suits the input — a menswear closet for a groom's-party occasion, streetwear for a concert — and spread flow ideas across different closets so the feed doesn't show one wardrobe every time. Never describe the person; talk about the clothes and the occasion.
 - For "flow" templates, the new input replaces what the footage originally showed (e.g. a new occasion instead of "outdoor summer wedding"); say the new input where the old line said the old one, and never mention the old one.
 
-Captions: exactly three options — [0] hook/curiosity, [1] plain and useful, [2] personal or POV. Each under 150 characters, no hashtags.
-Hashtags: 10–13, space-separated, starting with #whichoutfit, mixing broad (#whattowear #ootd) and feature-specific tags.
+Captions: exactly three options — [0] hook/curiosity, [1] plain and useful, [2] personal or POV.
+${CAPTION_RULES}
+${HASHTAG_RULES}
 Title: a short internal name, 3–6 words.
 Rationale: one sentence on why this idea, citing the performance data when it informed the choice.`;
 
@@ -396,7 +410,7 @@ export async function completeIdea(id: string, videoUrl: string, now = new Date(
       clip_id: clip,
       platform,
       caption,
-      hashtags: idea.hashtags,
+      hashtags: cleanHashtags(idea.hashtags) || null,
       video_url: videoUrl,
       campaign: `${platform === "instagram" ? "ig" : "tt"}_${clip}`,
       scheduled_for: at,

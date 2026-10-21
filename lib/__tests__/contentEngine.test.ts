@@ -1,6 +1,7 @@
 // The content engine books real posts into a public calendar, so the date maths
 // and the guard on what the model writes are tested here rather than trusted.
 import { describe, expect, it } from "vitest";
+import { cleanHashtags, captionWithTags } from "../contentEngine/hashtags";
 import { nextSlots, runwayDays, slotsToFill } from "../contentEngine/schedule";
 import { countSyllables, syllableBudget, TEMPLATES, getTemplate } from "../contentEngine/templates";
 import { featureOf, scoreClip, validateIdea } from "../contentEngine/rules";
@@ -188,5 +189,22 @@ describe("persona closets", () => {
       ["original", "menswear"]
     );
     expect(typeof v === "object" && v.closet).toBe("original");
+  });
+});
+
+describe("cleanHashtags", () => {
+  it("keeps at most five, drops brand, bait, AI and giant tags, dedupes and lowercases", () => {
+    const raw = "#whichoutfit #digitalcloset #BeforeAndAfter #styleapp #satisfying #closetorganization #outfitinspo #fashiontok #ootd #aistylist #digitalcloset";
+    expect(cleanHashtags(raw)).toBe("#digitalcloset #beforeandafter #closetorganization #outfitinspo #fashiontok");
+  });
+  it("accepts tags without # and comma separators, and rejects junk", () => {
+    expect(cleanHashtags("packinglist, #fyp, #12, ##weddingguestoutfit #a")).toBe("#packinglist #weddingguestoutfit");
+  });
+  it("returns an empty string when nothing survives", () => {
+    expect(cleanHashtags("#whichoutfit #fyp #viral")).toBe("");
+    expect(captionWithTags(" Same photo. ", "#fyp")).toBe("Same photo.");
+  });
+  it("appends the cleaned tags after a blank line", () => {
+    expect(captionWithTags("Same photo.", "#whichoutfit #capsulewardrobe")).toBe("Same photo.\n\n#capsulewardrobe");
   });
 });

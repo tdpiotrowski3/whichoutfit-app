@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { captionWithTags } from "@/lib/contentEngine/hashtags";
 
 // Month view of everything posted and scheduled. One chip per video per day,
 // with a dot per platform; click a chip to watch the video and see how it did.
@@ -167,7 +168,7 @@ export function PostCalendar({ posts, today }: { posts: CalendarPost[]; today: s
 function Detail({ group, onClose }: { group: Group; onClose: () => void }) {
   const url = group.posts.find((p) => p.video_url)?.video_url ?? null;
   const first = group.posts[0];
-  const caption = first ? (first.hashtags?.trim() ? `${first.caption.trim()}\n\n${first.hashtags.trim()}` : first.caption) : "";
+  const caption = first ? captionWithTags(first.caption, first.hashtags) : "";
   return (
     <div className="flex flex-col gap-4 rounded-xl border border-[var(--wo-border)] p-4 sm:flex-row">
       {url ? (
@@ -203,7 +204,7 @@ function Detail({ group, onClose }: { group: Group; onClose: () => void }) {
               {p.status === "manual" && p.video_url ? (
                 <span className="flex w-full flex-wrap items-center gap-3 text-xs">
                   <SendToTikTok id={p.id} />
-                  <CopyCaption text={p.hashtags?.trim() ? `${p.caption.trim()}\n\n${p.hashtags.trim()}` : p.caption.trim()} />
+                  <CopyCaption text={captionWithTags(p.caption, p.hashtags)} />
                   <a href={p.video_url} download className="text-[var(--wo-blue)] hover:underline">Download the clip</a>
                 </span>
               ) : null}
