@@ -24,6 +24,10 @@ const FIX: Record<Connection["key"], string[]> = {
     "Set TIKTOK_ACCESS_TOKEN (the long-lived token) and TIKTOK_BUSINESS_ID in Vercel (Production), then redeploy.",
     "TikTok posting stays by hand either way: TikTok only allows automated public posts for audited apps.",
   ],
+  tiktok_ads: [
+    "In TikTok API for Business → My apps, give the WhichOutfit app the Ads Management and Reporting scopes, then authorize it for your TikTok ad account.",
+    "Set TIKTOK_ADVERTISER_ID and TIKTOK_ADS_ACCESS_TOKEN in Vercel (the ads token can be the same as TIKTOK_ACCESS_TOKEN if it carries both scopes).",
+  ],
   instagram_ads: [
     "In Business settings → Users → System users → whichoutfit-server → Assign assets → Ad accounts, give it your ad account (View performance is enough).",
     "Make sure the token was generated with ads_read. The Ads page picks the account up on its own — no env var needed.",
