@@ -73,7 +73,7 @@ them one day at a time; `reach` is still a daily series. The Ads page
 (`/ads`, Meta | TikTok | All) reads campaigns live from each API on load.
 
 **Social publishing (Instagram auto-publish + the tracked /go link).** The Social
-tab's publish queue drains on the daily `social-publish` cron (23:00 UTC in `vercel.json`, with a GitHub Actions backup and the **Publish due now** button). It
+tab's publish queue drains on the daily `social-publish` cron (23:00 UTC in `vercel.json`, with a GitHub Actions backup every 15 minutes and the **Publish due now** button). It
 needs NO new variables: it reuses `META_ACCESS_TOKEN` + `IG_USER_ID` from the
 table above, and is inert until both are set.
 
