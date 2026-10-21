@@ -26,10 +26,10 @@ One Vercel project, routed by hostname in `proxy.ts`:
 | Host | Surface | Code |
 |---|---|---|
 | `whichoutfit.app` (+ www) | Marketing site, legal pages, referral/poll landing pages | static files in `public/` |
-| `admin.whichoutfit.app` | Internal admin dashboard (overview, AI usage, users, App Store, social, finance, marketing email) | `app/(dash)/`, server-side only, service-role key |
+| `admin.whichoutfit.app` | Internal admin dashboard — sidebar groups: Growth (growth, users, attribution, redemptions), Marketing (Content Studio, Social, Ads, email & nudges), Business (App Store, finance, AI usage) | `app/(dash)/`, server-side only, service-role key |
 | `app.whichoutfit.app` | Consumer webapp (closet, outfits, stylist, …) — **gated off** behind `CONSUMER_WEBAPP_ENABLED` (`lib/flags.ts`), renders `components/ComingSoon.tsx` until re-enabled | `app/(consumer)/`, browser-side, anon key + RLS |
 
-Daily Vercel crons (`vercel.json`): App Store sync, social sync, Mercury sync.
+Daily Vercel crons (`vercel.json`): App Store sync, social sync (+ TikTok draft/reminder), Mercury sync, Gmail sync, social publish, weekly social plan.
 
 ## How it ties together
 

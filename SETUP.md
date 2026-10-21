@@ -46,26 +46,34 @@ is set (the in-app stale banner still shows regardless).
 |---|---|---|
 | `ADMIN_ALERT_EMAIL` | inbox for ops alerts (stale-data notifications) | your own email |
 
-**Social & ads metrics (optional).** Each platform's sync is inert until its token
-+ account id are set. Use a long-lived / system-user token (no in-app OAuth). The
-TikTok app must be built in **sandbox** and submitted/published before production
-data flows; the sandbox token works against sandbox data in the meantime.
+**Social & ads metrics (optional).** Each source is inert until it is set up, and
+Social → **Connections** checks each one live and says what's wrong (the engine
+can read the same report at `/api/engine/health`). State as of 2026-10-21:
+Instagram, Meta ads and TikTok (organic) are connected; TikTok ads are not.
 
 | Var | What | Where to get it |
 |---|---|---|
-| `TIKTOK_ACCESS_TOKEN` | TikTok long-lived token | TikTok developer portal (app → sandbox, then published) |
-| `TIKTOK_BUSINESS_ID` | business account id (organic insights) | TikTok Business Center |
-| `TIKTOK_ADVERTISER_ID` | (optional) advertiser id for ads spend/ROAS | TikTok Ads Manager |
-| `META_ACCESS_TOKEN` | Meta long-lived / system-user token | Meta Business Suite / Graph API |
-| `IG_USER_ID` | IG Business account id (organic insights) | linked to a FB Page |
-| `META_AD_ACCOUNT_ID` | (optional) `act_<id>` for ads spend/ROAS | Meta Ads Manager |
+| `META_ACCESS_TOKEN` | Meta **system-user** token, expiry Never (instagram_basic, instagram_content_publish, instagram_manage_insights, pages_show_list, pages_read_engagement, business_management, ads_read) | Business settings → System users → `whichoutfit-server` → Generate token (app: WhichOutfit). The system user must be assigned the Page, the Instagram account, the app (Develop app — the app is in development mode) and the ad account. |
+| `IG_USER_ID` | IG Business account id | Graph API: /me/accounts → page → instagram_business_account |
+| `META_AD_ACCOUNT_ID` | (optional) pins an ad account; otherwise the first one the token can see is used | Meta Ads Manager |
+| `TIKTOK_CLIENT_KEY` / `TIKTOK_CLIENT_SECRET` | TikTok **Login Kit sandbox** credentials (developers.tiktok.com → WhichOutfit → Sandbox "WhichOutfitAnalytics" → Credentials) | then Social → Connections → **Connect TikTok**; tokens live in Supabase `social_tokens` and refresh on use |
+| `TIKTOK_ADVERTISER_ID` / `TIKTOK_ADS_ACCESS_TOKEN` | TikTok ads for the Ads page (Marketing API) — **not set**: needs a TikTok *for Business* developer approval, which was rejected 2026-10 because the domain was too new | TikTok API for Business portal |
+| `TIKTOK_ACCESS_TOKEN` / `TIKTOK_BUSINESS_ID` | legacy Business API route (lib/tiktok.ts), unused while the Login Kit route is connected | — |
 
-> App credentials (TikTok client key/secret, Meta app id/secret) are used only to
-> mint/refresh tokens out-of-band — they are NOT needed by the running app and
-> must never be committed.
+Two traps already hit:
+- **Set tokens from the clipboard, never by pasting a command after copying the
+  token** — the clipboard then holds the command. A malformed token reads as
+  "access token could not be decrypted (code 190)".
+- The TikTok sandbox only authorizes accounts listed under **Target users**
+  (`non_sandbox_target` otherwise). Adding a scope means reconnecting once.
+
+Meta's insights API returns `profile_views`, `total_interactions` and `views`
+only as window totals (`metric_type=total_value`), so `lib/meta.ts` asks for
+them one day at a time; `reach` is still a daily series. The Ads page
+(`/ads`, Meta | TikTok | All) reads campaigns live from each API on load.
 
 **Social publishing (Instagram auto-publish + the tracked /go link).** The Social
-tab's publish queue drains on the `social-publish` cron every 15 minutes. It
+tab's publish queue drains on the daily `social-publish` cron (23:00 UTC in `vercel.json`, with a GitHub Actions backup and the **Publish due now** button). It
 needs NO new variables: it reuses `META_ACCESS_TOKEN` + `IG_USER_ID` from the
 table above, and is inert until both are set.
 
@@ -77,12 +85,19 @@ Two things that are easy to get wrong:
   accounts you don't own. What IS required: the target must be a **Business**
   account linked to a Facebook Page, and the token holder must have a role on
   the app.
-- **TikTok cannot be automated yet and the queue does not try.** The Content
-  Posting API forces an unaudited Direct Post to PRIVATE visibility, so
-  publishing TikTok from here would post videos nobody can see. TikTok rows sit
-  at status `manual` and get posted by hand. The way in, when it's wanted, is
-  the draft/inbox upload endpoint — it is exempt from the privacy restriction
-  and lands the video in the TikTok app's drafts for a human to post.
+- **TikTok can't be published publicly from here** — an unaudited app's Direct
+  Post is forced to PRIVATE. TikTok rows sit at status `manual`. On the morning
+  one is due, the reminder (`lib/tiktokReminder.ts`) uploads the clip to the
+  TikTok **inbox as a draft** (`video.upload`, push_by_file) and emails the
+  caption; the calendar has **Send to TikTok** and **Copy caption** for doing it
+  by hand. The inbox endpoint takes no caption or hashtags, so they're pasted in
+  the app. The daily sync then matches the posted video to its row (the only
+  video between 6h before the slot and the next slot) and tracks its stats.
+  Public auto-posting needs TikTok's production app review (Direct Post audit).
+
+Every caption that leaves the app goes through `lib/contentEngine/hashtags.ts`:
+at most five hashtags, with brand, feed-bait, platform, AI/app and one-word tags
+removed. The planner's caption rules live in `lib/contentEngine/planner.ts`.
 
 The clip itself must be at a **publicly fetchable** URL (`social_posts.video_url`)
 because Meta's servers download it themselves — a signed or private URL fails at
