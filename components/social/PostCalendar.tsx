@@ -199,12 +199,35 @@ function Detail({ group, onClose }: { group: Group; onClose: () => void }) {
               ) : null}
               {p.status === "failed" && p.error ? <span className="w-full text-xs text-[var(--wo-red,#e5484d)]">{p.error}</span> : null}
               {p.status === "manual" && p.video_url ? (
-                <a href={p.video_url} download className="w-full text-xs text-[var(--wo-blue)] hover:underline">Download to post on TikTok</a>
+                <span className="flex w-full flex-wrap items-center gap-3 text-xs">
+                  <SendToTikTok id={p.id} />
+                  <a href={p.video_url} download className="text-[var(--wo-blue)] hover:underline">Download the clip</a>
+                </span>
               ) : null}
             </div>
           ))}
         </div>
       </div>
     </div>
+  );
+}
+
+/** Drops the clip into the TikTok app's inbox as a draft; the owner adds the caption and posts. */
+function SendToTikTok({ id }: { id: string }) {
+  const [state, setState] = useState<"idle" | "busy" | "sent" | string>("idle");
+  async function send() {
+    setState("busy");
+    const res = await fetch("/api/social/tiktok-inbox", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id }) });
+    const j = (await res.json().catch(() => ({}))) as { error?: string };
+    setState(res.ok ? "sent" : j.error || "Couldn't send");
+  }
+  if (state === "sent") return <span className="text-[var(--wo-green)]">✓ In your TikTok inbox — open TikTok to post</span>;
+  return (
+    <>
+      <button onClick={send} disabled={state === "busy"} className="rounded-md bg-[var(--wo-text)] px-2.5 py-1 font-medium text-white disabled:opacity-50">
+        {state === "busy" ? "Sending…" : "Send to TikTok"}
+      </button>
+      {state !== "idle" && state !== "busy" ? <span className="text-[var(--wo-red,#e5484d)]">{state}</span> : null}
+    </>
   );
 }

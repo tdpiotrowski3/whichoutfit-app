@@ -15,7 +15,9 @@ import { num, utcDay, type SocialMetricRow } from "./social";
 
 const AUTH = "https://www.tiktok.com/v2/auth/authorize/";
 const API = "https://open.tiktokapis.com/v2";
-const SCOPES = ["user.info.basic", "user.info.stats", "video.list"];
+// video.upload sends clips to the account's TikTok inbox as drafts; public
+// Direct Post needs TikTok's app review, which we don't have.
+const SCOPES = ["user.info.basic", "user.info.stats", "video.list", "video.upload"];
 const REDIRECT = "https://admin.whichoutfit.app/api/tiktok/callback";
 const PROVIDER = "tiktok";
 
@@ -201,4 +203,32 @@ export async function syncTikTokPosts(): Promise<TikTokPostResult> {
     }
   }
   return out;
+}
+
+/**
+ * Send a clip to the connected account's TikTok inbox as a draft (Content
+ * Posting API, "Upload to TikTok"). The owner gets a notification in the app,
+ * adds the caption and taps Post. Uploads the file itself (push_by_file), since
+ * pull_by_url needs a verified domain and the clips live on Supabase Storage.
+ * Returns TikTok's publish_id.
+ */
+export async function sendToInbox(videoUrl: string): Promise<string> {
+  const token = await accessToken();
+  if (!token) throw new Error("TikTok isn't connected");
+  const res = await fetch(videoUrl, { cache: "no-store" });
+  if (!res.ok) throw new Error(`couldn't fetch the clip (HTTP ${res.status})`);
+  const bytes = Buffer.from(await res.arrayBuffer());
+  const size = bytes.length;
+  // One chunk is allowed up to 64 MB; our clips are a few MB.
+  if (size > 64 * 1024 * 1024) throw new Error("clip is over 64 MB");
+  const init = await call<{ publish_id: string; upload_url: string }>(token, "post/publish/inbox/video/init/", {
+    body: { source_info: { source: "FILE_UPLOAD", video_size: size, chunk_size: size, total_chunk_count: 1 } },
+  });
+  const put = await fetch(init.upload_url, {
+    method: "PUT",
+    headers: { "content-type": "video/mp4", "content-length": String(size), "content-range": `bytes 0-${size - 1}/${size}` },
+    body: bytes,
+  });
+  if (!put.ok) throw new Error(`TikTok upload failed (HTTP ${put.status})`);
+  return init.publish_id;
 }
