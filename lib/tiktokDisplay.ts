@@ -127,8 +127,6 @@ export async function fetchVideos(token: string, max = 60): Promise<TikTokVideo[
   return out;
 }
 
-const chicagoDay = (d: Date) => d.toLocaleDateString("en-CA", { timeZone: "America/Chicago" });
-
 /**
  * Daily TikTok snapshot for the social sync: today's follower count as a
  * social_metrics row (the Display API only has current totals, so history
@@ -150,9 +148,10 @@ export type TikTokPostResult = { matched: number; updated: number; errors: strin
 
 /**
  * TikTok posts go up by hand, so their social_posts rows never learn their
- * video. Match each to the video posted the same (Chicago) day — only when that
- * day has exactly one candidate on each side, so a guess never mislabels a
- * clip — mark it posted, and refresh the numbers on every matched row.
+ * video. Match each to the one video posted between just before its slot and
+ * the next slot (at most three days later) — only when exactly one fits, so a
+ * guess never mislabels a clip — mark it posted, and refresh the numbers on
+ * every matched row.
  */
 export async function syncTikTokPosts(): Promise<TikTokPostResult> {
   const out: TikTokPostResult = { matched: 0, updated: 0, errors: [] };
@@ -168,7 +167,8 @@ export async function syncTikTokPosts(): Promise<TikTokPostResult> {
     .in("status", ["manual", "posted"])
     .gte("scheduled_for", new Date(Date.now() - 90 * 86400_000).toISOString());
   if (error) throw error;
-  const rows = (data ?? []) as { id: string; clip_id: string; status: string; scheduled_for: string; platform_post_id: string | null }[];
+  const rows = ((data ?? []) as { id: string; clip_id: string; status: string; scheduled_for: string; platform_post_id: string | null }[])
+    .sort((a, b) => Date.parse(a.scheduled_for) - Date.parse(b.scheduled_for));
 
   const stats = (v: TikTokVideo) => ({
     views: num(v.view_count),
@@ -185,11 +185,18 @@ export async function syncTikTokPosts(): Promise<TikTokPostResult> {
       let v = r.platform_post_id ? byId.get(r.platform_post_id) : undefined;
       let extra: Record<string, unknown> = {};
       if (!r.platform_post_id) {
-        const day = chicagoDay(new Date(r.scheduled_for));
-        const sameDayRows = rows.filter((x) => !x.platform_post_id && chicagoDay(new Date(x.scheduled_for)) === day);
-        const sameDayVideos = videos.filter((x) => !taken.has(x.id) && x.create_time && chicagoDay(new Date(x.create_time * 1000)) === day);
-        if (sameDayRows.length !== 1 || sameDayVideos.length !== 1) continue;
-        v = sameDayVideos[0];
+        // A video posted from a few hours before the slot until the next
+        // post's slot (or three days, whichever is first) belongs to this row,
+        // as long as it is the only unclaimed video in that window.
+        const start = Date.parse(r.scheduled_for) - 6 * 3600_000;
+        const next = rows
+          .map((x) => Date.parse(x.scheduled_for))
+          .filter((t) => t > Date.parse(r.scheduled_for))
+          .sort((a, b) => a - b)[0];
+        const end = Math.min(next ?? Infinity, Date.parse(r.scheduled_for) + 3 * 86400_000);
+        const inWindow = videos.filter((x) => !taken.has(x.id) && x.create_time && x.create_time * 1000 >= start && x.create_time * 1000 < end);
+        if (inWindow.length !== 1) continue;
+        v = inWindow[0];
         taken.add(v.id);
         extra = { platform_post_id: v.id, status: "posted", posted_at: new Date(v.create_time! * 1000).toISOString(), error: null };
         out.matched++;
