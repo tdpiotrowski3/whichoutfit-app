@@ -1,6 +1,7 @@
 import { admin } from "@/lib/supabase";
 import { sendAdminAlert, isAlertConfigured } from "@/lib/alert";
 import { isTikTokAppConfigured, sendToInbox } from "@/lib/tiktokDisplay";
+import { captionWithTags } from "@/lib/contentEngine/hashtags";
 
 // TikTok can't be auto-posted yet (an unaudited app's Direct Post is forced to
 // PRIVATE), so TikTok rows sit at status 'manual'. On the morning one is due,
@@ -70,7 +71,7 @@ export async function sendTikTokReminder(now = new Date()): Promise<ReminderResu
 
   const blocks = due
     .map((r) => {
-      const text = r.hashtags?.trim() ? `${r.caption.trim()}\n\n${r.hashtags.trim()}` : r.caption.trim();
+      const text = captionWithTags(r.caption, r.hashtags);
       const link = inInbox.has(r.id)
         ? `<strong>It's in your TikTok inbox</strong> — open TikTok, tap the notification, paste the caption below, post. (<a href="${esc(r.video_url!)}">Clip</a> if you need it.)`
         : r.video_url

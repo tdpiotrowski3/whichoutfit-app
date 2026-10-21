@@ -1,4 +1,5 @@
 import { admin } from "@/lib/supabase";
+import { captionWithTags } from "@/lib/contentEngine/hashtags";
 import {
   createReelContainer,
   containerStatus,
@@ -70,7 +71,7 @@ export type PublishOptions = {
 
 /** Instagram wants one text field, so the hashtags ride at the end of the caption. */
 export function fullCaption(row: Pick<SocialPostRow, "caption" | "hashtags">): string {
-  return row.hashtags?.trim() ? `${row.caption.trim()}\n\n${row.hashtags.trim()}` : row.caption.trim();
+  return captionWithTags(row.caption, row.hashtags);
 }
 
 /**
