@@ -39,49 +39,59 @@ async function getJson(url: string): Promise<Record<string, unknown> | null> {
 }
 
 /**
- * Instagram daily organic insights (reach, profile views) plus the current
- * follower count, normalized to one row per day. Returns [] (never throws) when
- * unconfigured or on any API error.
+ * Instagram daily organic insights, one row per day: reach (a daily series),
+ * plus profile views, interactions and views, which Meta now only returns as a
+ * total over a window (metric_type=total_value) — so those are asked for one
+ * day at a time. The follower count is a "now" value, stamped on today.
+ * Returns [] (never throws) when unconfigured or on any API error.
  */
 async function fetchOrganic(days: number): Promise<SocialMetricRow[]> {
   const e = env();
   if (!e || !e.igUserId) return [];
   try {
-    const since = Math.floor(Date.now() / 1000 - days * 86400);
-    const until = Math.floor(Date.now() / 1000);
-    const params = new URLSearchParams({
-      metric: "reach,profile_views",
-      period: "day",
-      since: String(since),
-      until: String(until),
-      access_token: e.token,
-    });
-    const insights = await getJson(`${BASE}/${e.igUserId}/insights?${params}`);
-
-    // Day -> partial row, merged across the per-metric time series.
+    const now = Math.floor(Date.now() / 1000);
+    const q = (p: Record<string, string>) => new URLSearchParams({ ...p, access_token: e.token });
     const byDay = new Map<string, SocialMetricRow>();
-    const series = (insights?.data as { name?: string; values?: { value?: unknown; end_time?: string }[] }[]) ?? [];
-    for (const metric of series) {
+    const row = (day: string) => {
+      const r = byDay.get(day) ?? { day, platform: "instagram" as const };
+      byDay.set(day, r);
+      return r;
+    };
+
+    const reach = await getJson(`${BASE}/${e.igUserId}/insights?${q({ metric: "reach", period: "day", since: String(now - days * 86400), until: String(now) })}`);
+    for (const metric of (reach?.data as { values?: { value?: unknown; end_time?: string }[] }[]) ?? []) {
       for (const point of metric.values ?? []) {
-        const day = (point.end_time ?? "").slice(0, 10);
-        if (!day) continue;
-        const row = byDay.get(day) ?? { day, platform: "instagram" };
-        if (metric.name === "reach") row.reach = num(point.value);
-        if (metric.name === "profile_views") row.profile_views = num(point.value);
-        byDay.set(day, row);
+        // end_time is the END of the day being reported, so step back one day.
+        const end = Date.parse(point.end_time ?? "");
+        if (Number.isFinite(end)) row(new Date(end - 86400_000).toISOString().slice(0, 10)).reach = num(point.value);
       }
     }
 
-    // Follower count is a "now" value, not a time series — stamp it on the most
-    // recent day we have.
-    const acct = await getJson(`${BASE}/${e.igUserId}?fields=followers_count&access_token=${encodeURIComponent(e.token)}`);
-    const followers = num(acct?.followers_count);
-    if (followers !== null && byDay.size > 0) {
-      const latest = [...byDay.keys()].sort().at(-1)!;
-      byDay.get(latest)!.followers = followers;
-    }
+    const midnight = Math.floor(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate()) / 1000);
+    await Promise.all(Array.from({ length: days }, async (_, i) => {
+      const since = midnight - (i + 1) * 86400;
+      const totals = await getJson(`${BASE}/${e.igUserId}/insights?${q({
+        metric: "profile_views,total_interactions,views",
+        period: "day",
+        metric_type: "total_value",
+        since: String(since),
+        until: String(since + 86400),
+      })}`);
+      const r = row(new Date(since * 1000).toISOString().slice(0, 10));
+      for (const m of (totals?.data as { name?: string; total_value?: { value?: unknown } }[]) ?? []) {
+        const v = num(m.total_value?.value);
+        if (m.name === "profile_views") r.profile_views = v;
+        if (m.name === "total_interactions") r.engagements = v;
+        if (m.name === "views") r.video_views = v;
+      }
+    }));
 
-    return [...byDay.values()];
+    const acct = await getJson(`${BASE}/${e.igUserId}?${q({ fields: "followers_count" })}`);
+    const followers = num(acct?.followers_count);
+    if (followers !== null) row(utcDay(0)).followers = followers;
+
+    // Drop days Meta returned nothing for.
+    return [...byDay.values()].filter((r) => Object.keys(r).length > 2);
   } catch {
     return [];
   }

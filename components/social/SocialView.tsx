@@ -169,7 +169,7 @@ export function SocialView({ now, rows, posts, clicks, ideas, configured, connec
   const working = (k: Connection["key"]) => conn(k)?.state === "ok" || conn(k)?.state === "partial";
   const connected = [
     { label: "Instagram", on: working("instagram"), set: configured.instagram, note: configured.instagramPublish ? "auto-posts" : "stats only" },
-    { label: "TikTok", on: working("tiktok"), set: configured.tiktok, note: "post by hand" },
+    { label: "TikTok", on: working("tiktok"), set: configured.tiktok || !!conn("tiktok")?.connectUrl, note: "post by hand" },
   ];
   const broken = connections.filter((c) => c.key !== "instagram_ads" && c.state !== "ok");
 
@@ -177,25 +177,24 @@ export function SocialView({ now, rows, posts, clicks, ideas, configured, connec
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold">Social &amp; Ads</h1>
-          <p className="text-sm text-[var(--wo-muted)]">
-            {connected.map((c, i) => (
-              <span key={c.label}>
-                {i ? " · " : ""}
-                {c.label}{" "}
-                {c.on ? <span className="text-[var(--wo-green)]">connected</span> : c.set ? <span className="text-[var(--wo-red,#e5484d)]">not working</span> : "not connected"}
-                {c.on ? ` (${c.note})` : ""}
+          <h1 className="text-2xl font-semibold">Social</h1>
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+            {connected.map((c) => (
+              <span key={c.label} className="inline-flex items-center gap-1.5 rounded-full border border-[var(--wo-border)] bg-white px-2.5 py-1">
+                <span className={`inline-block h-1.5 w-1.5 rounded-full ${c.on ? "bg-[var(--wo-green)]" : c.set ? "bg-[var(--wo-red,#e5484d)]" : "bg-[var(--wo-muted)]/50"}`} />
+                <span className="font-medium">{c.label}</span>
+                <span className="text-[var(--wo-muted)]">{c.on ? c.note : c.set ? "not working" : "not connected"}</span>
               </span>
             ))}
-            {" · "}synced daily
-          </p>
+            <span className="text-[var(--wo-muted)]">Synced daily</span>
+          </div>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <SocialSyncButton />
+          <SocialPublishButton />
           <Link href="/content" className="rounded-lg bg-[var(--wo-blue)] px-3 py-1.5 text-sm font-medium text-white">
             Content Studio{waiting ? ` · ${waiting} to review` : ""}
           </Link>
-          <SocialPublishButton />
-          <SocialSyncButton />
         </div>
       </div>
 
