@@ -159,7 +159,7 @@ export function SocialView({ now, rows, posts, clicks, ideas, configured, connec
 
   const calendar: CalendarPost[] = posts.map((p) => ({
     id: p.id, clip_id: p.clip_id, title: clipTitle(p.clip_id, titles), platform: p.platform, status: p.status,
-    scheduled_for: p.scheduled_for, posted_at: p.posted_at, caption: p.caption, video_url: p.video_url,
+    scheduled_for: p.scheduled_for, posted_at: p.posted_at, caption: p.caption, hashtags: p.hashtags, video_url: p.video_url,
     views: p.views, likes: p.likes, saves: p.saves, shares: p.shares, error: p.error,
   }));
   const today = now.toLocaleDateString("en-CA", { timeZone: "America/Chicago" });
