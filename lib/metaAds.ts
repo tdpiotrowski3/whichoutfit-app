@@ -1,4 +1,5 @@
 import { num } from "./social";
+import { sumAds, ZERO_ADS as ZERO, type AdsDay, type AdsMetrics, type AdsOverview, type AdsRow } from "./ads";
 
 // Meta ads, read live from the Marketing API for the Ads page. The daily sync
 // (lib/meta.ts) only keeps account totals per day; campaigns and ads come from
@@ -11,40 +12,6 @@ import { num } from "./social";
 const GRAPH = "https://graph.facebook.com/v21.0";
 
 export type AdAccount = { id: string; name: string; currency: string; status: number; timezone: string };
-
-export type AdsMetrics = {
-  spend: number;
-  impressions: number;
-  reach: number;
-  clicks: number;
-  linkClicks: number;
-  installs: number;
-};
-
-export type AdsDay = AdsMetrics & { day: string };
-
-export type AdsRow = AdsMetrics & {
-  id: string;
-  name: string;
-  status: string;
-  detail: string;
-  thumbnail?: string | null;
-};
-
-export type AdsOverview =
-  | { state: "no_token" }
-  | { state: "no_account"; error?: string }
-  | {
-      state: "ok";
-      account: AdAccount;
-      days: number;
-      daily: AdsDay[];
-      totals: AdsMetrics;
-      prev: AdsMetrics;
-      campaigns: AdsRow[];
-      ads: AdsRow[];
-      error?: string;
-    };
 
 type Json = Record<string, unknown>;
 
@@ -104,19 +71,6 @@ function metrics(i: Insight | undefined): AdsMetrics {
     // These overlap (omni counts app + web), so take the largest, never the sum.
     installs: Math.max(action("mobile_app_install"), action("app_install"), action("omni_app_install")),
   };
-}
-
-const ZERO: AdsMetrics = { spend: 0, impressions: 0, reach: 0, clicks: 0, linkClicks: 0, installs: 0 };
-
-function sum(rows: AdsMetrics[]): AdsMetrics {
-  return rows.reduce((t, r) => ({
-    spend: t.spend + r.spend,
-    impressions: t.impressions + r.impressions,
-    reach: t.reach + r.reach,
-    clicks: t.clicks + r.clicks,
-    linkClicks: t.linkClicks + r.linkClicks,
-    installs: t.installs + r.installs,
-  }), ZERO);
 }
 
 const ymd = (d: Date) => d.toISOString().slice(0, 10);
@@ -203,10 +157,11 @@ export async function getAdsOverview(days: number, now = new Date()): Promise<Ad
   const failed = [daily, camps, ads].find((r) => !r.ok);
   return {
     state: "ok",
-    account,
+    account: { id: account.id, name: account.name, currency: account.currency, active: account.status === 1, statusText: account.status === 1 ? undefined : `account status ${account.status}` },
+    managerUrl: `https://adsmanager.facebook.com/adsmanager/manage/campaigns?act=${account.id.replace(/^act_/, "")}`,
     days,
     daily: series,
-    totals: sum(series),
+    totals: sumAds(series),
     prev: metrics(((prev.body.data as Insight[]) ?? [])[0]),
     campaigns,
     ads: adRows,

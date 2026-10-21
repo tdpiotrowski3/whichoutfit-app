@@ -10,7 +10,7 @@ const GRAPH = "https://graph.facebook.com/v21.0";
 
 export type Check = { name: string; ok: boolean; detail: string };
 export type Connection = {
-  key: "instagram" | "instagram_ads" | "tiktok";
+  key: "instagram" | "instagram_ads" | "tiktok" | "tiktok_ads";
   label: string;
   state: "ok" | "partial" | "failing" | "not_set";
   missing: string[];
@@ -99,6 +99,25 @@ export async function tiktokHealth(): Promise<Connection> {
   }
 }
 
+export async function tiktokAdsHealth(): Promise<Connection> {
+  const token = process.env.TIKTOK_ADS_ACCESS_TOKEN ?? process.env.TIKTOK_ACCESS_TOKEN;
+  const adv = process.env.TIKTOK_ADVERTISER_ID;
+  const base = { key: "tiktok_ads" as const, label: "TikTok ads" };
+  const missing = [!token && "TIKTOK_ADS_ACCESS_TOKEN", !adv && "TIKTOK_ADVERTISER_ID"].filter(Boolean) as string[];
+  if (missing.length) return { ...base, state: "not_set", missing, checks: [] };
+  try {
+    const q = new URLSearchParams({ advertiser_ids: JSON.stringify([adv]), fields: JSON.stringify(["name", "currency", "status"]) });
+    const res = await fetch(`https://business-api.tiktok.com/open_api/v1.3/advertiser/info/?${q}`, { headers: { "Access-Token": token! }, cache: "no-store" });
+    const body = (await res.json().catch(() => ({}))) as { code?: number; message?: string; data?: { list?: { name?: string; currency?: string; status?: string }[] } };
+    const a = body.data?.list?.[0];
+    const ok = body.code === 0 && !!a;
+    const checks = [{ name: "Ad account", ok, detail: ok ? `${a!.name} (${a!.currency})${a!.status === "STATUS_ENABLE" ? "" : ` · ${a!.status}`}` : `${body.message ?? "error"} (code ${body.code})` }];
+    return { ...base, state: stateOf(checks), missing: [], checks, account: ok ? a!.name : undefined };
+  } catch (e) {
+    return { ...base, state: "failing", missing: [], checks: [{ name: "Ad account", ok: false, detail: (e as Error).message }] };
+  }
+}
+
 export async function socialHealth(): Promise<Connection[]> {
-  return Promise.all([instagramHealth(), tiktokHealth(), instagramAdsHealth()]);
+  return Promise.all([instagramHealth(), tiktokHealth(), instagramAdsHealth(), tiktokAdsHealth()]);
 }
