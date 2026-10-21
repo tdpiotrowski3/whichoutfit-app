@@ -16,6 +16,7 @@ const TABS = [
   { href: "/marketing", label: "Marketing" },
   { href: "/content", label: "Studio" },
   { href: "/social", label: "Social" },
+  { href: "/ads", label: "Ads" },
 ];
 
 export function Nav() {

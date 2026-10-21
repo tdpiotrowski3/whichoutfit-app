@@ -1,3 +1,5 @@
+import { resolveAdAccount } from "./metaAds";
+
 // Is each social connection actually working? The syncs (lib/meta.ts,
 // lib/tiktok.ts) swallow API errors so a bad token can never break a cron —
 // which also means a broken connection looks exactly like "no data yet". This
@@ -69,13 +71,14 @@ export async function instagramHealth(): Promise<Connection> {
 
 export async function instagramAdsHealth(): Promise<Connection> {
   const token = process.env.META_ACCESS_TOKEN;
-  const ad = process.env.META_AD_ACCOUNT_ID;
-  const base = { key: "instagram_ads" as const, label: "Meta ads (optional)" };
-  if (!token || !ad) return { ...base, state: "not_set", missing: [!token && "META_ACCESS_TOKEN", !ad && "META_AD_ACCOUNT_ID"].filter(Boolean) as string[], checks: [] };
-  const acct = ad.startsWith("act_") ? ad : `act_${ad}`;
-  const r = await graph(acct, token, { fields: "name,account_status,currency" });
-  const checks = [{ name: "Ad account", ok: r.ok, detail: r.ok ? `${r.body.name} (${r.body.currency})` : gerr(r.body) }];
-  return { ...base, state: stateOf(checks), missing: [], checks };
+  const base = { key: "instagram_ads" as const, label: "Meta ads" };
+  if (!token) return { ...base, state: "not_set", missing: ["META_ACCESS_TOKEN"], checks: [] };
+  const { account, error } = await resolveAdAccount(token);
+  if (!account) {
+    return { ...base, state: error ? "failing" : "not_set", missing: [], checks: [{ name: "Ad account", ok: false, detail: error ?? "the token can't see an ad account yet — assign one to the system user" }] };
+  }
+  const checks = [{ name: "Ad account", ok: account.status === 1, detail: `${account.name} (${account.currency})${account.status === 1 ? "" : ` · status ${account.status}`}` }];
+  return { ...base, state: stateOf(checks), missing: [], checks, account: account.name };
 }
 
 export async function tiktokHealth(): Promise<Connection> {

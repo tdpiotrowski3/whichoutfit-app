@@ -1,11 +1,13 @@
 import { mergeByDay, num, utcDay, type SocialMetricRow } from "./social";
+import { resolveAdAccount } from "./metaAds";
 
 // Instagram metrics via the Meta Graph API (IG Business/Creator account linked
 // to a Facebook Page). Env-var token model, same as TikTok — inert until set.
 //
 //   META_ACCESS_TOKEN   – long-lived / system-user token
 //   IG_USER_ID          – the IG Business account id (for organic insights)
-//   META_AD_ACCOUNT_ID  – (optional) act_<id> for ads spend/ROAS
+//   META_AD_ACCOUNT_ID  – (optional) act_<id> for ads spend; without it, the
+//                         first ad account the token can see
 //
 // ⚠️ IG insights metric availability shifts between Graph API versions (Meta has
 // deprecated several over time). VALIDATE the metric set against a real call on
@@ -14,7 +16,7 @@ import { mergeByDay, num, utcDay, type SocialMetricRow } from "./social";
 const VERSION = "v21.0";
 const BASE = `https://graph.facebook.com/${VERSION}`;
 
-type Env = { token: string; igUserId?: string; adAccountId?: string };
+type Env = { token: string; igUserId?: string };
 
 function env(): Env | null {
   const token = process.env.META_ACCESS_TOKEN;
@@ -22,7 +24,6 @@ function env(): Env | null {
   return {
     token,
     igUserId: process.env.IG_USER_ID,
-    adAccountId: process.env.META_AD_ACCOUNT_ID,
   };
 }
 
@@ -88,14 +89,16 @@ async function fetchOrganic(days: number): Promise<SocialMetricRow[]> {
 
 /**
  * Meta Ads daily performance (spend / impressions / clicks / conversions) via
- * the ad account's insights edge. Needs META_AD_ACCOUNT_ID; returns [] when
- * that or the token is missing, or on any error.
+ * the ad account's insights edge (see resolveAdAccount). Returns [] when there
+ * is no token or visible ad account, or on any error.
  */
 async function fetchAds(days: number): Promise<SocialMetricRow[]> {
   const e = env();
-  if (!e || !e.adAccountId) return [];
+  if (!e) return [];
   try {
-    const acct = e.adAccountId.startsWith("act_") ? e.adAccountId : `act_${e.adAccountId}`;
+    const { account } = await resolveAdAccount(e.token);
+    if (!account) return [];
+    const acct = account.id;
     const params = new URLSearchParams({
       fields: "spend,impressions,clicks,actions",
       time_increment: "1",
