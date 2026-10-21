@@ -25,7 +25,8 @@ const FIX: Record<Connection["key"], string[]> = {
     "TikTok posting stays by hand either way: TikTok only allows automated public posts for audited apps.",
   ],
   instagram_ads: [
-    "Only needed once you run Meta ads. Set META_AD_ACCOUNT_ID to the ad account id (act_…) from Ads Manager, and give the system user ads_read on it.",
+    "In Business settings → Users → System users → whichoutfit-server → Assign assets → Ad accounts, give it your ad account (View performance is enough).",
+    "Make sure the token was generated with ads_read. The Ads page picks the account up on its own — no env var needed.",
   ],
 };
 
