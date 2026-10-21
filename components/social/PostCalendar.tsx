@@ -15,6 +15,7 @@ export type CalendarPost = {
   scheduled_for: string;
   posted_at: string | null;
   caption: string;
+  hashtags?: string | null;
   video_url: string | null;
   views: number | null;
   likes: number | null;
@@ -165,7 +166,8 @@ export function PostCalendar({ posts, today }: { posts: CalendarPost[]; today: s
 
 function Detail({ group, onClose }: { group: Group; onClose: () => void }) {
   const url = group.posts.find((p) => p.video_url)?.video_url ?? null;
-  const caption = group.posts[0]?.caption ?? "";
+  const first = group.posts[0];
+  const caption = first ? (first.hashtags?.trim() ? `${first.caption.trim()}\n\n${first.hashtags.trim()}` : first.caption) : "";
   return (
     <div className="flex flex-col gap-4 rounded-xl border border-[var(--wo-border)] p-4 sm:flex-row">
       {url ? (
@@ -179,7 +181,7 @@ function Detail({ group, onClose }: { group: Group; onClose: () => void }) {
           </div>
           <button onClick={onClose} className="text-xs text-[var(--wo-muted)] hover:text-[var(--wo-text)]">Close</button>
         </div>
-        <p className="text-[var(--wo-muted)]">{caption}</p>
+        <p className="whitespace-pre-wrap text-[var(--wo-muted)]">{caption}</p>
         <div className="space-y-2">
           {group.posts.map((p) => (
             <div key={p.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-[var(--wo-bg)] px-3 py-2">
@@ -201,6 +203,7 @@ function Detail({ group, onClose }: { group: Group; onClose: () => void }) {
               {p.status === "manual" && p.video_url ? (
                 <span className="flex w-full flex-wrap items-center gap-3 text-xs">
                   <SendToTikTok id={p.id} />
+                  <CopyCaption text={p.hashtags?.trim() ? `${p.caption.trim()}\n\n${p.hashtags.trim()}` : p.caption.trim()} />
                   <a href={p.video_url} download className="text-[var(--wo-blue)] hover:underline">Download the clip</a>
                 </span>
               ) : null}
@@ -229,5 +232,24 @@ function SendToTikTok({ id }: { id: string }) {
       </button>
       {state !== "idle" && state !== "busy" ? <span className="text-[var(--wo-red,#e5484d)]">{state}</span> : null}
     </>
+  );
+}
+
+/** TikTok drafts can't carry a caption, so make pasting it one tap (works on the phone too). */
+function CopyCaption({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopied(false);
+    }
+  }
+  return (
+    <button onClick={copy} className="rounded-md border border-[var(--wo-border)] px-2.5 py-1 font-medium hover:bg-[var(--wo-bg)]">
+      {copied ? "✓ Copied" : "Copy caption"}
+    </button>
   );
 }
