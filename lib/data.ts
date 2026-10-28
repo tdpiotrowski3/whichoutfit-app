@@ -1,4 +1,5 @@
 import { admin } from "./supabase";
+import { WHICHOUTFIT } from "@/lib/brand";
 
 export type Overview = {
   total_signups: number;
@@ -401,6 +402,7 @@ export async function getSocialPosts(limit = 40): Promise<SocialPostDbRow[]> {
   const { data, error } = await admin()
     .from("social_posts")
     .select("id,clip_id,platform,caption,hashtags,video_url,campaign,scheduled_for,status,platform_post_id,attempts,error,posted_at,views,reach,likes,comments,saves,shares,stats_updated_at")
+    .eq("brand", WHICHOUTFIT)
     .order("scheduled_for", { ascending: true })
     .limit(limit);
   if (error) throw error;
@@ -435,6 +437,7 @@ export async function getSocialIdeas(limit = 30): Promise<SocialIdeaDbRow[] | nu
   const { data, error } = await admin()
     .from("social_ideas")
     .select("id,created_at,updated_at,status,template,inputs,closet,title,voiceover,captions,caption_pick,hashtags,rationale,source,clip_id,error")
+    .eq("brand", WHICHOUTFIT)
     .neq("status", "rejected")
     .order("created_at", { ascending: false })
     .limit(limit);

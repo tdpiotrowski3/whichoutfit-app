@@ -1,4 +1,5 @@
 import { admin } from "@/lib/supabase";
+import { WHICHOUTFIT } from "@/lib/brand";
 import { fetchReelStats, isInstagramPublishConfigured } from "@/lib/instagram";
 
 // Per-Reel results for the posts this app published, written back onto their
@@ -18,6 +19,7 @@ export async function syncPostStats(): Promise<PostStatsResult> {
   const { data, error } = await admin()
     .from("social_posts")
     .select("id,clip_id,platform_post_id")
+    .eq("brand", WHICHOUTFIT)
     .eq("platform", "instagram")
     .eq("status", "posted")
     .not("platform_post_id", "is", null)

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { isAuthed } from "@/lib/session";
 import { admin } from "@/lib/supabase";
+import { WHICHOUTFIT } from "@/lib/brand";
 import { errorMessage } from "@/lib/contentEngine/auth";
 import { draftIdeas } from "@/lib/contentEngine/planner";
 import { editIdea, requestVideo, briefToIdea, rewriteIdea, setSetting, type IdeaEdit, type VideoRequest } from "@/lib/contentEngine/studio";
@@ -43,6 +44,7 @@ export async function POST(req: Request) {
       .from("social_ideas")
       .update({ status: "proposed", error: null })
       .eq("id", body.id)
+      .eq("brand", WHICHOUTFIT)
       .in("status", ["approved", "failed"])
       .select("id");
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -58,6 +60,7 @@ export async function POST(req: Request) {
       .from("social_ideas")
       .update(fields)
       .eq("id", body.id)
+      .eq("brand", WHICHOUTFIT)
       .in("status", ["proposed", "failed", "approved"])
       .select("id");
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });

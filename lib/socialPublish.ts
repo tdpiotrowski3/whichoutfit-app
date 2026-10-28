@@ -1,4 +1,5 @@
 import { admin } from "@/lib/supabase";
+import { WHICHOUTFIT } from "@/lib/brand";
 import { captionWithTags } from "@/lib/contentEngine/hashtags";
 import {
   createReelContainer,
@@ -166,6 +167,7 @@ export async function runSocialPublish(now = new Date(), opts: PublishOptions = 
   const { data, error } = await admin()
     .from("social_posts")
     .select("*")
+    .eq("brand", WHICHOUTFIT)
     .eq("platform", "instagram")
     .in("status", ["queued", "publishing"])
     .lte("scheduled_for", now.toISOString())
