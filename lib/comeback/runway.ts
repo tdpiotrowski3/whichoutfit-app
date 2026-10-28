@@ -56,18 +56,21 @@ export const RUNWAY: Slot[] = [
     brief: "The gap between PT discharge and being ready for your sport: what PT is built to do, what it isn't, and what fills the space in between." },
   { key: "pov_cleared", day: -24, phase: "teaser", format: "reel", source: "you", beats: [4, 5, 5, 4],
     brief: "POV: your PT just said 'you're cleared'. Now what? The relatable moment of being discharged with a sheet of exercises and no plan for getting back to your sport." },
-  { key: "pro_room_carousel", day: -21, phase: "teaser", format: "carousel",
-    brief: "What happens when a pro athlete gets hurt: load managed around the injury, everything cleared stays in, progressions gated by the clinician. Comeback brings that approach to everyone." },
+  { key: "compare_carousel", day: -21, phase: "teaser", format: "carousel",
+    brief: "Why another app: your health app collects your data, Comeback plans with it. One slide per difference against your health app and typical fitness apps (brings your devices together, turns it into today's plan, starts where you are, plans around an injury, moves you up only when earned, nine sports plus strength). Fair to other apps: say 'most' or 'some', never 'none'. Last slide: the waitlist." },
   { key: "momentum_reel", day: -19, phase: "teaser", format: "reel", source: "app", beats: [4, 5, 5, 5],
     screens: ["Today tab, Momentum ring", "A week with a missed stretch", "Momentum dips, not to zero", "Momentum climbing back"],
     brief: "Momentum, not streaks: a missed week shouldn't reset you to zero. First look at the app." },
   { key: "waitlist_story", day: -17, phase: "teaser", format: "story",
-    brief: "Story set that ends on the waitlist link: a poll about where people are in their recovery, then the invite." },
+    brief: "Story set that ends on the waitlist link: a poll on where people are starting from (an injury, time off, or from scratch), then the invite." },
+  { key: "scratch_reel", day: -15, phase: "teaser", format: "reel", source: "app", beats: [4, 5, 5, 5],
+    screens: ["Setup: Let's meet you where you're at", "Starting from scratch picked", "Stage 1: walk and easy cardio", "Stages up to a first 5K"],
+    brief: "Starting from scratch: someone who has never run picks 'Starting from scratch' and gets a plan that begins with walking and builds to a first 5K, one solid week at a time. No injury needed." },
   { key: "sneak_today", day: -14, phase: "teaser", format: "reel", source: "app", beats: [4, 5, 6, 5],
     screens: ["Today tab, Morning Brief", "Check-in sliders", "Today's session built around cleared moves", "Session start"],
-    brief: "Sneak peek: one morning in the app. The brief reads sleep and recovery, a ten-second check-in, and today's session is built around what's healing." },
-  { key: "myths_carousel", day: -12, phase: "teaser", format: "carousel",
-    brief: "Common beliefs about getting back to sport after an injury, and what an Athletic Trainer would tell you instead. General education only, nothing that reads as a diagnosis." },
+    brief: "Sneak peek: one morning in the app. The brief reads sleep and recovery, a ten-second check-in, and today's session is built around how you are today." },
+  { key: "timeoff_carousel", day: -12, phase: "teaser", format: "carousel",
+    brief: "Getting back into it after time off: why week one goes wrong (picking up where you left off), and how starting a stage lower and earning the next one keeps you going. No injury needed. General education, no medical claims." },
   { key: "two_weeks_story", day: -10, phase: "teaser", format: "story",
     brief: "Two weeks out: a behind-the-scenes look at what's being finished, plus the waitlist link." },
   { key: "founder_athletes", day: -8, phase: "teaser", format: "reel", source: "you", beats: [4, 5, 5, 5],
@@ -78,15 +81,15 @@ export const RUNWAY: Slot[] = [
     brief: "To the waitlist: one week to go, what's coming, and that they'll be first to know on launch day." },
   { key: "reveal_brief", day: -7, phase: "reveal", format: "reel", source: "app", beats: [4, 5, 5, 5],
     screens: ["Morning Brief card", "Sleep, HRV, resting heart rate", "Push / steady / easy call", "Today's session adjusts"],
-    brief: "Feature: the Morning Brief. A clear call every morning (push, steady or easy) from sleep, HRV, resting heart rate and a check-in." },
+    brief: "Feature: one daily plan from all your health data. The Morning Brief reads sleep, HRV and resting heart rate from the watch, ring, scale and food app you already use (through Apple Health or Health Connect) plus a check-in, and makes one call: push, steady or easy." },
   { key: "reveal_pt_import", day: -6, phase: "reveal", format: "reel", source: "app", beats: [4, 5, 6, 5],
     screens: ["PT tab", "Photo of a PT exercise sheet", "Exercises read back for review", "Saved to the PT list"],
     brief: "Feature: add your PT exercises in seconds by snapping the sheet your PT gave you; you check every one before it's saved." },
   { key: "reveal_sports", day: -5, phase: "reveal", format: "reel", source: "app", beats: [4, 5, 5, 5],
-    screens: ["Sport picker", "Return stages", "Next stage locked until PT clears it", "Full training plan"],
-    brief: "Feature: back to your sport in stages (running, cycling, tennis, pickleball, swimming and more); the next stage opens only when your PT clears it." },
-  { key: "reveal_trainer_carousel", day: -4, phase: "reveal", format: "carousel",
-    brief: "Built by a Board Certified Athletic Trainer: what that credential means, how pros are brought back, and how that shaped each part of the app." },
+    screens: ["Sport picker", "Stages", "Solid weeks toward the next stage", "Full training plan"],
+    brief: "Feature: your sport in stages (running, cycling, tennis, pickleball, swimming and more). The next stage opens when your PT clears it, or once you've earned it with solid weeks." },
+  { key: "reveal_paths", day: -4, phase: "reveal", format: "carousel",
+    brief: "Let's meet you where you're at: the three ways in (coming back from an injury or surgery, getting back into it after time off, starting from scratch), what each one changes about where the plan starts and how fast it moves up. Built by a Board Certified Athletic Trainer." },
   { key: "reveal_pt_summary", day: -3, phase: "reveal", format: "reel", source: "app", beats: [4, 5, 5, 5],
     screens: ["Pain vs training chart", "30-day view", "Two-week summary", "Share link for your PT"],
     brief: "Feature: built for your PT visits. Pain charted against training, and a two-week summary or a link to share with your physical therapist." },
@@ -98,28 +101,28 @@ export const RUNWAY: Slot[] = [
 
   // --- launch day -----------------------------------------------------------
   { key: "launch_hero", day: 0, phase: "launch", format: "reel", source: "app", beats: [4, 5, 5, 5, 5],
-    screens: ["Welcome", "Pick injury area and sport", "Today's plan around what's healing", "PT exercises", "Back-to-sport stages"],
-    brief: "Launch hero: Comeback Health is live. The whole story in one clip, from the injury to getting back to the sport." },
+    screens: ["Let's meet you where you're at", "Pick your sport and goal", "Morning call from your health data", "Today's plan", "Stages that open when you've earned them"],
+    brief: "Launch hero: Comeback Health is live. Whatever you're coming back from (an injury, time off, or starting from scratch), the story from where you start to doing what you love." },
   { key: "launch_tour_carousel", day: 0, phase: "launch", format: "carousel",
-    brief: "Everything in it: a slide per pillar (train around what's healing, PT exercises, back to your sport, morning brief, PT visits, Watch), last slide where to get it." },
+    brief: "Everything in it: a slide per pillar (three ways in, one daily plan from your health data, stages you earn, plans around an injury and your PT's exercises, nine sports, Watch), last slide where to get it." },
   { key: "launch_story", day: 0, phase: "launch", format: "story",
     brief: "Launch day story set: it's live, a link sticker to download, and a thank-you to the waitlist." },
   { key: "launch_email", day: 0, phase: "launch", format: "email",
-    brief: "To the waitlist: it's live, where to download on iPhone and Android, and the three things to do first." },
+    brief: "To the waitlist: it's live, where to download on iPhone and Android, and the first three things to do: pick where you're starting from, connect your health data, check tomorrow's morning call." },
 
   // --- proof: three weeks after ---------------------------------------------
   { key: "howto_setup", day: 2, phase: "proof", format: "reel", source: "app", beats: [4, 5, 5, 5],
-    screens: ["Setup: injury area", "Setup: sport and goal", "Clearances", "First day's plan"],
-    brief: "How to set up Comeback in under a minute and get your first day's plan." },
+    screens: ["Let's meet you where you're at", "Sport and goal", "Health questions or clearances", "First day's plan"],
+    brief: "How to set up Comeback in under a minute from any starting point and get your first day's plan." },
   { key: "faq_carousel", day: 4, phase: "proof", format: "carousel",
-    brief: "Answers to the questions people ask first: does it replace my PT (no), what if I'm not cleared yet, which sports, does it work without a Watch." },
+    brief: "Answers to the questions people ask first: do I need an injury (no), does it replace my PT (no), which devices and apps work, which sports, does it work without a Watch." },
   { key: "week_one_reel", day: 7, phase: "proof", format: "reel", source: "you", beats: [4, 5, 5, 5],
     brief: "One week in: what the founder is hearing from the first users, told as a story. Never quote or invent a user; speak to the kinds of comebacks people are using it for." },
   { key: "nudge_email", day: 10, phase: "proof", format: "email",
-    brief: "To waitlist sign-ups who haven't opened the app yet: the one-minute setup and why starting during rehab beats waiting until discharge." },
+    brief: "To waitlist sign-ups who haven't opened the app yet: the one-minute setup from wherever they're starting, and why a small first week beats a big one." },
   { key: "milestone_reel", day: 14, phase: "proof", format: "reel", source: "app", beats: [4, 5, 5, 5],
-    screens: ["A stage cleared", "Milestone card", "Share card", "Next stage"],
-    brief: "Milestones: clearing a return stage, the share card, and what opens next." },
+    screens: ["A stage reached", "Milestone card", "Share card", "Next stage"],
+    brief: "Milestones: reaching a new stage, the share card, and what opens next." },
   { key: "three_weeks_carousel", day: 21, phase: "proof", format: "carousel",
     brief: "Three weeks in: what's been added or fixed from feedback, and what's coming next." },
 ];
@@ -218,7 +221,7 @@ export function ctaFor(phase: Phase): string {
     : "Download Comeback Health on the App Store or Google Play, and get back to your sport.";
 }
 
-export const VOICE_RULES = `Comeback Health is a training app for people coming back from an injury: it tracks what their physical therapist gave them, builds each day's training around what is healing and what they're cleared for, and walks them back to their sport in stages. Built by a Board Certified Athletic Trainer who has spent years rehabilitating professional athletes. iPhone, Apple Watch, Android and web. Sports: running, cycling, rowing, tennis, pickleball, swimming, fitness classes, functional fitness, hybrid racing.
+export const VOICE_RULES = `Comeback Health meets people where they're at: coming back from an injury or surgery, getting back into it after time off, or starting from scratch. It turns the sleep and recovery data from the devices they already wear into one plan for today, and moves them up a stage once they've earned it (on the injury path, when their PT clears it). For injuries it also tracks what their physical therapist gave them and keeps uncleared moves out. Positioning line: "Your health app collects it. Comeback plans with it." Built by a Board Certified Athletic Trainer who has spent years rehabilitating professional athletes. iPhone, Apple Watch, Android and web. Sports: running, cycling, rowing, tennis, pickleball, swimming, fitness classes, functional fitness, hybrid racing.
 Voice: an Athletic Trainer talking to an athlete, calm, direct, specific, a little dry. Plain words, concrete details. No hype or AI-sounding words (game-changer, elevate, effortless, seamless, unlock, revolutionize, level up, crush it, beast mode), no emojis, no exclamation marks in narration. Sport-neutral: never make it about one sport; use a mix.
 Say "AI" only if the piece is literally about how a feature works, and then once at most.
 It is a training and tracking tool, NOT medical care. Hard rules, never broken:
@@ -227,16 +230,18 @@ It is a training and tracking tool, NOT medical care. Hard rules, never broken:
 - Never invent statistics, studies, testimonials, users, quotes or outcomes.
 - Never invent personal details about the founder (his own injuries, his athletes' names or teams). Speak from what an Athletic Trainer sees working with athletes.
 - Never say "training room" or "Athletic Training room".
+- Never name a device, wearable or food-app brand; say "your watch, ring, scale and food app" or "anything that shares with Apple Health or Health Connect". Apple Watch only as Comeback's own Watch app.
+- Speak to all three starting points across the runway; don't make every piece about injury.
 - Never name trademarked programs (CrossFit, HYROX); say "functional fitness" and "hybrid racing".
 - Before launch (teaser, reveal) the ask is the waitlist at comebackhealth.app; from launch day on it is the App Store and Google Play. Never mention prices.`;
 
 export const CAPTION_RULES = `Caption rules (Instagram and TikTok):
 - The first line is the hook and must work alone; only about the first 100 characters show before "more".
-- Work in one phrase people actually search, said naturally ("back to running after knee surgery", "what to do after physical therapy ends", "shoulder rehab exercises").
+- Work in one phrase people actually search, said naturally ("back to running after knee surgery", "couch to 5k for beginners", "getting back into running after a break").
 - Optionally end with a low-effort prompt that earns a comment or a save; vary it.
 - Under 150 characters. No hashtags in the caption, no emojis, no em dashes. "Not medical advice" is added automatically; don't write it.`;
 
-export const HASHTAG_RULES = `Hashtags: exactly 5, lowercase, space-separated. 1–2 broad but on-niche (#injuryrecovery #returntosport #physicaltherapy #sportsrehab), 3–4 specific to this piece and how someone would search for it (#aclrecovery #runninginjury #shoulderrehab #tennisinjury #athletictrainer). Never: our brand (#comeback #comebackhealth), feed bait (#fyp #viral #explore), platform, AI/app/tech tags, trademarks (#crossfit #hyrox), or one-word giants (#fitness #health #workout #gym #motivation).`;
+export const HASHTAG_RULES = `Hashtags: exactly 5, lowercase, space-separated. 1–2 broad but on-niche (#injuryrecovery #returntosport #physicaltherapy #sportsrehab), 3–4 specific to this piece and how someone would search for it (#aclrecovery #runninginjury #shoulderrehab #tennisinjury #athletictrainer #couchto5k #beginnerrunner). Never: our brand (#comeback #comebackhealth), feed bait (#fyp #viral #explore), platform, AI/app/tech tags, trademarks (#crossfit #hyrox), or one-word giants (#fitness #health #workout #gym #motivation).`;
 
 /** What the claims guard rejects outright. The prompt forbids these; this catches the slips. */
 const CLAIMS: [RegExp, string][] = [
