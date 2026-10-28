@@ -149,6 +149,66 @@ export function beatBudget(seconds: number): number {
   return Math.max(4, Math.floor((seconds - 0.5) * SYLLABLES_PER_SEC));
 }
 
+/** Whole days from `a` to `b`, both YYYY-MM-DD. */
+export function daysBetween(a: string, b: string): number {
+  const t = (s: string) => Date.UTC(+s.slice(0, 4), +s.slice(5, 7) - 1, +s.slice(8, 10));
+  return Math.round((t(b) - t(a)) / 86_400_000);
+}
+
+/** Today's date in Chicago, where the posting calendar lives. */
+export function todayLocal(now = new Date()): string {
+  return now.toLocaleDateString("en-CA", { timeZone: "America/Chicago" });
+}
+
+/** The reveal week is kept whole whenever there is room for it before launch. */
+const REVEAL_START = -7;
+
+/** Days of lead before the first post can go out: accounts, filming, approval. */
+export const LEAD_DAYS = 3;
+
+export type Scheduled = {
+  /** The day this piece actually goes out, counted from launch. */
+  day: number;
+  date: string;
+  /** True when the piece was pulled later than planned to fit the time left. */
+  moved: boolean;
+};
+
+/** The earliest launch day that leaves room for the whole plan after the lead time. */
+export function fullRunwayLaunch(today: string): string {
+  return dateFor(today, LEAD_DAYS - Math.min(...RUNWAY.map((s) => s.day)));
+}
+
+/**
+ * Fit the plan to the time actually left. With a launch far enough out every
+ * piece keeps its planned day. Closer than that, nothing is ever scheduled in
+ * the past or before LEAD_DAYS from now: the teaser is squeezed, in order,
+ * into the days left before reveal week, and reveal week stays whole. Under a week out,
+ * everything before launch shares the days that remain. Launch and the weeks
+ * after keep their days.
+ */
+export function scheduleRunway(launch: string, today: string): Map<string, Scheduled> {
+  // The first day anything can go out (after the lead time), counted from launch.
+  const first = daysBetween(launch, today) + LEAD_DAYS;
+  const keepReveal = first < REVEAL_START;
+  const squeeze = RUNWAY.filter((s) => s.day < (keepReveal ? REVEAL_START : 0));
+  const planLo = Math.min(...squeeze.map((s) => s.day));
+  const planHi = Math.max(...squeeze.map((s) => s.day));
+  const hi = keepReveal ? REVEAL_START - 1 : -1;
+  // Squeeze only when the plan starts too soon and there are days left to squeeze into.
+  const squeezing = first > planLo && first <= hi;
+  const out = new Map<string, Scheduled>();
+  for (const s of RUNWAY) {
+    let day = s.day;
+    if (squeezing && squeeze.includes(s)) {
+      // Linear map of the planned span onto [first, hi], so order and spacing survive.
+      day = first + Math.round(((s.day - planLo) * (hi - first)) / Math.max(1, planHi - planLo));
+    }
+    out.set(s.key, { day, date: dateFor(launch, day), moved: day !== s.day });
+  }
+  return out;
+}
+
 // --- voice and rules ---------------------------------------------------------
 
 /** Spoken over every reel's end card, by phase: before launch it is the waitlist. */
