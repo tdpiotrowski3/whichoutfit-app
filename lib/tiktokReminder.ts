@@ -1,4 +1,5 @@
 import { admin } from "@/lib/supabase";
+import { WHICHOUTFIT } from "@/lib/brand";
 import { sendAdminAlert, isAlertConfigured } from "@/lib/alert";
 import { isTikTokAppConfigured, sendToInbox } from "@/lib/tiktokDisplay";
 import { captionWithTags } from "@/lib/contentEngine/hashtags";
@@ -39,6 +40,7 @@ export async function sendTikTokReminder(now = new Date()): Promise<ReminderResu
   const { data, error } = await admin()
     .from("social_posts")
     .select("id,clip_id,caption,hashtags,video_url,scheduled_for")
+    .eq("brand", WHICHOUTFIT)
     .eq("platform", "tiktok")
     .eq("status", "manual")
     .is("reminded_at", null)

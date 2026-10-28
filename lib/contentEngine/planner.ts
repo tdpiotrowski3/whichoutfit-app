@@ -1,4 +1,5 @@
 import { admin } from "@/lib/supabase";
+import { WHICHOUTFIT } from "@/lib/brand";
 import { cleanHashtags } from "./hashtags";
 import { errorMessage } from "./auth";
 import { getAttribution } from "@/lib/attribution";
@@ -84,6 +85,7 @@ async function loadPosts(): Promise<PostRow[]> {
   const { data, error } = await admin()
     .from("social_posts")
     .select("clip_id,platform,caption,hashtags,video_url,campaign,scheduled_for,status,posted_at,views,likes,saves,shares,error")
+    .eq("brand", WHICHOUTFIT)
     .order("scheduled_for", { ascending: true });
   if (error) throw error;
   return (data ?? []) as PostRow[];
@@ -296,6 +298,7 @@ export async function draftIdeas(count = IDEAS_PER_WEEK, now = new Date()): Prom
   const { data: recent, error } = await db
     .from("social_ideas")
     .select("template,inputs,closet,title,status")
+    .eq("brand", WHICHOUTFIT)
     .order("created_at", { ascending: false })
     .limit(60);
   if (error) throw error;
@@ -386,7 +389,7 @@ export function templateBrief(t: Template): string {
 
 export async function completeIdea(id: string, videoUrl: string, now = new Date()): Promise<{ clip_id: string; scheduled_for: string }> {
   const db = admin();
-  const { data, error } = await db.from("social_ideas").select("*").eq("id", id).single();
+  const { data, error } = await db.from("social_ideas").select("*").eq("id", id).eq("brand", WHICHOUTFIT).single();
   if (error) throw error;
   const idea = data as IdeaRow;
   const t = getTemplate(idea.template);
@@ -440,8 +443,8 @@ async function digestHtml(now: Date, refill: PlanResult["refill"], ideas: PlanRe
   const runway = runwayDays(now, queued.map((p) => new Date(p.scheduled_for)));
   // Rows parked as failed by hand say so ("Dropped on purpose"); only real failures count.
   const failed = posts.filter((p) => p.status === "failed" && p.scheduled_for >= weekAgo && !/on purpose/i.test(p.error ?? ""));
-  const { data: waiting } = await admin().from("social_ideas").select("title,template").eq("status", "proposed");
-  const { data: approved } = await admin().from("social_ideas").select("title").eq("status", "approved");
+  const { data: waiting } = await admin().from("social_ideas").select("title,template").eq("brand", WHICHOUTFIT).eq("status", "proposed");
+  const { data: approved } = await admin().from("social_ideas").select("title").eq("brand", WHICHOUTFIT).eq("status", "approved");
   const top = (await clipScores(posts).catch(() => []))[0];
 
   const li = (s: string) => `<li>${s}</li>`;
@@ -495,7 +498,7 @@ export async function runSocialPlan(now = new Date()): Promise<PlanResult> {
 
 /** For the engine's GET /jobs: approved ideas with everything the Mac needs to render them. */
 export async function approvedJobs(): Promise<(IdeaRow & { job: Template; voice: string })[]> {
-  const { data, error } = await admin().from("social_ideas").select("*").eq("status", "approved").order("created_at");
+  const { data, error } = await admin().from("social_ideas").select("*").eq("brand", WHICHOUTFIT).eq("status", "approved").order("created_at");
   if (error) throw error;
   return ((data ?? []) as IdeaRow[]).flatMap((i) => {
     const t = getTemplate(i.template);

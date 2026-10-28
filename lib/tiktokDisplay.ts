@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { WHICHOUTFIT } from "@/lib/brand";
 import { admin } from "./supabase";
 import { num, utcDay, type SocialMetricRow } from "./social";
 
@@ -163,6 +164,7 @@ export async function syncTikTokPosts(): Promise<TikTokPostResult> {
   const { data, error } = await db
     .from("social_posts")
     .select("id,clip_id,status,scheduled_for,platform_post_id")
+    .eq("brand", WHICHOUTFIT)
     .eq("platform", "tiktok")
     .in("status", ["manual", "posted"])
     .gte("scheduled_for", new Date(Date.now() - 90 * 86400_000).toISOString());

@@ -6,9 +6,18 @@ import { useState } from "react";
 
 // The dashboard's navigation: a grouped sidebar on desktop, a top bar with a
 // slide-in drawer on phones. Twelve pages no longer fit in one row of tabs, so
-// they are grouped by the job they help with.
+// they are grouped by the job they help with. The dashboard runs more than one
+// company: a switcher under the logo flips between WhichOutfit's pages and
+// Comeback Health's (everything under /comeback).
 
 type Item = { href: string; label: string; icon: keyof typeof ICONS };
+type Company = "whichoutfit" | "comeback";
+
+const companyOf = (pathname: string): Company => (pathname === "/comeback" || pathname.startsWith("/comeback/") ? "comeback" : "whichoutfit");
+
+const COMEBACK_GROUPS: { label: string | null; items: Item[] }[] = [
+  { label: "Marketing", items: [{ href: "/comeback", label: "Launch runway", icon: "calendar" }] },
+];
 
 const GROUPS: { label: string | null; items: Item[] }[] = [
   { label: null, items: [{ href: "/", label: "Overview", icon: "home" }] },
@@ -67,26 +76,58 @@ function Icon({ name, className = "" }: { name: keyof typeof ICONS; className?: 
 
 const isActive = (pathname: string, href: string) => (href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(href + "/"));
 
-function Brand() {
+function Brand({ company }: { company: Company }) {
+  const comeback = company === "comeback";
   return (
-    <Link href="/" className="flex items-center gap-2.5">
-      <span className="flex h-8 w-8 items-center justify-center rounded-lg text-white" style={{ background: "linear-gradient(135deg, var(--wo-blue), var(--wo-teal))" }}>
-        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="M12 6a2 2 0 1 1 2 2c-1 0-2 .7-2 1.7V10l8.5 6.3c.8.6.4 1.7-.6 1.7H4.1c-1 0-1.4-1.1-.6-1.7L12 10" />
-        </svg>
+    <Link href={comeback ? "/comeback" : "/"} className="flex items-center gap-2.5">
+      <span
+        className="flex h-8 w-8 items-center justify-center rounded-lg text-white"
+        style={{ background: comeback ? "linear-gradient(135deg, #0f766e, #22c55e)" : "linear-gradient(135deg, var(--wo-blue), var(--wo-teal))" }}
+      >
+        {comeback ? (
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M3 17l5-5 4 4 9-9M15 7h6v6" />
+          </svg>
+        ) : (
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M12 6a2 2 0 1 1 2 2c-1 0-2 .7-2 1.7V10l8.5 6.3c.8.6.4 1.7-.6 1.7H4.1c-1 0-1.4-1.1-.6-1.7L12 10" />
+          </svg>
+        )}
       </span>
       <span className="leading-tight">
-        <span className="block text-[15px] font-semibold">WhichOutfit</span>
+        <span className="block text-[15px] font-semibold">{comeback ? "Comeback Health" : "WhichOutfit"}</span>
         <span className="block text-[11px] text-[var(--wo-muted)]">Admin</span>
       </span>
     </Link>
   );
 }
 
+function CompanySwitch({ company, onNavigate }: { company: Company; onNavigate?: () => void }) {
+  const tab = (c: Company, href: string, label: string) => (
+    <Link
+      href={href}
+      onClick={onNavigate}
+      aria-current={company === c ? "page" : undefined}
+      className={`flex-1 rounded-md px-2 py-1.5 text-center text-xs font-medium transition-colors ${
+        company === c ? "bg-white text-[var(--wo-text)] shadow-sm" : "text-[var(--wo-muted)] hover:text-[var(--wo-text)]"
+      }`}
+    >
+      {label}
+    </Link>
+  );
+  return (
+    <div className="flex gap-1 rounded-lg bg-[var(--wo-bg)] p-1" role="tablist" aria-label="Company">
+      {tab("whichoutfit", "/", "WhichOutfit")}
+      {tab("comeback", "/comeback", "Comeback")}
+    </div>
+  );
+}
+
 function Links({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
+  const groups = companyOf(pathname) === "comeback" ? COMEBACK_GROUPS : GROUPS;
   return (
     <div className="space-y-5">
-      {GROUPS.map((g, gi) => (
+      {groups.map((g, gi) => (
         <div key={gi}>
           {g.label ? <div className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wider text-[var(--wo-muted)]/80">{g.label}</div> : null}
           <ul className="space-y-0.5">
@@ -122,6 +163,7 @@ export function Nav() {
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const company = companyOf(pathname);
 
   async function logout() {
     await fetch("/api/logout", { method: "POST" });
@@ -140,7 +182,7 @@ export function Nav() {
     <>
       {/* Desktop: fixed sidebar. */}
       <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-[var(--wo-border)] bg-white md:flex">
-        <div className="px-5 py-5"><Brand /></div>
+        <div className="space-y-3 px-5 py-5"><Brand company={company} /><CompanySwitch company={company} /></div>
         <nav className="flex-1 overflow-y-auto px-3 pb-4" aria-label="Dashboard">
           <Links pathname={pathname} />
         </nav>
@@ -149,7 +191,7 @@ export function Nav() {
 
       {/* Phone: top bar + drawer. */}
       <header className="sticky top-0 z-30 flex items-center justify-between border-b border-[var(--wo-border)] bg-white/90 px-4 py-2.5 backdrop-blur md:hidden">
-        <Brand />
+        <Brand company={company} />
         <button
           type="button"
           aria-label="Open menu"
@@ -167,13 +209,14 @@ export function Nav() {
           <div className="absolute inset-0 bg-black/30" onClick={() => setOpen(false)} />
           <div className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col bg-white shadow-xl">
             <div className="flex items-center justify-between px-5 py-4">
-              <Brand />
+              <Brand company={company} />
               <button type="button" aria-label="Close menu" onClick={() => setOpen(false)} className="-mr-2 inline-flex h-11 w-11 items-center justify-center rounded-lg hover:bg-[var(--wo-bg)]">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
                   <path d="M6 6l12 12M18 6 6 18" />
                 </svg>
               </button>
             </div>
+            <div className="px-5 pb-3"><CompanySwitch company={company} onNavigate={() => setOpen(false)} /></div>
             <nav className="flex-1 overflow-y-auto px-3 pb-4" aria-label="Dashboard">
               <Links pathname={pathname} onNavigate={() => setOpen(false)} />
             </nav>

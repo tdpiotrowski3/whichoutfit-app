@@ -1,4 +1,5 @@
 import { admin } from "@/lib/supabase";
+import { WHICHOUTFIT } from "@/lib/brand";
 import { generateJson } from "./gemini";
 import { getTemplate, TEMPLATES } from "./templates";
 import { validateIdea, type RawIdea } from "./rules";
@@ -69,7 +70,7 @@ export type IdeaEdit = {
  */
 export async function editIdea(id: string, edit: IdeaEdit): Promise<IdeaRow> {
   const db = admin();
-  const { data, error } = await db.from("social_ideas").select("*").eq("id", id).single();
+  const { data, error } = await db.from("social_ideas").select("*").eq("id", id).eq("brand", WHICHOUTFIT).single();
   if (error) throw error;
   const idea = data as IdeaRow;
   if (!["proposed", "approved", "failed"].includes(idea.status)) {
@@ -213,7 +214,7 @@ ${catalog}`;
 /** Redo an idea's script from a note ("funnier", "open on the price"), same footage, input and closet. */
 export async function rewriteIdea(id: string, note: string): Promise<IdeaRow> {
   const db = admin();
-  const { data, error } = await db.from("social_ideas").select("*").eq("id", id).single();
+  const { data, error } = await db.from("social_ideas").select("*").eq("id", id).eq("brand", WHICHOUTFIT).single();
   if (error) throw error;
   const idea = data as IdeaRow;
   if (!["proposed", "failed"].includes(idea.status)) throw new Error("Only an idea waiting for review can be rewritten.");

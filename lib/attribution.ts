@@ -1,4 +1,5 @@
 import { admin } from "@/lib/supabase";
+import { WHICHOUTFIT } from "@/lib/brand";
 import { appleCampaign, isAndroid } from "@/lib/socialLinks";
 
 // Post → click → install → activated → paid, per campaign.
@@ -42,7 +43,7 @@ export async function getAttribution(days = 30): Promise<Attribution> {
   const db = admin();
 
   const [posts, clicks, ios, android] = await Promise.all([
-    db.from("social_posts").select("campaign,views").not("campaign", "is", null),
+    db.from("social_posts").select("campaign,views").eq("brand", WHICHOUTFIT).not("campaign", "is", null),
     db.from("social_clicks").select("campaign,user_agent").gte("created_at", since),
     db.from("appstore_campaign_metrics").select("campaign,first_downloads").gte("day", since.slice(0, 10)),
     db.from("acquisition_users").select("channel,activated,paid").eq("method", "link").gte("attributed_at", since),
