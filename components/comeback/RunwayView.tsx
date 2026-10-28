@@ -1,15 +1,18 @@
 import { Card } from "@/components/ui";
 import { DraftRunwayButton, LaunchDateForm, PieceActions } from "@/components/comeback/RunwayClient";
 import {
-  RUNWAY, PHASES, FORMATS, dayLabel, dateFor, beatBudget, ctaFor, templateKey, DISCLAIMER,
-  type Slot,
+  RUNWAY, PHASES, FORMATS, dayLabel, beatBudget, ctaFor, templateKey, DISCLAIMER,
+  scheduleRunway, fullRunwayLaunch, todayLocal,
+  type Slot, type Scheduled,
 } from "@/lib/comeback/runway";
 import type { PieceRow } from "@/lib/comeback/runwayStore";
 
 // Comeback's launch runway, top to bottom: every slot of the plan in order,
 // each either still a brief (not drafted yet) or its drafted piece with the
 // owner's controls. Dates appear once a launch date is set; until then the
-// plan reads in T-minus days and nothing is booked anywhere.
+// plan reads in T-minus days and nothing is booked anywhere. A launch closer
+// than the plan allows squeezes the teaser into the days left
+// (scheduleRunway), so nothing is ever dated in the past.
 
 const STATUS: Record<PieceRow["status"], { label: string; tone: string }> = {
   proposed: { label: "To review", tone: "bg-[var(--wo-blue)]/10 text-[var(--wo-blue)]" },
@@ -63,13 +66,13 @@ function Content({ slot, piece }: { slot: Slot; piece: PieceRow }) {
   );
 }
 
-function SlotRow({ slot, piece, launch }: { slot: Slot; piece?: PieceRow; launch: string | null }) {
-  const when = launch ? dateText(dateFor(launch, slot.day)) : null;
+function SlotRow({ slot, piece, sched }: { slot: Slot; piece?: PieceRow; sched?: Scheduled }) {
   return (
     <li className="rounded-xl border border-[var(--wo-border)] bg-white p-4">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-sm font-semibold tabular-nums">{dayLabel(slot.day)}</span>
-        {when ? <span className="text-sm text-[var(--wo-muted)]">{when}</span> : null}
+        <span className="text-sm font-semibold tabular-nums">{dayLabel(sched?.day ?? slot.day)}</span>
+        {sched ? <span className="text-sm text-[var(--wo-muted)]">{dateText(sched.date)}</span> : null}
+        {sched?.moved ? <span className="text-xs text-[var(--wo-muted)]">moved from {dayLabel(slot.day)}</span> : null}
         <Chip>{FORMATS[slot.format]}</Chip>
         {slot.source === "you" ? <Chip tone="bg-amber-50 text-amber-700">You film this</Chip> : null}
         {slot.source === "app" ? <Chip>App footage</Chip> : null}
@@ -108,8 +111,13 @@ export function RunwayView({ pieces, launch, now }: { pieces: PieceRow[]; launch
     approved: live.filter((p) => p && ["approved", "rendering", "rendered"].includes(p.status)).length,
     yours: RUNWAY.filter((s) => s.source === "you").length,
   };
-  const daysOut = launch ? Math.round((new Date(`${launch}T12:00:00Z`).getTime() - now.getTime()) / 86_400_000) : null;
+  const today = todayLocal(now);
+  const sched = launch ? scheduleRunway(launch, today) : null;
+  const daysOut = launch ? Math.round((new Date(`${launch}T12:00:00Z`).getTime() - new Date(`${today}T12:00:00Z`).getTime()) / 86_400_000) : null;
   const firstDay = Math.min(...RUNWAY.map((s) => s.day));
+  const dates = sched ? [...sched.values()].map((x) => x.date).sort() : [];
+  const moved = sched ? RUNWAY.filter((s) => sched.get(s.key)!.moved) : [];
+  const squeezedTo = moved.length ? [...moved.map((s) => sched!.get(s.key)!.date)].sort() : [];
 
   return (
     <div className="space-y-6">
@@ -137,7 +145,13 @@ export function RunwayView({ pieces, launch, now }: { pieces: PieceRow[]; launch
       </div>
 
       <Card title="Plan" right={<DraftRunwayButton empty={counts.total - counts.drafted} />}>
-        <LaunchDateForm launch={launch} startsOn={launch ? dateFor(launch, firstDay) : null} />
+        <LaunchDateForm launch={launch} startsOn={dates[0] ?? null} />
+        {moved.length ? (
+          <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            The full plan needs launch on or after {dateText(fullRunwayLaunch(today))}. With this date, {moved.length} pre-launch piece{moved.length === 1 ? " is" : "s are"} squeezed into{" "}
+            {dateText(squeezedTo[0])}–{dateText(squeezedTo[squeezedTo.length - 1])}, in order{moved.some((s) => s.day >= -7) ? "" : "; reveal week stays one feature a day"}.
+          </p>
+        ) : null}
       </Card>
 
       {PHASES.map((phase) => (
@@ -148,7 +162,7 @@ export function RunwayView({ pieces, launch, now }: { pieces: PieceRow[]; launch
           </div>
           <ul className="space-y-3">
             {RUNWAY.filter((s) => s.phase === phase.key).map((slot) => (
-              <SlotRow key={slot.key} slot={slot} piece={bySlot.get(templateKey(slot))} launch={launch} />
+              <SlotRow key={slot.key} slot={slot} piece={bySlot.get(templateKey(slot))} sched={sched?.get(slot.key)} />
             ))}
           </ul>
         </section>

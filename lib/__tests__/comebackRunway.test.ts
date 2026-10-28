@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   RUNWAY, PHASES, beatBudget, claimProblem, cleanComebackHashtags, dateFor, dayLabel,
   postText, slotFromTemplate, templateKey, validatePiece, DISCLAIMER, type RawPiece,
+  scheduleRunway, fullRunwayLaunch, daysBetween,
 } from "../comeback/runway";
 import { countSyllables } from "../contentEngine/templates";
 
@@ -127,5 +128,47 @@ describe("hashtags and post text", () => {
   it("always carries the disclaimer", () => {
     expect(postText("Cleared by PT. Now what?", "#returntosport")).toBe(`Cleared by PT. Now what?\n${DISCLAIMER}\n\n#returntosport`);
     expect(postText("No tags", "")).toBe(`No tags\n${DISCLAIMER}`);
+  });
+});
+
+describe("scheduleRunway", () => {
+  const today = "2026-10-28";
+  const dates = (m: ReturnType<typeof scheduleRunway>) => RUNWAY.map((s) => m.get(s.key)!.date);
+
+  it("keeps every planned day when launch is far enough out", () => {
+    const launch = fullRunwayLaunch(today);
+    expect(launch).toBe("2026-11-28");
+    const m = scheduleRunway(launch, today);
+    for (const s of RUNWAY) expect(m.get(s.key)).toEqual({ day: s.day, date: dateFor(launch, s.day), moved: false });
+  });
+
+  it("squeezes the teaser into the lead time..T-8 and keeps reveal week whole (Nov 16 launch)", () => {
+    const m = scheduleRunway("2026-11-16", today);
+    const all = dates(m);
+    expect(all.every((d) => d >= "2026-10-31")).toBe(true);
+    expect([...all].sort()).toEqual(all); // order survives
+    const teaser = RUNWAY.filter((s) => s.phase === "teaser").map((s) => m.get(s.key)!);
+    expect(teaser[0].date).toBe("2026-10-31");
+    expect(teaser[teaser.length - 1].day).toBe(-8);
+    expect(teaser.every((t) => t.moved || t.day === -8)).toBe(true);
+    for (const s of RUNWAY.filter((x) => x.day >= -7)) expect(m.get(s.key)).toMatchObject({ day: s.day, moved: false });
+  });
+
+  it("shares the last days among every pre-launch piece when launch is under a week out", () => {
+    const m = scheduleRunway("2026-11-02", today);
+    const pre = RUNWAY.filter((s) => s.day < 0).map((s) => m.get(s.key)!);
+    expect(pre[0].date).toBe("2026-10-31");
+    expect(pre[pre.length - 1].day).toBe(-1);
+    expect(pre.every((p) => p.date >= "2026-10-31" && p.date < "2026-11-02")).toBe(true);
+    expect(m.get("launch_hero")!.date).toBe("2026-11-02");
+  });
+
+  it("leaves a past launch alone rather than inventing dates", () => {
+    const m = scheduleRunway("2026-10-01", today);
+    for (const s of RUNWAY) expect(m.get(s.key)!.moved).toBe(false);
+  });
+
+  it("counts days across a month end", () => {
+    expect(daysBetween("2026-10-28", "2026-11-16")).toBe(19);
   });
 });
