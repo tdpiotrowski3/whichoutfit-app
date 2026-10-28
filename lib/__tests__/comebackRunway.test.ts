@@ -106,6 +106,7 @@ describe("claimProblem", () => {
     ["Clinically proven programs", "claims clinical proof"],
     ["Built for CrossFit athletes", "names a trademark"],
     ["Only $9.99 a month", "mentions a price"],
+    ["The Athletic Training room approach", 'says "training room"'],
   ])("flags %s", (text, why) => {
     expect(claimProblem(text)).toBe(why);
   });

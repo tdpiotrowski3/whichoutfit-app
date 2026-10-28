@@ -51,13 +51,13 @@ export const FORMATS: Record<Format, string> = {
 export const RUNWAY: Slot[] = [
   // --- teaser: the problem, the founder, the waitlist ---------------------
   { key: "founder_why", day: -28, phase: "teaser", format: "reel", source: "you", beats: [4, 5, 5, 5],
-    brief: "Why Comeback exists, from the Athletic Trainer who built it: in a pro training room an injured athlete never just stops, the trainer programs around the injury; most people get none of that." },
+    brief: "Why Comeback exists, from the Athletic Trainer who built it: when a pro athlete gets hurt they never just stop, their Athletic Trainer programs around the injury; most people get none of that." },
   { key: "gap_carousel", day: -26, phase: "teaser", format: "carousel",
     brief: "The gap between PT discharge and being ready for your sport: what PT is built to do, what it isn't, and what fills the space in between." },
   { key: "pov_cleared", day: -24, phase: "teaser", format: "reel", source: "you", beats: [4, 5, 5, 4],
     brief: "POV: your PT just said 'you're cleared'. Now what? The relatable moment of being discharged with a sheet of exercises and no plan for getting back to your sport." },
   { key: "pro_room_carousel", day: -21, phase: "teaser", format: "carousel",
-    brief: "What a pro athlete's training room does when someone is hurt: load managed around the injury, everything cleared stays in, progressions gated by the clinician. Comeback brings that approach to everyone." },
+    brief: "What happens when a pro athlete gets hurt: load managed around the injury, everything cleared stays in, progressions gated by the clinician. Comeback brings that approach to everyone." },
   { key: "momentum_reel", day: -19, phase: "teaser", format: "reel", source: "app", beats: [4, 5, 5, 5],
     screens: ["Today tab, Momentum ring", "A week with a missed stretch", "Momentum dips, not to zero", "Momentum climbing back"],
     brief: "Momentum, not streaks: a missed week shouldn't reset you to zero. First look at the app." },
@@ -86,7 +86,7 @@ export const RUNWAY: Slot[] = [
     screens: ["Sport picker", "Return stages", "Next stage locked until PT clears it", "Full training plan"],
     brief: "Feature: back to your sport in stages (running, cycling, tennis, pickleball, swimming and more); the next stage opens only when your PT clears it." },
   { key: "reveal_trainer_carousel", day: -4, phase: "reveal", format: "carousel",
-    brief: "Built by a Board Certified Athletic Trainer: what that credential means, what the training-room approach is, and how it shaped each part of the app." },
+    brief: "Built by a Board Certified Athletic Trainer: what that credential means, how pros are brought back, and how that shaped each part of the app." },
   { key: "reveal_pt_summary", day: -3, phase: "reveal", format: "reel", source: "app", beats: [4, 5, 5, 5],
     screens: ["Pain vs training chart", "30-day view", "Two-week summary", "Share link for your PT"],
     brief: "Feature: built for your PT visits. Pain charted against training, and a two-week summary or a link to share with your physical therapist." },
@@ -225,7 +225,8 @@ It is a training and tracking tool, NOT medical care. Hard rules, never broken:
 - Never claim it heals, treats, cures, diagnoses, prevents injury, speeds up recovery, or replaces a physical therapist, surgeon or doctor. It works WITH the care team.
 - Never say what anyone is cleared for. Clearance always comes from their clinician; the app follows it.
 - Never invent statistics, studies, testimonials, users, quotes or outcomes.
-- Never invent personal details about the founder (his own injuries, his athletes' names or teams). Speak from what an Athletic Trainer sees in a training room.
+- Never invent personal details about the founder (his own injuries, his athletes' names or teams). Speak from what an Athletic Trainer sees working with athletes.
+- Never say "training room" or "Athletic Training room".
 - Never name trademarked programs (CrossFit, HYROX); say "functional fitness" and "hybrid racing".
 - Before launch (teaser, reveal) the ask is the waitlist at comebackhealth.app; from launch day on it is the App Store and Google Play. Never mention prices.`;
 
@@ -246,6 +247,7 @@ const CLAIMS: [RegExp, string][] = [
   [/\b(no|without( a)?)\s+(need for( a)?\s+)?(pt|physical therapist|physio)\b/i, "suggests skipping the PT"],
   [/\b(clinically|scientifically|doctor)[- ](proven|approved|backed)\b/i, "claims clinical proof"],
   [/\bguarantee/i, "promises a guarantee"],
+  [/\btraining[- ]rooms?\b/i, "says \"training room\""],
   [/\b(crossfit|hyrox)\b/i, "names a trademark"],
   [/\$\s?\d|\bper month\b|\/mo\b/i, "mentions a price"],
 ];
