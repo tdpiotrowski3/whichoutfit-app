@@ -59,7 +59,16 @@ function parseReport(tsv: string, day: string): DayMetric {
   return { day, units, downloads, redownloads, updates, proceeds: Math.round(proceeds * 100) / 100 };
 }
 
-async function fetchDay(date: string): Promise<DayMetric | null> {
+/**
+ * Apple answers 404 both for "report not generated yet" and for "there were no
+ * sales for the date specified" (no downloads, redownloads or updates at all that
+ * day). Only the second is a real zero; tell them apart by the error detail.
+ */
+export function isNoSalesResponse(body: string): boolean {
+  return /no sales/i.test(body);
+}
+
+async function fetchDay(date: string): Promise<DayMetric | "no_sales" | null> {
   const params = new URLSearchParams({
     "filter[frequency]": "DAILY",
     "filter[reportType]": "SALES",
@@ -71,12 +80,13 @@ async function fetchDay(date: string): Promise<DayMetric | null> {
   const res = await fetch(`https://api.appstoreconnect.apple.com/v1/salesReports?${params}`, {
     headers: { Authorization: `Bearer ${makeJwt()}`, Accept: "application/a-gzip" },
   });
-  // 404 = Apple has no report for this date under this vendor (not-yet-generated,
-  // or a date before this account started reporting after the org conversion). It
-  // does NOT mean "zero sales" — returning a zero row here would overwrite real or
-  // manually-reconciled data (e.g. proceeds Apple only reports under the old
-  // vendor). Skip the day instead so existing rows are left untouched.
-  if (res.status === 404) return null;
+  // 404 with "no sales" = a genuine zero day; the caller records it without
+  // overwriting an existing row. Any other 404 = Apple has no report for this date
+  // under this vendor (not-yet-generated, or a date before this account started
+  // reporting after the org conversion). That does NOT mean zero sales: a zero row
+  // would overwrite real or manually-reconciled data (e.g. proceeds Apple only
+  // reports under the old vendor), so skip the day and leave existing rows alone.
+  if (res.status === 404) return isNoSalesResponse(await res.text().catch(() => "")) ? "no_sales" : null;
   if (!res.ok) throw new Error(`ASC ${res.status} for ${date}`);
   const buf = Buffer.from(await res.arrayBuffer());
   const tsv = zlib.gunzipSync(buf).toString("utf8");
@@ -84,11 +94,12 @@ async function fetchDay(date: string): Promise<DayMetric | null> {
 }
 
 // Pull the last `days` daily reports (idempotent; recent days self-heal as Apple
-// restates). Returns only the days Apple actually has a report for; days with no
-// report (404) are skipped, never written as zeros, so a report gap can't clobber
-// existing data.
-export async function fetchSalesRange(days = 10): Promise<DayMetric[]> {
-  const out: DayMetric[] = [];
+// restates). `rows` holds the days Apple has a report for; `noSales` the days Apple
+// confirmed had no sales at all. Days with no report yet are in neither, so a
+// report gap can't clobber existing data.
+export async function fetchSalesRange(days = 10): Promise<{ rows: DayMetric[]; noSales: string[] }> {
+  const rows: DayMetric[] = [];
+  const noSales: string[] = [];
   let lastError: Error | null = null;
   const now = new Date();
   for (let i = 1; i <= days; i++) {
@@ -97,17 +108,17 @@ export async function fetchSalesRange(days = 10): Promise<DayMetric[]> {
     const ds = d.toISOString().slice(0, 10);
     try {
       const m = await fetchDay(ds);
-      if (m) out.push(m);
+      if (m === "no_sales") noSales.push(ds);
+      else if (m) rows.push(m);
     } catch (e) {
       // One bad day is genuinely transient (Apple's report not ready yet) and the
       // next run backfills — so tolerate partial failure. But remember the reason.
       lastError = e instanceof Error ? e : new Error(String(e));
     }
   }
-  // A 404 day still yields a zero-filled row, so `out` is only empty when EVERY
-  // day threw — i.e. a systemic failure (revoked ASC key, wrong vendor number,
-  // network), never a quiet-sales period. Surface it instead of returning a
-  // clean empty result that the caller would silently persist as a flatline.
-  if (out.length === 0 && lastError) throw lastError;
-  return out;
+  // Nothing at all while a request threw = a systemic failure (revoked ASC key,
+  // wrong vendor number, network), never a quiet-sales period. Surface it instead
+  // of returning a clean empty result that the caller would silently persist.
+  if (rows.length === 0 && noSales.length === 0 && lastError) throw lastError;
+  return { rows, noSales };
 }
