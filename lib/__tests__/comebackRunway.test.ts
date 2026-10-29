@@ -76,8 +76,8 @@ describe("validatePiece", () => {
   });
 
   it("holds carousels, stories and emails to their shape", () => {
-    expect(validatePiece(piece("gap_carousel", ["one", "two"]))).toMatch(/slides/);
-    expect(typeof validatePiece(piece("gap_carousel", ["Hook", "A: b.", "C: d.", "E: f.", "Join the waitlist"]))).toBe("object");
+    expect(validatePiece(piece("compare_carousel", ["one", "two"]))).toMatch(/slides/);
+    expect(typeof validatePiece(piece("compare_carousel", ["Hook", "A: b.", "C: d.", "E: f.", "Join the waitlist"]))).toBe("object");
     expect(validatePiece(piece("waitlist_story", ["x".repeat(91), "b", "c"]))).toMatch(/frame 1 over/);
     expect(validatePiece(piece("week_email", ["Subject", "Preview"]))).toMatch(/subject, preview and body/);
     const email = validatePiece(piece("week_email", ["One week", "What's coming", "Hi,\n\nSoon.\n\nTyler"], { captions: [] }));
