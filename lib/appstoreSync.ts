@@ -10,6 +10,7 @@ import { syncCampaigns } from "./appstoreCampaigns";
 
 export type AppstoreSyncResult = {
   sales_days: number;
+  no_sales_days: number;
   downloads: number;
   redownloads: number;
   analytics: { days: number; note: string; discovered?: { name: string; category: string }[] };
@@ -17,13 +18,26 @@ export type AppstoreSyncResult = {
 };
 
 export async function syncAppstore(): Promise<AppstoreSyncResult> {
-  const rows = await fetchSalesRange(14);
+  const { rows, noSales } = await fetchSalesRange(14);
   if (rows.length) {
     const { error } = await admin()
       .from("appstore_metrics")
       .upsert(
         rows.map((r) => ({ ...r, updated_at: new Date().toISOString() })),
         { onConflict: "day" },
+      );
+    if (error) throw error;
+  }
+  // Days Apple confirmed had no sales: record them as zeros so the dashboard
+  // doesn't read a quiet stretch as reporting lag. Insert-only: an existing row
+  // (e.g. manually reconciled proceeds) is never overwritten.
+  if (noSales.length) {
+    const now = new Date().toISOString();
+    const { error } = await admin()
+      .from("appstore_metrics")
+      .upsert(
+        noSales.map((day) => ({ day, units: 0, downloads: 0, redownloads: 0, updates: 0, proceeds: 0, updated_at: now })),
+        { onConflict: "day", ignoreDuplicates: true },
       );
     if (error) throw error;
   }
@@ -56,5 +70,5 @@ export async function syncAppstore(): Promise<AppstoreSyncResult> {
     campaigns = { rows: 0, note: e instanceof Error ? e.message : "campaign sync failed" };
   }
 
-  return { sales_days: rows.length, ...totals, analytics, campaigns };
+  return { sales_days: rows.length, no_sales_days: noSales.length, ...totals, analytics, campaigns };
 }
