@@ -51,7 +51,7 @@ export const FORMATS: Record<Format, string> = {
 export const RUNWAY: Slot[] = [
   // --- teaser: who it's for, why it's different, the waitlist ----------------
   { key: "founder_why", day: -28, phase: "teaser", format: "reel", source: "you", beats: [4, 5, 5, 5],
-    brief: "Why Comeback exists, from the Athletic Trainer who built it: pros who get hurt never just stop, someone plans around where they are. Most people coming back from an injury, a year off, or starting from scratch get a generic plan instead. Comeback meets you where you're at." },
+    brief: "Why Comeback exists, from the sports medicine experience behind it: pros who get hurt never just stop, someone plans around where they are. Most people coming back from an injury, a year off, or starting from scratch get a generic plan instead. Comeback meets you where you're at." },
   { key: "compare_carousel", day: -26, phase: "teaser", format: "carousel",
     brief: "Why another app: your health app collects your data, Comeback plans with it. One slide per difference against your health app and typical fitness apps (brings your devices together, turns it into today's plan, starts where you are, plans around an injury, moves you up only when earned, nine sports plus strength). Fair to other apps: 'most' or 'some', never 'none'. Last slide: the waitlist." },
   { key: "pov_cleared", day: -24, phase: "teaser", format: "reel", source: "you", beats: [4, 5, 5, 4],
@@ -86,7 +86,7 @@ export const RUNWAY: Slot[] = [
     screens: ["Strength session", "Reps going up (+2)", "Ready for more", "New load, reps start again"],
     brief: "Feature: strength that actually progresses. Every two complete sessions add reps, then it tells you you're ready for a little more weight or the harder version. Moves picked for your sport." },
   { key: "reveal_paths", day: -4, phase: "reveal", format: "carousel",
-    brief: "Let's meet you where you're at: the three ways in (coming back from an injury or surgery, getting back into it after time off, starting from scratch), what each changes about where the plan starts and how fast it moves up. Built by a Board Certified Athletic Trainer." },
+    brief: "Let's meet you where you're at: the three ways in (coming back from an injury or surgery, getting back into it after time off, starting from scratch), what each changes about where the plan starts and how fast it moves up." },
   { key: "reveal_lighter", day: -3, phase: "reveal", format: "reel", source: "app", beats: [4, 5, 5, 5],
     screens: ["Lighter week note", "HRV under normal last week", "Week scaled back", "Sunday weekly review"],
     brief: "Feature: a plan that listens. When last week's recovery dipped (HRV under your normal, resting heart rate up, sore check-ins) this week gets lighter and says why. Every Sunday, a review of your week and where the next one goes." },
@@ -227,14 +227,14 @@ export function ctaFor(phase: Phase): string {
     : "Download Comeback Health on the App Store or Google Play, and get back to your sport.";
 }
 
-export const VOICE_RULES = `Comeback Health meets people where they're at: coming back from an injury or surgery, getting back into it after time off, or starting from scratch. Setup builds their week around the days and time they have. It turns the sleep and recovery data from the devices they already wear into one call each morning, shows where the plan is heading (e.g. "on track for your first 5K around Dec 7"), and moves them up a stage once they've earned it with solid weeks (on the injury path, when their PT clears it); a month off steps them back a stage. Strength progresses (reps, then load). Lighter weeks when recovery dips, and a weekly review every Sunday. For injuries it also reads the PT's exercise sheet, keeps uncleared moves out and makes a summary for PT visits. Nine sports plus strength, Apple Watch. Positioning line: "Your health app collects it. Comeback plans with it." Built by a Board Certified Athletic Trainer who has spent years rehabilitating professional athletes. iPhone, Apple Watch, Android and web. Sports: running, cycling, rowing, tennis, pickleball, swimming, fitness classes, functional fitness, hybrid racing.
-Voice: an Athletic Trainer talking to an athlete, calm, direct, specific, a little dry. Plain words, concrete details. No hype or AI-sounding words (game-changer, elevate, effortless, seamless, unlock, revolutionize, level up, crush it, beast mode), no emojis, no exclamation marks in narration. Sport-neutral: never make it about one sport; use a mix.
+export const VOICE_RULES = `Comeback Health meets people where they're at: coming back from an injury or surgery, getting back into it after time off, or starting from scratch. Setup builds their week around the days and time they have. It turns the sleep and recovery data from the devices they already wear into one call each morning, shows where the plan is heading (e.g. "on track for your first 5K around Dec 7"), and moves them up a stage once they've earned it with solid weeks (on the injury path, when their PT clears it); a month off steps them back a stage. Strength progresses (reps, then load). Lighter weeks when recovery dips, and a weekly review every Sunday. For injuries it also reads the PT's exercise sheet, keeps uncleared moves out and makes a summary for PT visits. Nine sports plus strength, Apple Watch. Positioning line: "Your health app collects it. Comeback plans with it." who has spent years rehabilitating professional athletes. iPhone, Apple Watch, Android and web. Sports: running, cycling, rowing, tennis, pickleball, swimming, fitness classes, functional fitness, hybrid racing.
+Voice: someone who has spent years in pro sports medicine, talking to an athlete, calm, direct, specific, a little dry. Plain words, concrete details. No hype or AI-sounding words (game-changer, elevate, effortless, seamless, unlock, revolutionize, level up, crush it, beast mode), no emojis, no exclamation marks in narration. Sport-neutral: never make it about one sport; use a mix.
 Say "AI" only if the piece is literally about how a feature works, and then once at most.
 It is a training and tracking tool, NOT medical care. Hard rules, never broken:
 - Never claim it heals, treats, cures, diagnoses, prevents injury, speeds up recovery, or replaces a physical therapist, surgeon or doctor. It works WITH the care team.
 - Never say what anyone is cleared for. Clearance always comes from their clinician; the app follows it.
 - Never invent statistics, studies, testimonials, users, quotes or outcomes.
-- Never invent personal details about the founder (his own injuries, his athletes' names or teams). Speak from what an Athletic Trainer sees working with athletes.
+- Never invent personal details about the founder (his own injuries, his athletes' names or teams). Speak from what years of working with athletes in sports medicine show. Never call the founder an athletic trainer, ATC or board certified.
 - Never say "training room" or "Athletic Training room".
 - Never name a device, wearable or food-app brand; say "your watch, ring, scale and food app" or "anything that shares with Apple Health or Health Connect". Apple Watch only as Comeback's own Watch app.
 - Speak to all three starting points across the runway; don't make every piece about injury.
@@ -259,6 +259,7 @@ const CLAIMS: [RegExp, string][] = [
   [/\b(clinically|scientifically|doctor)[- ](proven|approved|backed)\b/i, "claims clinical proof"],
   [/\bguarantee/i, "promises a guarantee"],
   [/\btraining[- ]rooms?\b/i, "says \"training room\""],
+  [/\bboard[- ]certified\b|\bATC\b|\b(by|from|as|our|comeback's)\s+(an?\s+|the\s+)?athletic trainer/i, "claims a professional title"],
   [/\b(crossfit|hyrox)\b/i, "names a trademark"],
   [/\$\s?\d|\bper month\b|\/mo\b/i, "mentions a price"],
 ];

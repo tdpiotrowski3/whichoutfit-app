@@ -107,6 +107,8 @@ describe("claimProblem", () => {
     ["Built for CrossFit athletes", "names a trademark"],
     ["Only $9.99 a month", "mentions a price"],
     ["The Athletic Training room approach", 'says "training room"'],
+    ["Built by a Board Certified Athletic Trainer", "claims a professional title"],
+    ["Tips from our athletic trainer", "claims a professional title"],
   ])("flags %s", (text, why) => {
     expect(claimProblem(text)).toBe(why);
   });
@@ -115,7 +117,7 @@ describe("claimProblem", () => {
     "Train around what's healing, with what your PT cleared",
     "Works with your physical therapist, not instead of them",
     "Back to running after knee surgery, in stages",
-    "Built by a Board Certified Athletic Trainer",
+    "Ask your PT or athletic trainer before you start",
   ])("lets %s through", (text) => {
     expect(claimProblem(text)).toBeNull();
   });
