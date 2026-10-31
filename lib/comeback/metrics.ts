@@ -1,11 +1,14 @@
 // Comeback Health admin metrics: pure aggregation over rows read from Comeback's Supabase (lib/comeback/data.ts).
 // Kept free of I/O so it can be tested. A "person" in event data is the account when signed in, else the
 // install (events.user_id is set by the database for signed-in users since 2026-10-30).
+import { describe, knownFeatures, AREA_ORDER, type Area } from "./features";
 
 export type AuthUser = { id: string; email: string | null; created_at: string; last_sign_in_at: string | null };
 export type StateRow = { user_id: string; updated_at: string; state: { sport?: { kind?: string; goal?: { mode?: string } }; path?: string; injury?: { area?: string }; onboarded?: boolean } | null };
 export type EntRow = { user_id: string; pro_until: string | null; lifetime: boolean | null; status: string | null; platform: string | null; product_id: string | null };
-export type SessRow = { user_id: string; date: string };
+/** source: "phone" | "watch" = logged in Comeback; "health" = imported from Apple Health / Health Connect (incl. years of history). */
+export type SessRow = { user_id: string; date: string; source?: string | null };
+const inApp = (s: SessRow) => s.source !== "health";
 export type EvRow = { install_id: string; user_id: string | null; name: string; props: Record<string, unknown> | null; platform: string | null; at: string };
 export type AiRow = { user_id: string | null; kind: string; at: string };
 export type ShareRow = { user_id: string; created_at: string; revoked_at: string | null; last_viewed_at: string | null };
@@ -16,7 +19,6 @@ export const SPORT_LABEL: Record<string, string> = {
   crossfit: "Functional fitness", hyrox: "Hybrid racing", triathlon: "Triathlon",
 };
 export const PATH_LABEL: Record<string, string> = { injury: "Injury or surgery", break: "Time off", new: "Starting from scratch" };
-const TAB_LABEL: Record<string, string> = { today: "Today tab", plan: "Plan tab", swim: "Sport tab", pt: "PT tab", health: "Health tab" };
 
 const DAY = 864e5;
 const since = (now: Date, days: number) => now.getTime() - days * DAY;
@@ -40,17 +42,15 @@ export function isPro(e: EntRow | undefined, now: Date): boolean {
   return !!e.lifetime || t(e.pro_until) > now.getTime();
 }
 
-/** Readable feature name for an event: tab and button events by what they name, funnel events by name. */
+/** Readable feature name for an event (lib/comeback/features.ts); funnel events by name; "" for UI plumbing. */
 export function featureOf(e: EvRow): string {
-  const p = e.props || {};
-  if (e.name === "tab") return TAB_LABEL[String(p.t)] || String(p.t) + " tab";
-  if (e.name === "act") return String(p.a) + (p.v ? " · " + String(p.v) : "");
-  return e.name.replace(/_/g, " ");
+  if (e.name !== "tab" && e.name !== "act") return e.name.replace(/_/g, " ");
+  return describe(e.name, e.props)?.label ?? "";
 }
 
 export interface Overview {
   signups: number; signups30: number; pro: number; proIos: number; proAndroid: number; proLifetime: number;
-  sessions30: number; ai30: number; aiTotal: number; active7: number; installs30: number; waitlist: number; ptLinks: number;
+  sessions30: number; healthImported30: number; ai30: number; aiTotal: number; active7: number; installs30: number; waitlist: number; ptLinks: number;
   excludedInstalls: number;
 }
 export function overview(r: { users: AuthUser[]; ents: EntRow[]; sessions: SessRow[]; events: EvRow[]; ai: AiRow[]; shares: ShareRow[]; waitlist: WaitRow[]; excludedInstalls?: number }, now: Date): Overview {
@@ -63,7 +63,8 @@ export function overview(r: { users: AuthUser[]; ents: EntRow[]; sessions: SessR
     proIos: pros.filter((e) => e.platform === "ios").length,
     proAndroid: pros.filter((e) => e.platform === "android").length,
     proLifetime: pros.filter((e) => e.lifetime).length,
-    sessions30: r.sessions.filter((s) => t(s.date) >= d30).length,
+    sessions30: r.sessions.filter((s) => inApp(s) && t(s.date) >= d30).length,
+    healthImported30: r.sessions.filter((s) => !inApp(s) && t(s.date) >= d30).length,
     ai30: r.ai.filter((a) => t(a.at) >= d30).length,
     aiTotal: r.ai.length,
     active7: new Set(r.events.filter((e) => t(e.at) >= d7).map(person)).size,
@@ -76,13 +77,15 @@ export function overview(r: { users: AuthUser[]; ents: EntRow[]; sessions: SessR
 
 export interface UserRow {
   id: string; email: string | null; created_at: string; last_active: string | null; sport: string; path: string; area: string | null;
-  goal: string | null; pro: boolean; platform: string | null; sessions: number; ai: number; features: number; uses: number;
+  goal: string | null; pro: boolean; platform: string | null; sessions: number; sessions30: number; healthImported: number; ai: number; features: number; uses: number;
 }
 export function users(r: { users: AuthUser[]; states: StateRow[]; ents: EntRow[]; sessions: SessRow[]; events: EvRow[]; ai: AiRow[] }, now: Date): UserRow[] {
   const st = new Map(r.states.map((s) => [s.user_id, s]));
   const ent = new Map(r.ents.map((e) => [e.user_id, e]));
   const count = <T,>(rows: T[], key: (x: T) => string | null) => { const m = new Map<string, number>(); for (const x of rows) { const k = key(x); if (k) m.set(k, (m.get(k) || 0) + 1); } return m; };
-  const sess = count(r.sessions, (s) => s.user_id), ai = count(r.ai, (a) => a.user_id);
+  const sess = count(r.sessions.filter(inApp), (s) => s.user_id), ai = count(r.ai, (a) => a.user_id);
+  const sess30 = count(r.sessions.filter((s) => inApp(s) && t(s.date) >= since(now, 30)), (s) => s.user_id);
+  const imported = count(r.sessions.filter((s) => !inApp(s)), (s) => s.user_id);
   const evBy = new Map<string, EvRow[]>();
   for (const e of r.events) if (e.user_id) evBy.set(e.user_id, [...(evBy.get(e.user_id) || []), e]);
   return r.users.map((u) => {
@@ -90,14 +93,14 @@ export function users(r: { users: AuthUser[]; states: StateRow[]; ents: EntRow[]
     const evs = evBy.get(u.id) || [];
     const lastEv = evs.reduce((a, e) => (e.at > a ? e.at : a), "");
     const last = [lastEv, st.get(u.id)?.updated_at || "", u.last_sign_in_at || ""].sort().pop() || null;
-    const feats = evs.filter((e) => e.name === "tab" || e.name === "act");
+    const feats = evs.filter((e) => (e.name === "tab" || e.name === "act") && featureOf(e));
     return {
       id: u.id, email: u.email, created_at: u.created_at, last_active: last,
       sport: SPORT_LABEL[s.sport?.kind || ""] || (s.sport?.kind ?? "—"), path: PATH_LABEL[s.path || ""] || (s.onboarded ? "Injury or surgery" : "Not set up"),
       area: s.path === "injury" || (!s.path && s.injury) ? s.injury?.area || null : null,
       goal: s.sport?.goal?.mode && s.sport.goal.mode !== "casual" ? s.sport.goal.mode : null,
       pro: isPro(ent.get(u.id), now), platform: ent.get(u.id)?.platform || null,
-      sessions: sess.get(u.id) || 0, ai: ai.get(u.id) || 0,
+      sessions: sess.get(u.id) || 0, sessions30: sess30.get(u.id) || 0, healthImported: imported.get(u.id) || 0, ai: ai.get(u.id) || 0,
       features: new Set(feats.map(featureOf)).size, uses: feats.length,
     };
   }).sort((a, b) => (b.last_active || "").localeCompare(a.last_active || ""));
@@ -105,7 +108,11 @@ export function users(r: { users: AuthUser[]; states: StateRow[]; ents: EntRow[]
 
 export interface Usage {
   days: number;
-  features: { feature: string; people: number; signedIn: number; uses: number }[];
+  /** People with any event in the window: the base for every adoption percentage. */
+  active: number;
+  areas: { area: Area | "Other"; people: number; share: number; uses: number }[];
+  features: { area: Area | "Other"; feature: string; people: number; share: number; signedIn: number; uses: number }[];
+  notUsed: { area: Area; feature: string }[];
   sports: { sport: string; people: number; sessions: number }[];
   paths: { path: string; people: number }[];
   platforms: { platform: string; people: number }[];
@@ -113,12 +120,19 @@ export interface Usage {
 export function usage(r: { events: EvRow[]; states: StateRow[] }, now: Date, days = 30): Usage {
   const from = since(now, days);
   const evs = r.events.filter((e) => t(e.at) >= from);
-  const f = new Map<string, { people: Set<string>; signed: Set<string>; uses: number }>();
+  const active = new Set(evs.map(person)).size;
+  const f = new Map<string, { area: Area | "Other"; label: string; people: Set<string>; signed: Set<string>; uses: number }>();
+  const a = new Map<Area | "Other", { people: Set<string>; uses: number }>();
   for (const e of evs) {
     if (e.name !== "tab" && e.name !== "act") continue;
-    const k = featureOf(e); const g = f.get(k) || { people: new Set(), signed: new Set(), uses: 0 };
+    const d = describe(e.name, e.props); if (!d) continue;
+    const k = d.area + "|" + d.label;
+    const g = f.get(k) || { area: d.area, label: d.label, people: new Set(), signed: new Set(), uses: 0 };
     g.people.add(person(e)); if (e.user_id) g.signed.add(e.user_id); g.uses++; f.set(k, g);
+    const ag = a.get(d.area) || { people: new Set(), uses: 0 }; ag.people.add(person(e)); ag.uses++; a.set(d.area, ag);
   }
+  const share = (n: number) => (active ? n / active : 0);
+  const used = new Set([...f.values()].map((g) => g.area + "|" + g.label));
   // Sport per person: the synced plan for accounts, else what they picked in setup on that install.
   const sportOf = new Map<string, string>(), pathOf = new Map<string, string>();
   for (const e of r.events) if (e.name === "onboard_done") {
@@ -133,7 +147,12 @@ export function usage(r: { events: EvRow[]; states: StateRow[] }, now: Date, day
   const plat = new Map<string, Set<string>>(); for (const e of evs) { const k = e.platform || "unknown"; plat.set(k, (plat.get(k) || new Set()).add(person(e))); }
   return {
     days,
-    features: [...f.entries()].map(([feature, g]) => ({ feature, people: g.people.size, signedIn: g.signed.size, uses: g.uses })).sort((a, b) => b.people - a.people || b.uses - a.uses),
+    active,
+    areas: [...a.entries()].map(([area, g]) => ({ area, people: g.people.size, share: share(g.people.size), uses: g.uses }))
+      .sort((x, y) => y.people - x.people || AREA_ORDER.indexOf(x.area as Area) - AREA_ORDER.indexOf(y.area as Area)),
+    features: [...f.values()].map((g) => ({ area: g.area, feature: g.label, people: g.people.size, share: share(g.people.size), signedIn: g.signed.size, uses: g.uses }))
+      .sort((x, y) => y.people - x.people || y.uses - x.uses),
+    notUsed: knownFeatures().filter((k) => !used.has(k.area + "|" + k.label) && k.area !== "Setup" && k.area !== "Account").map((k) => ({ area: k.area, feature: k.label })),
     sports: [...sports.entries()].map(([k, g]) => ({ sport: SPORT_LABEL[k] || k, ...g })).sort((a, b) => b.people - a.people || b.sessions - a.sessions),
     paths: [...paths.entries()].map(([k, n]) => ({ path: PATH_LABEL[k] || k, people: n })).sort((a, b) => b.people - a.people),
     platforms: [...plat.entries()].map(([k, s]) => ({ platform: k, people: s.size })).sort((a, b) => b.people - a.people),
