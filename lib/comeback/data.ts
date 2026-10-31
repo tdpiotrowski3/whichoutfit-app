@@ -19,14 +19,17 @@ async function authUsers(): Promise<m.AuthUser[]> {
 const states = () => allRows<m.StateRow>((a, b) => comebackDb().from("app_state").select("user_id,updated_at,state").range(a, b));
 const ents = () => allRows<m.EntRow>((a, b) => comebackDb().from("entitlements").select("user_id,pro_until,lifetime,status,platform,product_id").range(a, b));
 const sessions = () => allRows<m.SessRow>((a, b) => comebackDb().from("sessions").select("user_id,date").range(a, b));
-const events = () => allRows<m.EvRow>((a, b) => comebackDb().from("events").select("install_id,user_id,name,props,platform,at").gte("at", iso(EVENT_DAYS)).order("at").range(a, b));
+const rawEvents = () => allRows<m.EvRow>((a, b) => comebackDb().from("events").select("install_id,user_id,name,props,platform,at").gte("at", iso(EVENT_DAYS)).order("at").range(a, b));
+/** Events without anonymous web installs (test runs and sign-in bounces); see metrics.realEvents. */
+const events = async () => m.realEvents(await rawEvents()).events;
 const ai = () => allRows<m.AiRow>((a, b) => comebackDb().from("ai_requests").select("user_id,kind,at").range(a, b));
 const shares = () => allRows<m.ShareRow>((a, b) => comebackDb().from("pt_shares").select("user_id,created_at,revoked_at,last_viewed_at").range(a, b));
 const waitlist = () => allRows<m.WaitRow>((a, b) => comebackDb().from("waitlist").select("created_at,platform,source").neq("source", "test").range(a, b));
 
 export async function getComebackOverview(): Promise<m.Overview> {
-  const [u, e, s, ev, a, sh, w] = await Promise.all([authUsers(), ents(), sessions(), events(), ai(), shares(), waitlist()]);
-  return m.overview({ users: u, ents: e, sessions: s, events: ev, ai: a, shares: sh, waitlist: w }, new Date());
+  const [u, e, s, raw, a, sh, w] = await Promise.all([authUsers(), ents(), sessions(), rawEvents(), ai(), shares(), waitlist()]);
+  const real = m.realEvents(raw);
+  return m.overview({ users: u, ents: e, sessions: s, events: real.events, ai: a, shares: sh, waitlist: w, excludedInstalls: real.excludedInstalls }, new Date());
 }
 export async function getComebackUsers(): Promise<m.UserRow[]> {
   const [u, st, e, s, ev, a] = await Promise.all([authUsers(), states(), ents(), sessions(), events(), ai()]);

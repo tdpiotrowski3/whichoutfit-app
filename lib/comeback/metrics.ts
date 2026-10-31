@@ -23,6 +23,17 @@ const since = (now: Date, days: number) => now.getTime() - days * DAY;
 const t = (iso: string | null | undefined) => (iso ? Date.parse(iso) : 0);
 const person = (e: EvRow) => e.user_id || "i:" + e.install_id;
 
+/**
+ * Drop web installs that never signed in. The web app needs an account (accounts start on the phone), so these are
+ * local test runs (smoke tests, crawls, screenshots sent events before 2026-10-30) or bounces at the sign-in page.
+ */
+export function realEvents(events: EvRow[]): { events: EvRow[]; excludedInstalls: number } {
+  const signed = new Set(events.filter((e) => e.user_id).map((e) => e.install_id));
+  const dropped = new Set<string>();
+  const kept = events.filter((e) => { const drop = e.platform === "web" && !signed.has(e.install_id); if (drop) dropped.add(e.install_id); return !drop; });
+  return { events: kept, excludedInstalls: dropped.size };
+}
+
 /** Active Pro: lifetime, or paid through a future date, and not refunded/revoked. */
 export function isPro(e: EntRow | undefined, now: Date): boolean {
   if (!e || e.status === "refunded" || e.status === "revoked") return false;
@@ -40,8 +51,9 @@ export function featureOf(e: EvRow): string {
 export interface Overview {
   signups: number; signups30: number; pro: number; proIos: number; proAndroid: number; proLifetime: number;
   sessions30: number; ai30: number; aiTotal: number; active7: number; installs30: number; waitlist: number; ptLinks: number;
+  excludedInstalls: number;
 }
-export function overview(r: { users: AuthUser[]; ents: EntRow[]; sessions: SessRow[]; events: EvRow[]; ai: AiRow[]; shares: ShareRow[]; waitlist: WaitRow[] }, now: Date): Overview {
+export function overview(r: { users: AuthUser[]; ents: EntRow[]; sessions: SessRow[]; events: EvRow[]; ai: AiRow[]; shares: ShareRow[]; waitlist: WaitRow[]; excludedInstalls?: number }, now: Date): Overview {
   const pros = r.ents.filter((e) => isPro(e, now));
   const d30 = since(now, 30), d7 = since(now, 7);
   return {
@@ -58,6 +70,7 @@ export function overview(r: { users: AuthUser[]; ents: EntRow[]; sessions: SessR
     installs30: new Set(r.events.filter((e) => t(e.at) >= d30).map((e) => e.install_id)).size,
     waitlist: r.waitlist.length,
     ptLinks: r.shares.filter((s) => !s.revoked_at).length,
+    excludedInstalls: r.excludedInstalls ?? 0,
   };
 }
 
