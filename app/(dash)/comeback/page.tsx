@@ -18,7 +18,7 @@ export default async function ComebackOverviewPage() {
         <Stat label="Signups" value={o.signups} accent="blue" sub={`${o.signups30} in the last 30 days`} />
         <Stat label="Pro active" value={o.pro} accent="green" sub={`${o.proIos} App Store · ${o.proAndroid} Play · ${o.proLifetime} lifetime`} />
         <Stat label="Active · 7d" value={o.active7} accent="teal" sub="people with any event (accounts or installs)" />
-        <Stat label="Sessions · 30d" value={o.sessions30} sub="synced from signed-in accounts" accent="muted" />
+        <Stat label="Sessions · 30d" value={o.sessions30} sub={`logged in Comeback (phone + Watch) · +${o.healthImported30} imported from Health`} accent="muted" />
       </div>
       <div className="grid gap-6 md:grid-cols-2">
         <Card title="Reach">

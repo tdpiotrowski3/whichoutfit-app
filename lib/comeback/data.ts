@@ -18,7 +18,7 @@ async function authUsers(): Promise<m.AuthUser[]> {
 }
 const states = () => allRows<m.StateRow>((a, b) => comebackDb().from("app_state").select("user_id,updated_at,state").range(a, b));
 const ents = () => allRows<m.EntRow>((a, b) => comebackDb().from("entitlements").select("user_id,pro_until,lifetime,status,platform,product_id").range(a, b));
-const sessions = () => allRows<m.SessRow>((a, b) => comebackDb().from("sessions").select("user_id,date").range(a, b));
+const sessions = () => allRows<m.SessRow>((a, b) => comebackDb().from("sessions").select("user_id,date,source:data->>source").range(a, b));
 const rawEvents = () => allRows<m.EvRow>((a, b) => comebackDb().from("events").select("install_id,user_id,name,props,platform,at").gte("at", iso(EVENT_DAYS)).order("at").range(a, b));
 /** Events without anonymous web installs (test runs and sign-in bounces); see metrics.realEvents. */
 const events = async () => m.realEvents(await rawEvents()).events;

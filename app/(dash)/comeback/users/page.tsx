@@ -14,7 +14,7 @@ export default async function ComebackUsersPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold">Users</h1>
-        <p className="text-sm text-[var(--wo-muted)]">{users.length} accounts · {pro} Pro. Sorted by last active. Features counts start Oct 30, 2026.</p>
+        <p className="text-sm text-[var(--wo-muted)]">{users.length} accounts · {pro} Pro. Sorted by last active. Sessions are ones logged in Comeback; workouts imported from Health (including years of history) are counted separately. Feature counts start Oct 30, 2026.</p>
       </div>
       <Card>
         <div className="overflow-x-auto">
@@ -27,7 +27,7 @@ export default async function ComebackUsersPage() {
                 <th className="py-2 pr-4 font-medium">Sport</th>
                 <th className="py-2 pr-4 font-medium">Signed up</th>
                 <th className="py-2 pr-4 font-medium">Last active</th>
-                <th className="py-2 pr-4 font-medium text-right">Sessions</th>
+                <th className="py-2 pr-4 font-medium text-right" title="Logged in Comeback (phone + Watch). Health imports shown separately.">Sessions</th>
                 <th className="py-2 pr-4 font-medium text-right">AI</th>
                 <th className="py-2 pl-4 font-medium text-right">Features</th>
               </tr>
@@ -44,7 +44,7 @@ export default async function ComebackUsersPage() {
                   <td className="py-2.5 pr-4">{u.sport}{u.goal ? <span className="text-[var(--wo-muted)]"> · {u.goal}</span> : null}</td>
                   <td className="py-2.5 pr-4 text-[var(--wo-muted)]">{fmt(u.created_at)}</td>
                   <td className="py-2.5 pr-4 text-[var(--wo-muted)]">{fmt(u.last_active)}</td>
-                  <td className="py-2.5 pr-4 text-right tabular-nums">{u.sessions}</td>
+                  <td className="py-2.5 pr-4 text-right tabular-nums">{u.sessions}<span className="text-[var(--wo-muted)]"> · {u.sessions30} in 30d</span>{u.healthImported ? <div className="text-xs text-[var(--wo-muted)]">+{u.healthImported} from Health</div> : null}</td>
                   <td className="py-2.5 pr-4 text-right tabular-nums">{u.ai}</td>
                   <td className="py-2.5 pl-4 text-right tabular-nums">{u.features}<span className="text-[var(--wo-muted)]"> · {u.uses} uses</span></td>
                 </tr>
