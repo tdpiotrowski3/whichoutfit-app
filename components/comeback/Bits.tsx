@@ -3,7 +3,18 @@ import { Card, Bar } from "@/components/ui";
 
 // Small pieces shared by the Comeback admin pages.
 
-export function NotConfigured({ what }: { what: string }) {
+/** Shown when a page's data fails to load: setup help if the Comeback env vars are missing, else the real error. */
+export function NotConfigured({ what, error }: { what: string; error?: unknown }) {
+  const msg = error instanceof Error ? error.message : error ? String(error) : "";
+  if (msg && !msg.startsWith("Missing COMEBACK_")) {
+    console.error("comeback admin: couldn't load " + what, error);
+    return (
+      <Card title={"Couldn't load " + what}>
+        <p className="text-sm text-[var(--wo-muted)]">Comeback&apos;s Supabase answered with an error. Reload in a moment; if it keeps happening, this is the message:</p>
+        <p className="mt-2 font-mono text-xs">{msg}</p>
+      </Card>
+    );
+  }
   return (
     <Card title="Not configured">
       <p className="text-sm text-[var(--wo-muted)]">

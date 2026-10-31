@@ -9,7 +9,7 @@ const KIND: Record<string, string> = { "pt-text": "PT import · typed", "pt-imag
 export default async function ComebackAiPage({ searchParams }: { searchParams: Promise<{ days?: string }> }) {
   const days = daysParam((await searchParams).days);
   let a;
-  try { a = await getComebackAi(days); } catch { return <NotConfigured what="AI usage" />; }
+  try { a = await getComebackAi(days); } catch (e) { return <NotConfigured what="AI usage" error={e} />; }
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
