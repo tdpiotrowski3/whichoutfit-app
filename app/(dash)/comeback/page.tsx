@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 // Comeback Health overview: the same shape as WhichOutfit's, from Comeback's own Supabase.
 export default async function ComebackOverviewPage() {
   let o;
-  try { o = await getComebackOverview(); } catch { return <NotConfigured what="the overview" />; }
+  try { o = await getComebackOverview(); } catch (e) { return <NotConfigured what="the overview" error={e} />; }
   return (
     <div className="space-y-6">
       <div>

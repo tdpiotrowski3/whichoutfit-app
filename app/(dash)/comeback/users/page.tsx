@@ -8,7 +8,7 @@ const fmt = (d: string | null) => (d ? new Date(d).toLocaleDateString(undefined,
 
 export default async function ComebackUsersPage() {
   let users;
-  try { users = await getComebackUsers(); } catch { return <NotConfigured what="users" />; }
+  try { users = await getComebackUsers(); } catch (e) { return <NotConfigured what="users" error={e} />; }
   const pro = users.filter((u) => u.pro).length;
   return (
     <div className="space-y-6">

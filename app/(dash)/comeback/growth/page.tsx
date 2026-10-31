@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export default async function ComebackGrowthPage({ searchParams }: { searchParams: Promise<{ days?: string }> }) {
   const days = daysParam((await searchParams).days);
   let g;
-  try { g = await getComebackGrowth(days); } catch { return <NotConfigured what="growth" />; }
+  try { g = await getComebackGrowth(days); } catch (e) { return <NotConfigured what="growth" error={e} />; }
   const top = g.funnel[0].people;
   const pct = (n: number, of: number) => (of > 0 ? `${Math.round((n / of) * 100)}%` : "—");
   const step = (i: number) => g.funnel[i].people;

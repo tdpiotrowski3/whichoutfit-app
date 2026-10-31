@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export default async function ComebackUsagePage({ searchParams }: { searchParams: Promise<{ days?: string }> }) {
   const days = daysParam((await searchParams).days);
   let u;
-  try { u = await getComebackUsage(days); } catch { return <NotConfigured what="usage" />; }
+  try { u = await getComebackUsage(days); } catch (e) { return <NotConfigured what="usage" error={e} />; }
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
