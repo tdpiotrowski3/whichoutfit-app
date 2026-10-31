@@ -15,8 +15,19 @@ type Company = "whichoutfit" | "comeback";
 
 const companyOf = (pathname: string): Company => (pathname === "/comeback" || pathname.startsWith("/comeback/") ? "comeback" : "whichoutfit");
 
+// Comeback mirrors WhichOutfit's layout, reading Comeback's own Supabase (lib/comeback/data.ts).
 const COMEBACK_GROUPS: { label: string | null; items: Item[] }[] = [
-  { label: "Marketing", items: [{ href: "/comeback", label: "Launch runway", icon: "calendar" }] },
+  { label: null, items: [{ href: "/comeback", label: "Overview", icon: "home" }] },
+  {
+    label: "Growth",
+    items: [
+      { href: "/comeback/growth", label: "Growth", icon: "trend" },
+      { href: "/comeback/users", label: "Users", icon: "users" },
+      { href: "/comeback/usage", label: "Usage", icon: "spark" },
+    ],
+  },
+  { label: "Marketing", items: [{ href: "/comeback/runway", label: "Launch runway", icon: "calendar" }] },
+  { label: "Business", items: [{ href: "/comeback/ai", label: "AI Usage", icon: "chip" }] },
 ];
 
 const GROUPS: { label: string | null; items: Item[] }[] = [
@@ -74,7 +85,8 @@ function Icon({ name, className = "" }: { name: keyof typeof ICONS; className?: 
   );
 }
 
-const isActive = (pathname: string, href: string) => (href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(href + "/"));
+// Section roots ("/" and "/comeback") only light up on their own page, not on every page beneath them.
+const isActive = (pathname: string, href: string) => (href === "/" || href === "/comeback" ? pathname === href : pathname === href || pathname.startsWith(href + "/"));
 
 function Brand({ company }: { company: Company }) {
   const comeback = company === "comeback";
