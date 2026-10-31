@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { overview, users, usage, growth, aiUsage, isPro, featureOf, type EvRow, type AuthUser, type StateRow, type EntRow } from "../comeback/metrics";
+import { overview, users, usage, growth, aiUsage, isPro, featureOf, realEvents, type EvRow, type AuthUser, type StateRow, type EntRow } from "../comeback/metrics";
 
 const NOW = new Date("2026-10-31T12:00:00Z");
 const ev = (o: Partial<EvRow>): EvRow => ({ install_id: "i1", user_id: null, name: "tab", props: {}, platform: "ios", at: "2026-10-30T10:00:00Z", ...o });
@@ -62,5 +62,10 @@ describe("comeback metrics", () => {
     const a = aiUsage([{ user_id: "u1", kind: "pt-text", at: "2026-10-30T01:00:00Z" }, { user_id: "u2", kind: "pt-text", at: "2026-10-30T02:00:00Z" }, { user_id: "u1", kind: "pt-image", at: "2026-09-01T00:00:00Z" }], NOW, 30);
     expect(a.total).toBe(2);
     expect(a.byKind).toEqual([{ kind: "pt-text", calls: 2, people: 2 }]);
+  });
+  it("drops web installs that never signed in, keeps apps and signed-in web", () => {
+    const r = realEvents([ev({ install_id: "w1", platform: "web" }), ev({ install_id: "w2", platform: "web" }), ev({ install_id: "w2", platform: "web", user_id: "u1" }), ev({ install_id: "p1", platform: "ios" })]);
+    expect(r.excludedInstalls).toBe(1);
+    expect(new Set(r.events.map((e) => e.install_id))).toEqual(new Set(["w2", "p1"]));
   });
 });

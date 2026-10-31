@@ -36,6 +36,7 @@ export default async function ComebackOverviewPage() {
       </div>
       <p className="text-xs text-[var(--wo-muted)]">
         Events from signed-in people carry their account since Oct 30, 2026; earlier events count by install only.
+        {o.excludedInstalls ? ` Leaves out ${o.excludedInstalls} web installs that never signed in (local test runs and sign-in bounces).` : ""}
       </p>
     </div>
   );
