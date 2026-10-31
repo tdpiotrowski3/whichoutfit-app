@@ -28,7 +28,7 @@ export default async function ComebackUsagePage({ searchParams }: { searchParams
 
       <Card title="What's working, by area">
         <Bars rows={u.areas.filter((a) => a.area !== "Setup" && a.area !== "Account").map((a) => ({ label: a.area, value: Math.round(a.share * 100), note: `% · ${a.people} of ${u.active}` }))} empty="No feature events yet. They start with the Oct 30 builds." />
-        <p className="mt-3 text-xs text-[var(--wo-muted)]">Share of active people who used anything in that area. Setup and account steps are left out here; they're in the table below.</p>
+        <p className="mt-3 text-xs text-[var(--wo-muted)]">Share of active people who used anything in that area. Setup and account steps are left out here; they&apos;re in the table below.</p>
       </Card>
 
       <div className="grid gap-6 lg:grid-cols-2">
