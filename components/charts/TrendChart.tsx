@@ -116,8 +116,9 @@ export function TrendChart({ days, series, empty }: { days: string[]; series: Tr
           </table>
         </div>
       ) : (
-        <div ref={ref} className="relative">
-          <svg width={w} height={H} role="img" aria-label={series.map((s) => s.label).join(" and ") + " per day"}>
+        <div ref={ref} className="relative w-full min-w-0 overflow-hidden">
+          {/* w-full + min-w-0: the box takes the card's width, not the chart's, so the observer can shrink it on phones. */}
+          <svg className="block max-w-full" width={w} height={H} role="img" aria-label={series.map((s) => s.label).join(" and ") + " per day"}>
             {ticks.map((t) => (
               <g key={t}>
                 <line x1={PAD.left} x2={PAD.left + iw} y1={y(t)} y2={y(t)} stroke="var(--wo-border)" strokeWidth={1} />

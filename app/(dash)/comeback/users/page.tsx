@@ -18,7 +18,7 @@ export default async function ComebackUsersPage() {
       </div>
       <Card>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full min-w-[860px] text-sm">
             <thead>
               <tr className="border-b border-[var(--wo-border)] text-left text-xs uppercase tracking-wide text-[var(--wo-muted)]">
                 <th className="py-2 pr-4 font-medium">Email</th>
