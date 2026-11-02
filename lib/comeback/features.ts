@@ -21,6 +21,8 @@ const F: Record<string, [Area, string] | null> = {
   // Today
   strip: ["Today", "Browsed other days"], selDay: ["Today", "Browsed other days"], openDay: ["Today", "Browsed other days"],
   ci: ["Today", "Morning check-in"], checkSheet: ["Today", "Morning check-in"], ckSet: ["Today", "Morning check-in"], ckSave: ["Today", "Morning check-in"],
+  chatSend: ["Today", "Told the coach what to work on"], chat_local: ["Today", "Chat changed the plan"], chat_unread: ["Today", "Chat didn't understand"],
+  chat_redflag: ["Today", "Chat flagged a symptom"], chatAI: ["AI coach", "Handed a chat to the AI coach"],
   int: ["Today", "Changed today's intensity"], surprise: ["Today", "Shuffled exercises"], shuffle: ["Today", "Shuffled exercises"], swap: ["Today", "Swapped an exercise"],
   // Workout player
   start: ["Workout", "Started a session with the timer"], qStart: ["Workout", "Started a session with the timer"],
