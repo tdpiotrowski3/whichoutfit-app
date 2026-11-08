@@ -6,7 +6,7 @@ import { getAttribution } from "@/lib/attribution";
 import { sendAdminAlert } from "@/lib/alert";
 import { generateJson } from "./gemini";
 import { TEMPLATES, getTemplate, syllableBudget, type Template } from "./templates";
-import { featureOf, scoreClip, seasonalSteer, validateIdea, type RawIdea } from "./rules";
+import { featureOf, launchSteer, needsReview, scoreClip, seasonalSteer, validateIdea, type RawIdea } from "./rules";
 import { PERSONAS, voiceFor } from "./personas";
 import { seededSlots, closetSize } from "./personaAccounts";
 import { nextSlots, runwayDays, slotsToFill, RUNWAY_DAYS } from "./schedule";
@@ -327,7 +327,7 @@ export async function draftIdeas(count = IDEAS_PER_WEEK, now = new Date()): Prom
   const month = now.toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "America/Chicago" });
 
   const prompt = `Today is ${month}. Draft ${count} new clip ideas.
-Mix: about half "recut" (cheap, re-narrates existing footage) and half "flow" (films new inputs). Lean toward features that are performing; give at least one idea to a feature with little or no data so we keep learning. Seasonal hooks are welcome when they fit (${month}).${seasonalSteer(now)}
+Mix: about half "recut" (cheap, re-narrates existing footage) and half "flow" (films new inputs). Lean toward features that are performing; give at least one idea to a feature with little or no data so we keep learning. Seasonal hooks are welcome when they fit (${month}).${launchSteer(now)}${seasonalSteer(now)}
 
 PERFORMANCE BY FEATURE (Instagram, posts the app published):
 ${perf}
@@ -344,7 +344,8 @@ ${catalog}`;
   const r = await generateJson<{ ideas: RawIdea[] }>(IDEA_SYSTEM, prompt, IDEA_SCHEMA);
   // Autopilot (Content Studio switch): the weekly ideas skip review and go straight to the Mac.
   const { data: ap } = await db.from("studio_settings").select("value").eq("key", "autopilot").maybeSingle();
-  const autopilot = ap?.value === true;
+  // A launch window overrides autopilot: launch clips are reviewed before they film.
+  const autopilot = ap?.value === true && !needsReview(now);
   const rows: Record<string, unknown>[] = [];
   const dropped: string[] = [];
   for (const raw of r.ideas ?? []) {
@@ -404,8 +405,11 @@ export async function completeIdea(id: string, videoUrl: string, now = new Date(
 
   const posts = await loadPosts();
   const taken = posts.filter((p) => p.platform === "instagram" && p.status !== "failed").map((p) => new Date(p.scheduled_for));
-  // New work goes out at the first free slot at least half a day away.
-  const [slot] = nextSlots(new Date(now.getTime() + 12 * 3_600_000), 1, taken);
+  // New work goes out at the first free slot at least half a day away — two days
+  // during a launch window, so the finished cut can be watched (and dropped from
+  // the Social calendar) before Instagram auto-publishes it.
+  const launch = needsReview(now);
+  const [slot] = nextSlots(new Date(now.getTime() + (launch ? 48 : 12) * 3_600_000), 1, taken);
   const caption = idea.captions[idea.caption_pick] ?? idea.captions[0] ?? idea.title;
   const at = slot.toISOString();
   const { error: insErr } = await db.from("social_posts").insert(
@@ -422,6 +426,15 @@ export async function completeIdea(id: string, videoUrl: string, now = new Date(
   );
   if (insErr) throw insErr;
   await db.from("social_ideas").update({ status: "rendered", clip_id: clip, error: null }).eq("id", id);
+  if (launch) {
+    const when = slot.toLocaleString("en-US", { timeZone: "America/Chicago", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+    await sendAdminAlert(
+      `Launch clip ready to check: ${idea.title}`,
+      `<p><b>${esc(idea.title)}</b> is rendered and booked for <b>${when} CT</b>. Instagram posts it automatically then.</p>` +
+        `<p><a href="${esc(videoUrl)}">Watch the cut</a>. If the results on screen aren't solid (a missing product photo, an off look, an error banner, dead air), drop it from the Social calendar and re-approve the idea to re-film.</p>` +
+        `<p>Caption: ${esc(caption)}</p>`
+    ).catch(() => undefined);
+  }
   return { clip_id: clip, scheduled_for: at };
 }
 

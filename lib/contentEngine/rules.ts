@@ -96,3 +96,58 @@ export function seasonalSteer(now: Date): string {
   return `
 WINTER TRIPS: this week, include at least one "flow:trip_packing" idea, alternating between (a) a ski town (e.g. "Park City, UT", "Aspen, CO", "Breckenridge, CO", "Jackson, WY", "Stowe, VT") — the ski-trip packing list — and (b) a warm escape from the cold (e.g. "Miami Beach, FL", "Key West, FL", "Tulum, Mexico", "San Juan, Puerto Rico", "Scottsdale, AZ") — the beach-weekend packing list. Check ALREADY PLANNED and pick the one done less recently. Every closet has ski gear, swimwear and a night-out look, so rotate closets.`;
 }
+
+/**
+ * Feature launches the feed should announce. A campaign is OFF until its
+ * `liveFrom` date is set, and that must be the day the build carrying it is
+ * live on BOTH stores (check with the live-versions script, never a repo doc):
+ * the clips film the real app, so announcing early films features users can't
+ * get. Set it with the Vercel env var named in `env` (no deploy of code
+ * needed beyond the env change + redeploy).
+ *
+ * For `windowDays` after launch, the planner leads with the campaign, and every
+ * idea it drafts lands as "proposed" even with autopilot on, so each launch clip
+ * is looked at before it films and again before it posts (`needsReview`).
+ */
+export type LaunchCampaign = { key: string; env: string; windowDays: number; brief: string };
+
+export const LAUNCH_CAMPAIGNS: LaunchCampaign[] = [
+  {
+    key: "closet-optional",
+    env: "LAUNCH_CLOSET_OPTIONAL_LIVE_FROM",
+    windowDays: 21,
+    brief: `LAUNCH — "WhichOutfit now works even with an empty closet" (2.2). Week 1 opens with ONE announcement clip: the honest story — "most of us never upload our whole closet, so now you don't have to": a look for real weather and a real plan, built from real products you can tap, then pinned to a wishlist. Then follow-ups, one feature each, spread across closets and the Tue/Thu/Sat slots:
+- A Miami-weekend packing list with a night-out look styled for Miami and the optional "Try it" swap (e.g. the bikini top under an open linen shirt).
+- A ski-trip packing list that remembers what people forget: pajamas, base layers, ski socks, gloves, goggles.
+- No closet at all: "it's 28° and I have a holiday party" → a full look with real product photos.
+- The wishlist: pin pieces from a suggested look or Rate My Outfit's "uplevel this outfit", then share it (holiday gift-list angle in December).
+- "I have something like this": snap your own piece and the look swaps it in.
+- "Shop suggestions" on a trip look.
+Say "now" or "new" once per clip, never "update" or version numbers. Use only templates in the catalog; when a feature has no template yet, skip it rather than describing a screen the footage doesn't show.`,
+  },
+];
+
+/** Days since a campaign went live, or null when it hasn't (or the date is bad). */
+export function campaignDay(c: LaunchCampaign, now: Date, env: Record<string, string | undefined> = process.env): number | null {
+  const raw = env[c.env]?.trim();
+  if (!raw) return null;
+  const start = new Date(`${raw}T00:00:00-06:00`);
+  if (Number.isNaN(start.getTime())) return null;
+  const day = Math.floor((now.getTime() - start.getTime()) / 86_400_000);
+  return day >= 0 && day < c.windowDays ? day : null;
+}
+
+/** The planner's launch block for this week (empty when nothing is launching). */
+export function launchSteer(now: Date, env: Record<string, string | undefined> = process.env): string {
+  return LAUNCH_CAMPAIGNS.filter((c) => campaignDay(c, now, env) !== null)
+    .map((c) => {
+      const day = campaignDay(c, now, env)!;
+      return `\n${c.brief}\n(This is day ${day + 1} of the launch window${day < 7 ? "; if no announcement clip is in ALREADY PLANNED yet, the first idea is the announcement" : ""}.)`;
+    })
+    .join("\n");
+}
+
+/** True while any launch window is open: drafted ideas need a human look even on autopilot. */
+export function needsReview(now: Date, env: Record<string, string | undefined> = process.env): boolean {
+  return LAUNCH_CAMPAIGNS.some((c) => campaignDay(c, now, env) !== null);
+}

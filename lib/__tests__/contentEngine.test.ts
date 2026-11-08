@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { cleanHashtags, captionWithTags } from "../contentEngine/hashtags";
 import { nextSlots, runwayDays, slotsToFill } from "../contentEngine/schedule";
 import { countSyllables, syllableBudget, TEMPLATES, getTemplate } from "../contentEngine/templates";
-import { featureOf, scoreClip, seasonalSteer, validateIdea } from "../contentEngine/rules";
+import { featureOf, launchSteer, needsReview, scoreClip, seasonalSteer, validateIdea } from "../contentEngine/rules";
 import { PERSONAS, VOICES, getPersona, itemId, garmentPrompt, personaEmail, voiceFor } from "../contentEngine/personas";
 
 const iso = (d: Date) => d.toISOString();
@@ -174,6 +174,17 @@ describe("persona closets", () => {
     expect(seasonalSteer(new Date("2026-11-10T18:00:00Z"))).toMatch(/ski town[\s\S]*warm escape/);
     expect(seasonalSteer(new Date("2027-02-10T18:00:00Z"))).not.toBe("");
     expect(seasonalSteer(new Date("2027-06-10T18:00:00Z"))).toBe("");
+  });
+
+  it("keeps a launch campaign off until its live date, then steers for 21 days with review forced", () => {
+    const now = new Date("2026-12-01T18:00:00Z");
+    expect(launchSteer(now, {})).toBe("");
+    expect(needsReview(now, {})).toBe(false);
+    const live = { LAUNCH_CLOSET_OPTIONAL_LIVE_FROM: "2026-11-30" };
+    expect(launchSteer(now, live)).toMatch(/empty closet[\s\S]*first idea is the announcement/);
+    expect(needsReview(now, live)).toBe(true);
+    expect(launchSteer(new Date("2026-12-25T18:00:00Z"), live)).toBe("");
+    expect(launchSteer(now, { LAUNCH_CLOSET_OPTIONAL_LIVE_FROM: "soon" })).toBe("");
   });
 
   it("gives every persona unique slots", () => {
