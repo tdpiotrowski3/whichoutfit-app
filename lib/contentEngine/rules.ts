@@ -83,3 +83,16 @@ export function validateIdea(raw: RawIdea, closets: string[] = ["original"]): Id
     rationale: raw.rationale?.trim() || null,
   };
 }
+
+/**
+ * Winter (Nov–Feb): every closet is stocked with ski gear, swim, night-out and
+ * pajamas (personas.ts), so the trip-packing flow gets the two winter-trip
+ * stories people actually search: packing for a ski trip, and a warm weekend
+ * away from the cold.
+ */
+export function seasonalSteer(now: Date): string {
+  const m = Number(now.toLocaleDateString("en-US", { month: "numeric", timeZone: "America/Chicago" }));
+  if (m !== 11 && m !== 12 && m !== 1 && m !== 2) return "";
+  return `
+WINTER TRIPS: this week, include at least one "flow:trip_packing" idea, alternating between (a) a ski town (e.g. "Park City, UT", "Aspen, CO", "Breckenridge, CO", "Jackson, WY", "Stowe, VT") — the ski-trip packing list — and (b) a warm escape from the cold (e.g. "Miami Beach, FL", "Key West, FL", "Tulum, Mexico", "San Juan, Puerto Rico", "Scottsdale, AZ") — the beach-weekend packing list. Check ALREADY PLANNED and pick the one done less recently. Every closet has ski gear, swimwear and a night-out look, so rotate closets.`;
+}

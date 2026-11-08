@@ -87,7 +87,7 @@ const flows: Template[] = [
       {
         name: "city",
         describe:
-          "Destination typed into Trips & Packing as 'City, ST' or 'City, Country', e.g. 'Chicago, IL'. Pick places with weather worth packing for.",
+          "Destination typed into Trips & Packing as 'City, ST' or 'City, Country', e.g. 'Chicago, IL'. Pick places with weather worth packing for: in winter, ski towns ('Park City, UT') and warm escapes ('Miami Beach, FL') — the app reads the destination and packs ski gear or swim accordingly.",
       },
     ],
     beats: FOOTAGE["05_trip_packing"].beats,
