@@ -48,6 +48,13 @@ export type Persona = {
   cloneFrom?: "owner";
   /** Narrator for clips filmed on this closet (a Gemini prebuilt voice). */
   voice?: string;
+  /**
+   * An account that deliberately has NO closet, for filming the closet-optional
+   * features (fully suggested looks, wishlist). Never seeded; offered to the
+   * planner only while a launch campaign is live (rules.ts), since before that
+   * the app has nothing to show on an empty closet.
+   */
+  startsEmpty?: boolean;
 };
 
 const item = (
@@ -154,6 +161,13 @@ export const PERSONAS: Persona[] = [
     ],
     cloneFrom: "owner",
     voice: "Schedar", // picked by ear by the owner (2026-10-20) over Charon, Orus, Iapetus, Sadachbia, Achird
+  },
+  {
+    key: "fresh",
+    label: "Fresh (no closet)",
+    describe: "A brand-new account with NO closet at all: every look is built from suggested pieces with real product photos. Use it for the empty-closet, wishlist and real-products clips.",
+    wardrobe: [],
+    startsEmpty: true,
   },
   {
     key: "streetwear",

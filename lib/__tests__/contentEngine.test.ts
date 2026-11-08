@@ -157,7 +157,7 @@ describe("persona closets", () => {
   });
 
   it("stocks every closet for winter trips, a beach weekend, nights out, workouts and sleep", () => {
-    for (const p of PERSONAS) {
+    for (const p of PERSONAS.filter((x) => !x.startsEmpty)) {
       const has = (tag: string) => p.wardrobe.some((w) => w.tags.includes(tag));
       expect(has("pajamas"), `${p.key} pajamas`).toBe(true);
       expect(has("ski"), `${p.key} ski`).toBe(true);
