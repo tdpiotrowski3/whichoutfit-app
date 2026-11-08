@@ -367,6 +367,10 @@ export async function availableClosets(): Promise<string[]> {
   const out = ["original"];
   for (const p of PERSONAS) {
     if (p.key === "original") continue;
+    if (p.startsEmpty) {
+      if (needsReview(new Date())) out.push(p.key); // only while a launch campaign is live
+      continue;
+    }
     if (p.cloneFrom) {
       // Available once the copy exists (its seeded add-ons don't count toward it).
       if ((await closetSize(p.key).catch(() => 0)) >= MIN_STOCKED) out.push(p.key);
