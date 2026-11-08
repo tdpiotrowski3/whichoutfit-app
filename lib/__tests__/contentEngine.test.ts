@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { cleanHashtags, captionWithTags } from "../contentEngine/hashtags";
 import { nextSlots, runwayDays, slotsToFill } from "../contentEngine/schedule";
 import { countSyllables, syllableBudget, TEMPLATES, getTemplate } from "../contentEngine/templates";
-import { featureOf, scoreClip, validateIdea } from "../contentEngine/rules";
+import { featureOf, scoreClip, seasonalSteer, validateIdea } from "../contentEngine/rules";
 import { PERSONAS, VOICES, getPersona, itemId, garmentPrompt, personaEmail, voiceFor } from "../contentEngine/personas";
 
 const iso = (d: Date) => d.toISOString();
@@ -145,7 +145,8 @@ describe("persona closets", () => {
   it("signs a cloned closet in as its own capture account, never the owner's", () => {
     expect(personaEmail("menswear", "owner@example.com")).toBe("owner+capture-menswear@example.com");
     expect(getPersona("menswear")!.cloneFrom).toBe("owner");
-    expect(getPersona("menswear")!.wardrobe).toHaveLength(0); // copied, never generated
+    // Copied, plus seeded add-ons (winter, ski, sleepwear) that a re-clone keeps.
+    expect(getPersona("menswear")!.wardrobe.length).toBeGreaterThan(0);
   });
 
   it("gives a menswear closet a male narrator and everything else the default", () => {
@@ -153,6 +154,26 @@ describe("persona closets", () => {
     expect(voiceFor("original")).toBe("Sulafat");
     expect(voiceFor(null)).toBe("Sulafat");
     for (const p of PERSONAS) expect(VOICES).toContain(voiceFor(p.key));
+  });
+
+  it("stocks every closet for winter trips, a beach weekend, nights out, workouts and sleep", () => {
+    for (const p of PERSONAS) {
+      const has = (tag: string) => p.wardrobe.some((w) => w.tags.includes(tag));
+      expect(has("pajamas"), `${p.key} pajamas`).toBe(true);
+      expect(has("ski"), `${p.key} ski`).toBe(true);
+      expect(has("night out"), `${p.key} night out`).toBe(true);
+      // menswear's copy already has swim and athletic gear; the rest seed it.
+      if (p.key !== "menswear") {
+        expect(has("swim"), `${p.key} swim`).toBe(true);
+        expect(has("workout"), `${p.key} workout`).toBe(true);
+      }
+    }
+  });
+
+  it("steers winter planning to ski and warm-escape trips, and only in winter", () => {
+    expect(seasonalSteer(new Date("2026-11-10T18:00:00Z"))).toMatch(/ski town[\s\S]*warm escape/);
+    expect(seasonalSteer(new Date("2027-02-10T18:00:00Z"))).not.toBe("");
+    expect(seasonalSteer(new Date("2027-06-10T18:00:00Z"))).toBe("");
   });
 
   it("gives every persona unique slots", () => {

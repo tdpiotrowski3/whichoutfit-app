@@ -6,7 +6,7 @@ import { getAttribution } from "@/lib/attribution";
 import { sendAdminAlert } from "@/lib/alert";
 import { generateJson } from "./gemini";
 import { TEMPLATES, getTemplate, syllableBudget, type Template } from "./templates";
-import { featureOf, scoreClip, validateIdea, type RawIdea } from "./rules";
+import { featureOf, scoreClip, seasonalSteer, validateIdea, type RawIdea } from "./rules";
 import { PERSONAS, voiceFor } from "./personas";
 import { seededSlots, closetSize } from "./personaAccounts";
 import { nextSlots, runwayDays, slotsToFill, RUNWAY_DAYS } from "./schedule";
@@ -327,7 +327,7 @@ export async function draftIdeas(count = IDEAS_PER_WEEK, now = new Date()): Prom
   const month = now.toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "America/Chicago" });
 
   const prompt = `Today is ${month}. Draft ${count} new clip ideas.
-Mix: about half "recut" (cheap, re-narrates existing footage) and half "flow" (films new inputs). Lean toward features that are performing; give at least one idea to a feature with little or no data so we keep learning. Seasonal hooks are welcome when they fit (${month}).
+Mix: about half "recut" (cheap, re-narrates existing footage) and half "flow" (films new inputs). Lean toward features that are performing; give at least one idea to a feature with little or no data so we keep learning. Seasonal hooks are welcome when they fit (${month}).${seasonalSteer(now)}
 
 PERFORMANCE BY FEATURE (Instagram, posts the app published):
 ${perf}
@@ -367,7 +367,7 @@ export async function availableClosets(): Promise<string[]> {
   for (const p of PERSONAS) {
     if (p.key === "original") continue;
     if (p.cloneFrom) {
-      // A cloned closet is never seeded; it's available once the copy exists.
+      // Available once the copy exists (its seeded add-ons don't count toward it).
       if ((await closetSize(p.key).catch(() => 0)) >= MIN_STOCKED) out.push(p.key);
       continue;
     }

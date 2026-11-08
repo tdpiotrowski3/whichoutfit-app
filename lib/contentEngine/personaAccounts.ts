@@ -143,7 +143,8 @@ export type CloneResult = { copied: number; total: number; next: number | null; 
  * Copy one batch of the owner's live closet, starting at `offset` (stable order
  * by id). The last batch also removes anything in the persona's closet that is
  * no longer in the owner's, so re-running mirrors it — including the generated
- * items an earlier menswear closet had.
+ * items an earlier menswear closet had — EXCEPT the persona's own seeded
+ * wardrobe slots, which are add-ons on top of the copy and always stay.
  */
 export async function cloneCloset(persona: string, offset = 0): Promise<CloneResult> {
   const p = getPersona(persona);
@@ -205,6 +206,8 @@ export async function cloneCloset(persona: string, offset = 0): Promise<CloneRes
     const { data: ownerIds, error: idErr } = await db.from("closet_items").select("id").eq("user_id", ownerId).is("deleted_at", null);
     if (idErr) throw idErr;
     const keep = new Set((ownerIds ?? []).map((x) => (x as { id: string }).id));
+    // Add-ons seeded on top of the copy (the persona's own wardrobe) stay.
+    for (const w of p.wardrobe) keep.add(itemId(persona, w.slot).toLowerCase());
     const { data: mine, error: mErr } = await db.from("closet_items").select("id,data").eq("user_id", uid).is("deleted_at", null);
     if (mErr) throw mErr;
     const staleRows = ((mine ?? []) as { id: string; data: { imageRef?: string } }[]).filter((x) => !keep.has(x.id));
