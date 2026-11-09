@@ -3,6 +3,7 @@ import { WHICHOUTFIT } from "@/lib/brand";
 import { sendAdminAlert, isAlertConfigured } from "@/lib/alert";
 import { isTikTokAppConfigured, sendToInbox } from "@/lib/tiktokDisplay";
 import { captionWithTags } from "@/lib/contentEngine/hashtags";
+import { socialPaused } from "@/lib/socialPause";
 
 // TikTok can't be auto-posted yet (an unaudited app's Direct Post is forced to
 // PRIVATE), so TikTok rows sit at status 'manual'. On the morning one is due,
@@ -35,6 +36,7 @@ export type ReminderResult = { due: number; sent: boolean; reason?: string };
 
 export async function sendTikTokReminder(now = new Date()): Promise<ReminderResult> {
   if (!isAlertConfigured()) return { due: 0, sent: false, reason: "alert email not configured" };
+  if (socialPaused(WHICHOUTFIT)) return { due: 0, sent: false, reason: "paused (SOCIAL_PAUSED)" };
 
   // Anything due in the next ~36h that hasn't been reminded, then keep today's.
   const { data, error } = await admin()
