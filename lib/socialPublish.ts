@@ -1,6 +1,7 @@
 import { admin } from "@/lib/supabase";
 import { WHICHOUTFIT } from "@/lib/brand";
 import { captionWithTags } from "@/lib/contentEngine/hashtags";
+import { socialPaused } from "@/lib/socialPause";
 import {
   createReelContainer,
   containerStatus,
@@ -158,6 +159,10 @@ async function advance(
 
 export async function runSocialPublish(now = new Date(), opts: PublishOptions = {}): Promise<PublishResult> {
   const out: PublishResult = { posted: [], pending: [], failed: [], skipped: [], errors: [] };
+  if (socialPaused(WHICHOUTFIT)) {
+    out.skipped.push("paused (SOCIAL_PAUSED)");
+    return out;
+  }
 
   if (!isInstagramPublishConfigured()) {
     out.errors.push("instagram: not configured (META_ACCESS_TOKEN / IG_USER_ID unset)");
