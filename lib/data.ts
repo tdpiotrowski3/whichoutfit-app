@@ -464,3 +464,54 @@ export async function getSocialClicks(days = 30): Promise<SocialClickRow[]> {
   if (error) throw error;
   return (data ?? []) as SocialClickRow[];
 }
+
+
+// ── Closet-optional funnel (2026-11-12) ───────────────────────────────────────
+// Reads the app events added for "no closet needed" (track allowlist) plus the
+// server-side shop_search rows and ambient AI calls. Aggregated here, no RPC.
+export type ClosetOptional = {
+  days: number;
+  looks: { total: number; users: number; bySource: Record<string, number>; fullySuggested: number };
+  differentLook: number;
+  ambientExhaustedUsers: number;
+  deptDeclared: Record<string, number>;
+  pieceActions: Record<string, number>;
+  guideOpenedUsers: number;
+  rewardClaimed: number;
+  shop: { searches: number; withPhotos: number };
+  ambientCalls: number;
+};
+
+export async function getClosetOptional(days = 30): Promise<ClosetOptional> {
+  const since = new Date(Date.now() - days * 86_400_000).toISOString();
+  const events = ["look_shown", "different_look", "ambient_exhausted", "dept_declared", "piece_action",
+    "guide_opened", "reward_claimed", "shop_search", "ai_call"];
+  const { data, error } = await admin().from("usage_events")
+    .select("event, user_id, metadata").in("event", events).gte("created_at", since).limit(20000);
+  if (error) throw error;
+  const rows = (data ?? []) as { event: string; user_id: string | null; metadata: Record<string, unknown> | null }[];
+  const count = (e: string) => rows.filter((r) => r.event === e);
+  const users = (e: string) => new Set(count(e).map((r) => r.user_id)).size;
+  const tally = (e: string, key: string) => count(e).reduce<Record<string, number>>((m, r) => {
+    const k = String(r.metadata?.[key] ?? "unknown"); m[k] = (m[k] ?? 0) + 1; return m;
+  }, {});
+  const looks = count("look_shown");
+  const shop = count("shop_search");
+  return {
+    days,
+    looks: {
+      total: looks.length,
+      users: users("look_shown"),
+      bySource: tally("look_shown", "source"),
+      fullySuggested: looks.filter((r) => String(r.metadata?.owned ?? "0") === "0").length,
+    },
+    differentLook: count("different_look").length,
+    ambientExhaustedUsers: users("ambient_exhausted"),
+    deptDeclared: tally("dept_declared", "dept"),
+    pieceActions: tally("piece_action", "action"),
+    guideOpenedUsers: users("guide_opened"),
+    rewardClaimed: count("reward_claimed").length,
+    shop: { searches: shop.length, withPhotos: shop.filter((r) => Number(r.metadata?.found ?? 0) > 0).length },
+    ambientCalls: count("ai_call").filter((r) => r.metadata?.source === "ambient").length,
+  };
+}

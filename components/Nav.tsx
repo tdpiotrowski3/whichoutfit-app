@@ -36,6 +36,7 @@ const GROUPS: { label: string | null; items: Item[] }[] = [
     label: "Growth",
     items: [
       { href: "/growth", label: "Growth", icon: "trend" },
+      { href: "/closet-optional", label: "No-closet looks", icon: "trend" },
       { href: "/users", label: "Users", icon: "users" },
       { href: "/attribution", label: "Attribution", icon: "link" },
       { href: "/redemptions", label: "Redemptions", icon: "ticket" },
