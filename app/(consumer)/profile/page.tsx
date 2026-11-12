@@ -17,6 +17,8 @@ type StyleProfile = {
   sizes?: Record<string, string>;
   comfortStatement?: number;
   fitPreference?: string;
+  /** Declared product departments (mens|womens|both) — set in the apps. */
+  shopDepartments?: string;
 };
 
 export default function ProfilePage() {
@@ -135,6 +137,7 @@ function isEmpty(p: StyleProfile): boolean {
     !(p.favoriteColors?.length) &&
     !(p.preferredStyles?.length) &&
     !p.fitPreference &&
+    !p.shopDepartments &&
     p.comfortStatement == null &&
     !(p.sizes && Object.keys(p.sizes).length)
   );

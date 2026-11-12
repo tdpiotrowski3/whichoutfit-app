@@ -84,7 +84,7 @@ export default function ClosetPage() {
       ) : items === null ? (
         <p style={{ color: "var(--wo-text-secondary, #5c6b7a)" }}>Loading…</p>
       ) : items.length === 0 ? (
-        <p style={{ color: "var(--wo-text-secondary, #5c6b7a)" }}>Your closet is empty. Add pieces in the WhichOutfit app.</p>
+        <p style={{ color: "var(--wo-text-secondary, #5c6b7a)" }}>No pieces yet, and that's fine: your stylist still builds complete looks. Add pieces in the WhichOutfit app whenever you like.</p>
       ) : (
         <div style={{ display: "grid", gap: 16, gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))" }}>
           {items.map((it) => (
