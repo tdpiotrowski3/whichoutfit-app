@@ -101,12 +101,12 @@ const flows: Template[] = [
 // (FitCheck tools/capture-engine/social, `no_closet_social`). `was` describes
 // what is on screen, for the planner, not a line that was ever narrated.
 const NO_CLOSET_BEATS: Beat[] = [
-  // PROVISIONAL (2026-11-13): laid out from the flow's steps, not yet measured.
-  // Re-measure from the first polished take that passes the quality bar.
-  { start: 0.0, end: 4.0, was: "The Planner on a brand-new account: 'Today's look is ready — no closet needed.'" },
-  { start: 4.0, end: 8.5, was: "Tapping in: today's complete outfit appears, styled for the real weather." },
-  { start: 8.5, end: 13.0, was: "Each suggested piece is a real product with a photo and price." },
-  { start: 13.0, end: 17.0, was: "One piece pinned to the wishlist, then scrolling the rest of the look." },
+  // Measured 2026-11-13 from the polished take (16.9s; the engine trims the
+  // teardown and the CTA J-cuts in after the last beat).
+  { start: 0.0, end: 3.0, was: "A brand-new account's Planner: 'Today's look is ready — no closet needed', 40° and clear; tapping in, the look loads." },
+  { start: 3.0, end: 6.5, was: "'See it together': the whole outfit as product photos in a row, then the first piece, an ivory crewneck sweater." },
+  { start: 6.5, end: 10.5, was: "Scrolling the suggested pieces: chinos, a camel long coat, burgundy loafers, a leather tote, each a real product with a photo and price." },
+  { start: 10.5, end: 14.5, was: "Filled hearts on the pinned pieces, scrolling back up through the look." },
 ];
 
 flows.push({
