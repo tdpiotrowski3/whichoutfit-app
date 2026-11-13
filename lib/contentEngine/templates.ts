@@ -26,6 +26,8 @@ export type Template = {
   footage: string;
   /** flow only: the flows.json flow the Mac films. */
   flow?: string;
+  /** flow only: the persona closet this flow must be filmed on (overrides the idea's pick). */
+  closet?: string;
   inputs: TemplateInput[];
   beats: Beat[];
   /** What a viewer sees, in one sentence, for the planner. */
@@ -94,6 +96,31 @@ const flows: Template[] = [
     shows: "A destination typed in, the real forecast, a packed capsule and outfits per day.",
   },
 ];
+
+// Beats for footage that has no recut master: measured from the polished take
+// (FitCheck tools/capture-engine/social, `no_closet_social`). `was` describes
+// what is on screen, for the planner, not a line that was ever narrated.
+const NO_CLOSET_BEATS: Beat[] = [
+  // PROVISIONAL (2026-11-13): laid out from the flow's steps, not yet measured.
+  // Re-measure from the first polished take that passes the quality bar.
+  { start: 0.0, end: 4.0, was: "The Planner on a brand-new account: 'Today's look is ready — no closet needed.'" },
+  { start: 4.0, end: 8.5, was: "Tapping in: today's complete outfit appears, styled for the real weather." },
+  { start: 8.5, end: 13.0, was: "Each suggested piece is a real product with a photo and price." },
+  { start: 13.0, end: 17.0, was: "One piece pinned to the wishlist, then scrolling the rest of the look." },
+];
+
+flows.push({
+  key: "flow:no_closet",
+  kind: "flow",
+  feature: "closet_optional",
+  footage: "no_closet_social",
+  flow: "no_closet_social",
+  closet: "fresh",
+  inputs: [],
+  beats: NO_CLOSET_BEATS,
+  shows:
+    "A brand-new account with an empty closet: the Planner's 'Today's look is ready' card, then a complete outfit for today's real weather built from real products with photos, the pieces laid out together, and one pinned to the wishlist.",
+});
 
 export const TEMPLATES: Template[] = [...flows, ...recuts];
 

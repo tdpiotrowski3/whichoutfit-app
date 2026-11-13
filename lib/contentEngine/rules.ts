@@ -68,8 +68,9 @@ export function validateIdea(raw: RawIdea, closets: string[] = ["original"]): Id
   }
   // Re-cuts are existing footage, so they are on the closet they were shot on.
   // A flow is filmed fresh, on any closet that is actually stocked.
-  const closet = t.kind === "recut" ? "original" : raw.closet?.trim() || "original";
-  if (!closets.includes(closet)) return `closet ${closet} is not available`;
+  // A template that names its closet (flow:no_closet → fresh) is always filmed there.
+  const closet = t.kind === "recut" ? "original" : t.closet ?? (raw.closet?.trim() || "original");
+  if (!t.closet && !closets.includes(closet)) return `closet ${closet} is not available`;
   const captions = (raw.captions ?? []).map((c) => c.trim()).filter(Boolean).slice(0, 3);
   if (captions.length === 0) return "no captions";
   return {
@@ -116,10 +117,10 @@ export const LAUNCH_CAMPAIGNS: LaunchCampaign[] = [
     key: "closet-optional",
     env: "LAUNCH_CLOSET_OPTIONAL_LIVE_FROM",
     windowDays: 21,
-    brief: `LAUNCH — "WhichOutfit now works even with an empty closet" (2.2). Week 1 opens with ONE announcement clip: the honest story — "most of us never upload our whole closet, so now you don't have to": a look for real weather and a real plan, built from real products you can tap, then pinned to a wishlist. Then follow-ups, one feature each, spread across closets and the Tue/Thu/Sat slots:
+    brief: `LAUNCH — "WhichOutfit now works even with an empty closet" (2.2). Week 1 opens with ONE announcement clip on "flow:no_closet" (the fresh account, filmed live): the honest story — "most of us never upload our whole closet, so now you don't have to": today's look for the real weather, built from real products you can tap, then pinned to a wishlist. The hook is "now no closet needed". Then follow-ups, one feature each, spread across closets and the Tue/Thu/Sat slots:
 - A Miami-weekend packing list with a night-out look styled for Miami and the optional "Try it" swap (e.g. the bikini top under an open linen shirt).
 - A ski-trip packing list that remembers what people forget: pajamas, base layers, ski socks, gloves, goggles.
-- No closet at all: "it's 28° and I have a holiday party" → a full look with real product photos.
+- No closet at all, a second angle on "flow:no_closet" (e.g. the cold-morning or holiday-season version of today's look) once the announcement has posted.
 - The wishlist: pin pieces from a suggested look or Rate My Outfit's "uplevel this outfit", then share it (holiday gift-list angle in December).
 - "I have something like this": snap your own piece and the look swaps it in.
 - "Shop suggestions" on a trip look.
