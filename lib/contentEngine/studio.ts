@@ -120,8 +120,8 @@ export async function requestVideo(req: VideoRequest): Promise<IdeaRow> {
     if (!req.inputs?.[need.name]?.trim()) throw new Error(`Fill in the ${need.name}.`);
   }
   const closets = await availableClosets();
-  const closet = t.kind === "recut" ? "original" : req.closet || "original";
-  if (!closets.includes(closet)) throw new Error(`The ${closet} closet isn't stocked yet.`);
+  const closet = t.kind === "recut" ? "original" : t.closet ?? (req.closet || "original");
+  if (!t.closet && !closets.includes(closet)) throw new Error(`The ${closet} closet isn't stocked yet.`);
   const persona = PERSONAS.find((p) => p.key === closet);
   const inputs = Object.entries(req.inputs ?? {}).map(([k, v]) => `${k} = "${v.trim()}"`).join(", ");
 

@@ -42,7 +42,8 @@ async function findUserId(email: string): Promise<string | null> {
  *
  * `readOnly` would tell capture.sh to run the app pull-only (for a real
  * account; none of the personas is one now); `syncWait` is how long to let the
- * closet come down after a fresh install — longer for a big cloned closet.
+ * closet come down after a fresh install — longer for a big cloned closet, and
+ * none for an account that starts empty.
  */
 export async function personaOtp(key: string): Promise<{ email: string; otp: string; readOnly: boolean; syncWait: number }> {
   const p = getPersona(key);
@@ -60,7 +61,9 @@ export async function personaOtp(key: string): Promise<{ email: string; otp: str
   const { data, error } = await db.auth.admin.generateLink({ type: "magiclink", email });
   const otp = data?.properties?.email_otp;
   if (error || !otp) throw error ?? new Error("could not mint a code");
-  return { email, otp, readOnly: false, syncWait: p.cloneFrom ? 90 : 30 };
+  // An empty account never replaces the app's sample closet (samples only clear
+  // when a real item lands), so waiting for that would burn the whole ceiling.
+  return { email, otp, readOnly: false, syncWait: p.startsEmpty ? 0 : p.cloneFrom ? 90 : 30 };
 }
 
 /** The ClothingItem document the iOS/Android apps decode (Models.swift). */

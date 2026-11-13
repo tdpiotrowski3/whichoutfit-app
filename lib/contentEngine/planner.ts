@@ -320,9 +320,10 @@ export async function draftIdeas(count = IDEAS_PER_WEEK, now = new Date()): Prom
         .join("\n")
     : "- No posted results yet. Favour the features with the most concrete payoff on screen (a score, a price, a palette).";
 
-  const catalog = TEMPLATES.map((t) => templateBrief(t)).join("\n\n");
-  const done = ideas.map((i) => `- ${i.template} ${JSON.stringify(i.inputs)} on ${i.closet} "${i.title}" (${i.status})`).join("\n") || "- none yet";
   const closets = await availableClosets();
+  // A template tied to a closet (flow:no_closet → fresh) is only offered while that closet is.
+  const catalog = TEMPLATES.filter((t) => !t.closet || closets.includes(t.closet)).map((t) => templateBrief(t)).join("\n\n");
+  const done = ideas.map((i) => `- ${i.template} ${JSON.stringify(i.inputs)} on ${i.closet} "${i.title}" (${i.status})`).join("\n") || "- none yet";
   const closetBrief = PERSONAS.filter((p) => closets.includes(p.key)).map((p) => `- ${p.key}: ${p.describe}`).join("\n");
   const month = now.toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "America/Chicago" });
 

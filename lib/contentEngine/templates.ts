@@ -26,6 +26,8 @@ export type Template = {
   footage: string;
   /** flow only: the flows.json flow the Mac films. */
   flow?: string;
+  /** flow only: the persona closet this flow must be filmed on (overrides the idea's pick). */
+  closet?: string;
   inputs: TemplateInput[];
   beats: Beat[];
   /** What a viewer sees, in one sentence, for the planner. */
@@ -94,6 +96,31 @@ const flows: Template[] = [
     shows: "A destination typed in, the real forecast, a packed capsule and outfits per day.",
   },
 ];
+
+// Beats for footage that has no recut master: measured from the polished take
+// (FitCheck tools/capture-engine/social, `no_closet_social`). `was` describes
+// what is on screen, for the planner, not a line that was ever narrated.
+const NO_CLOSET_BEATS: Beat[] = [
+  // Measured 2026-11-13 from the polished take (16.9s; the engine trims the
+  // teardown and the CTA J-cuts in after the last beat).
+  { start: 0.0, end: 3.0, was: "A brand-new account's Planner: 'Today's look is ready — no closet needed', 40° and clear; tapping in, the look loads." },
+  { start: 3.0, end: 6.5, was: "'See it together': the whole outfit as product photos in a row, then the first piece, an ivory crewneck sweater." },
+  { start: 6.5, end: 10.5, was: "Scrolling the suggested pieces: chinos, a camel long coat, burgundy loafers, a leather tote, each a real product with a photo and price." },
+  { start: 10.5, end: 14.5, was: "Filled hearts on the pinned pieces, scrolling back up through the look." },
+];
+
+flows.push({
+  key: "flow:no_closet",
+  kind: "flow",
+  feature: "closet_optional",
+  footage: "no_closet_social",
+  flow: "no_closet_social",
+  closet: "fresh",
+  inputs: [],
+  beats: NO_CLOSET_BEATS,
+  shows:
+    "A brand-new account with an empty closet: the Planner's 'Today's look is ready' card, then a complete outfit for today's real weather built from real products with photos, the pieces laid out together, and one pinned to the wishlist.",
+});
 
 export const TEMPLATES: Template[] = [...flows, ...recuts];
 
