@@ -90,7 +90,7 @@ export default function ProfilePage() {
             <Pills label="Dresses for" values={profile.places} />
             <Pills label="Favorite colors" values={profile.favoriteColors} />
             <Pills label="Preferred styles" values={profile.preferredStyles} />
-            {profile.fitPreference ? <Pills label="Preferred fit" values={[profile.fitPreference]} /> : null}
+            {profile.fitPreference ? <Pills label="Preferred fit" values={profile.fitPreference.split(",").map((f) => f.trim()).filter(Boolean)} /> : null}
             {sizeEntries.length > 0 ? (
               <Pills label="Sizes" values={sizeEntries.map(([k, v]) => `${k}: ${v}`)} />
             ) : null}
