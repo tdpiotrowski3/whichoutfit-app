@@ -103,7 +103,7 @@ const flows: Template[] = [
 const NO_CLOSET_BEATS: Beat[] = [
   // Measured 2026-11-13 from the polished take (16.9s; the engine trims the
   // teardown and the CTA J-cuts in after the last beat).
-  { start: 0.0, end: 3.0, was: "A brand-new account's Planner: 'Today's look is ready — no closet needed', 40° and clear; tapping in, the look loads." },
+  { start: 0.0, end: 3.0, was: "A brand-new account's Planner: 'Today's look is ready' card, 40° and clear; tapping in, the look loads." },
   { start: 3.0, end: 6.5, was: "'See it together': the whole outfit as product photos in a row, then the first piece, an ivory crewneck sweater." },
   { start: 6.5, end: 10.5, was: "Scrolling the suggested pieces: chinos, a camel long coat, burgundy loafers, a leather tote, each a real product with a photo and price." },
   { start: 10.5, end: 14.5, was: "Filled hearts on the pinned pieces, scrolling back up through the look." },
