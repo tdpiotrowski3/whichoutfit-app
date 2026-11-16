@@ -117,10 +117,10 @@ export const LAUNCH_CAMPAIGNS: LaunchCampaign[] = [
     key: "closet-optional",
     env: "LAUNCH_CLOSET_OPTIONAL_LIVE_FROM",
     windowDays: 21,
-    brief: `LAUNCH — "WhichOutfit now works even with an empty closet" (2.2). Week 1 opens with ONE announcement clip on "flow:no_closet" (the fresh account, filmed live): the honest story — "most of us never upload our whole closet, so now you don't have to": today's look for the real weather, built from real products you can tap, then pinned to a wishlist. The hook is "now no closet needed". Then follow-ups, one feature each, spread across closets and the Tue/Thu/Sat slots:
+    brief: `LAUNCH — "WhichOutfit styles you from day one" (2.2). POSITIONING: your own closet is still the heart of the app and the thing to sell — looks built from clothes you own. 2.2 just means it already works on day one, before your closet is in. NEVER say or imply you don't need to upload your closet, that skipping it is the point, or "no closet needed"; always land on adding your own pieces as the next step. Week 1 opens with ONE announcement clip on "flow:no_closet" (the fresh account, filmed live): the honest story — "my closet isn't in yet, and it still styled me today": today's look for the real weather, built from real products you can tap, pinned to a wishlist, then "next I add my own closet". The hook is "styled from day one". Then follow-ups, one feature each, spread across closets and the Tue/Thu/Sat slots (most on real, filled closets):
 - A Miami-weekend packing list with a night-out look styled for Miami and the optional "Try it" swap (e.g. the bikini top under an open linen shirt).
 - A ski-trip packing list that remembers what people forget: pajamas, base layers, ski socks, gloves, goggles.
-- No closet at all, a second angle on "flow:no_closet" (e.g. the cold-morning or holiday-season version of today's look) once the announcement has posted.
+- At most one more "flow:no_closet" angle (e.g. the cold-morning version of today's look) once the announcement has posted, framed as day one with adding your closet as the next step.
 - The wishlist: pin pieces from a suggested look or Rate My Outfit's "uplevel this outfit", then share it (holiday gift-list angle in December).
 - "I have something like this": snap your own piece and the look swaps it in.
 - "Shop suggestions" on a trip look.
