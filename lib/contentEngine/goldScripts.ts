@@ -99,7 +99,7 @@ export const GOLD: Gold[] = [
     brand: "comeback", clip: "Cleared by the PT, now what", hook: "pov",
     screens: ["PT tab: snap your sheet", "Exercises read back to check", "Uncleared moves kept out", "Two-week summary for your PT"],
     direction: "Someone from sports medicine talking to an athlete on their last day of PT, direct, on their side.",
-    lines: ["Your PT hands you a sheet and says good luck.", "One photo. It reads every exercise back.", "Not cleared? It stays out.", "And in two weeks, your PT gets the summary."],
+    lines: ["Your PT hands you a sheet and says good luck.", "One photo. It reads every exercise back.", "Not cleared? It stays out.", "And my PT gets a link to all of it."],
     why: "Second person, concrete, and it keeps the clinician in charge the whole way through.",
   },
 ];
