@@ -7,7 +7,7 @@ import {
   postText, slotFromTemplate, templateKey, validatePiece, DISCLAIMER, type RawPiece,
   scheduleRunway, fullRunwayLaunch, daysBetween,
 } from "../comeback/runway";
-import { countSyllables } from "../contentEngine/templates";
+import { countSyllables, lineCeiling } from "../contentEngine/templates";
 
 const reel = RUNWAY.find((s) => s.key === "reveal_brief")!;
 
@@ -70,8 +70,8 @@ describe("validatePiece", () => {
   it("rejects a reel with the wrong line count or an overlong line", () => {
     expect(validatePiece(piece(reel.key, fitting(reel.beats!).slice(1)))).toMatch(/lines for/);
     const long = fitting(reel.beats!);
-    long[0] = "this line goes on and on and on and on and on and on and on and on";
-    expect(countSyllables(long[0])).toBeGreaterThan(beatBudget(reel.beats![0]) + 2);
+    long[0] = Array(20).fill("this line goes on and on").join(" ");
+    expect(countSyllables(long[0])).toBeGreaterThan(lineCeiling(reel.beats![0]) + 2);
     expect(validatePiece(piece(reel.key, long))).toMatch(/syllables over/);
   });
 

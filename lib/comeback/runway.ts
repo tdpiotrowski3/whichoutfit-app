@@ -1,5 +1,7 @@
 import { cleanHashtags } from "../contentEngine/hashtags";
-import { countSyllables, SYLLABLES_PER_SEC } from "../contentEngine/templates";
+import { SYLLABLES_PER_SEC, lineCeiling, scriptFit } from "../contentEngine/templates";
+import { META, cleanDirection } from "../contentEngine/scriptRules";
+import { PLAYBOOKS, getSeries } from "../contentEngine/strategy";
 
 // Comeback Health's launch runway: the fixed plan of what goes out, counted in
 // days from launch (T-0), so the whole thing can be drafted, reviewed and
@@ -133,8 +135,28 @@ export const RUNWAY: Slot[] = [
     brief: "Three weeks in: what's been added or fixed from feedback, and what's coming next." },
 ];
 
+/** The day series pieces are filed under: after the launch runway's last piece. */
+export const SERIES_DAY = Math.max(...RUNWAY.map((s) => s.day)) + 1;
+
+/** Key of the always-on series piece for a strategy slot (contentEngine/strategy.ts), e.g. "s:week_one_back:the_trap". */
+export const seriesSlotKey = (series: string, episode: string) => `s:${series}:${episode}`;
+
+/**
+ * A runway slot by key. Beyond the fixed launch runway, the always-on series
+ * from the strategy playbook resolve here too ("s:<series>:<episode>"): each is
+ * an app-footage reel on its series' screens, with the download ask.
+ */
 export function getSlot(key: string): Slot | undefined {
-  return RUNWAY.find((s) => s.key === key);
+  const fixed = RUNWAY.find((s) => s.key === key);
+  if (fixed || !key.startsWith("s:")) return fixed;
+  const [, seriesKey, episodeKey] = key.split(":");
+  const series = getSeries(PLAYBOOKS.comeback, seriesKey);
+  const episode = series?.episodes.find((e) => e.key === episodeKey);
+  if (!series || !episode || !series.beats) return undefined;
+  return {
+    key, day: SERIES_DAY, phase: "proof", format: "reel", source: "app", beats: series.beats, screens: series.screens,
+    brief: `Series "${series.name}" (${series.promise}) — episode "${episode.label}": ${episode.angle}`,
+  };
 }
 
 /** social_ideas.template for a runway piece. */
@@ -153,7 +175,7 @@ export function dateFor(launch: string, day: number): string {
   return new Date(Date.UTC(y, m - 1, d + day)).toISOString().slice(0, 10);
 }
 
-/** Syllables a reel line can carry and still land 0.5s short of its beat. */
+/** LEGACY (engine v1): syllables a reel line could carry and still land 0.5s short of its beat. Nothing budgets against it now. */
 export function beatBudget(seconds: number): number {
   return Math.max(4, Math.floor((seconds - 0.5) * SYLLABLES_PER_SEC));
 }
@@ -301,6 +323,8 @@ export type RawPiece = {
   captions: string[];
   hashtags: string;
   rationale: string;
+  /** reel: how the narrator should say it (stored in inputs._direction). */
+  direction?: string;
 };
 
 export type PieceFields = {
@@ -321,9 +345,10 @@ const LIMITS = {
 
 /**
  * Hold a drafted piece to its slot's shape and to the claims guard. Returns
- * the social_ideas row (minus brand/status), or why it was dropped. A reel
- * line may run TWO syllables over its budget, as on WhichOutfit: the counter
- * is approximate and the Mac re-measures the real audio.
+ * the social_ideas row (minus brand/status), or why it was dropped. Reels
+ * follow the same voice-first contract as WhichOutfit (contentEngine/
+ * templates.ts scriptFit): one line per beat, anchored to it, no minimum
+ * length, and only soft ceilings on how far the footage can stretch.
  */
 export function validatePiece(raw: RawPiece): PieceFields | string {
   const slot = getSlot(raw.slot);
@@ -333,10 +358,8 @@ export function validatePiece(raw: RawPiece): PieceFields | string {
   if (slot.format === "reel") {
     const beats = slot.beats ?? [];
     if (content.length !== beats.length) return `${content.length} lines for ${beats.length} beats`;
-    for (let i = 0; i < content.length; i++) {
-      const over = countSyllables(content[i]) - beatBudget(beats[i]);
-      if (over > 2) return `line ${i + 1} is ${over} syllables over its beat`;
-    }
+    const fit = scriptFit(content, beats, ctaFor(slot.phase));
+    if (fit) return fit;
   } else if (slot.format === "email") {
     if (content.length !== 3) return "an email needs subject, preview and body";
     if (content[0].length > 70) return "subject over 70 characters";
@@ -359,6 +382,8 @@ export function validatePiece(raw: RawPiece): PieceFields | string {
 
   const inputs: Record<string, string> = { phase: slot.phase, day: String(slot.day), format: slot.format };
   if (slot.source) inputs.source = slot.source;
+  const direction = slot.format === "reel" ? cleanDirection(raw.direction) : "";
+  if (direction) inputs[META.direction] = direction;
   return {
     template: templateKey(slot),
     inputs,
@@ -376,9 +401,9 @@ export function slotBrief(slot: Slot): string {
   const head = `${slot.key} — ${dayLabel(slot.day)}, ${FORMATS[slot.format]}${slot.source === "you" ? " (Tyler films himself)" : slot.source === "app" ? " (screen footage of the app)" : ""}\n  job: ${slot.brief}`;
   if (slot.format === "reel") {
     const beats = (slot.beats ?? [])
-      .map((s, i) => `  beat ${i + 1} (${s}s, ≤${beatBudget(s)} syl)${slot.screens?.[i] ? ` on screen: ${slot.screens[i]}` : ""}`)
+      .map((s, i) => `  beat ${i + 1} (${s}s on screen, ≤${lineCeiling(s)} syl) on screen: ${slot.screens?.[i] ?? "Tyler, to camera"}`)
       .join("\n");
-    return `${head}\n  content: exactly ${slot.beats?.length} narration lines, one per beat\n${beats}`;
+    return `${head}\n  scripts: 3 candidate scripts, each exactly ${slot.beats?.length} narration lines, one per beat ("content" stays empty)\n${beats}`;
   }
   if (slot.format === "email") return `${head}\n  content: exactly 3 entries: [subject ≤70 chars, preview text ≤110 chars, body ≤1200 chars in short plain paragraphs separated by blank lines]`;
   const lim = LIMITS[slot.format];

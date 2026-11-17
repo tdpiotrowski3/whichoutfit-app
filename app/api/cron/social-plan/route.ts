@@ -4,8 +4,8 @@ import { cronAuthorized } from "@/lib/contentEngine/auth";
 import { socialPaused } from "@/lib/socialPause";
 
 export const runtime = "nodejs";
-// One Gemini call to draft ideas, one for re-post captions, then the digest.
-export const maxDuration = 120;
+// Re-plan, a writer call and a critic call to draft ideas, one call for re-post captions, then the digest.
+export const maxDuration = 300;
 
 // Weekly (vercel.json, Mondays): top up the queue, draft ideas, email the digest.
 // See lib/contentEngine/planner.ts.

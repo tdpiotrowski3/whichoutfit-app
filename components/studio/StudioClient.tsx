@@ -50,14 +50,13 @@ const field = "w-full rounded-lg border border-[var(--wo-border)] bg-white px-3 
 
 function LineMeter({ text, budget }: { text: string; budget: number }) {
   const n = countSyllables(text);
-  // Same tolerance as the server (rules.ts validateIdea): two over is allowed.
+  // `budget` is a ceiling (how far the footage can stretch for this line), not
+  // a target: the video is cut to the voice, so short is fine. Same tolerance
+  // as the server (templates.ts scriptFit): two over is allowed.
   const over = n > budget + 2;
-  const short = n < budget * 0.6;
-  const tone = over ? "text-[var(--wo-red,#e5484d)]" : short ? "text-[var(--wo-muted)]" : "text-[var(--wo-green)]";
-  const note = over ? "too long" : short ? "short — leaves a pause" : "fits";
   return (
-    <span className={`whitespace-nowrap text-xs ${tone}`}>
-      {n}/{budget} · {note}
+    <span className={`whitespace-nowrap text-xs ${over ? "text-[var(--wo-red,#e5484d)]" : "text-[var(--wo-muted)]"}`}>
+      {over ? `${n} syllables · too long for this shot (max ${budget})` : `${n} syllables`}
     </span>
   );
 }

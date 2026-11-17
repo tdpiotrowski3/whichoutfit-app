@@ -3,7 +3,7 @@ import { draftIdeas } from "@/lib/contentEngine/planner";
 import { engineAuthorized, errorMessage } from "@/lib/contentEngine/auth";
 
 export const runtime = "nodejs";
-export const maxDuration = 90;
+export const maxDuration = 300;
 
 // POST → the same drafting as the Monday cron and the Social tab's "Draft ideas
 // now", for `./engine.py --draft` on the Mac.

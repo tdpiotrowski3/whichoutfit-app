@@ -4,7 +4,11 @@ import { Card } from "@/components/ui";
 import { DraftIdeasButton } from "@/components/studio/DraftIdeasButton";
 import { NewVideo, CancelButton, ClosetRefresh, type TemplateOption, type ClosetOption } from "@/components/studio/StudioClient";
 import { AgentConsole, IdeaCard, type AgentState } from "@/components/studio/Agent";
-import { TEMPLATES, syllableBudget, type Template } from "@/lib/contentEngine/templates";
+import { TEMPLATES, lineCeiling, type Template } from "@/lib/contentEngine/templates";
+import { StrategyPanel } from "@/components/studio/StrategyPanel";
+import type { Plan } from "@/lib/contentEngine/strategy";
+import type { Provider } from "@/lib/contentEngine/llm";
+import { directionFor } from "@/lib/contentEngine/scriptRules";
 import { nextSlots } from "@/lib/contentEngine/schedule";
 import { voiceFor } from "@/lib/contentEngine/personas";
 import {
@@ -97,13 +101,15 @@ export type ContentStudioData = {
   worker: WorkerStatus;
   closets: ClosetInfo[];
   autopilot: boolean;
+  plan: Plan | null;
+  provider: Provider;
 };
 
 /** The whole page, from its data — the route loads it (app/(dash)/content/page.tsx). */
-export function ContentStudioView({ now, ideas, posts, worker, closets, autopilot }: ContentStudioData) {
+export function ContentStudioView({ now, ideas, posts, worker, closets, autopilot, plan, provider }: ContentStudioData) {
   const templates: TemplateOption[] = TEMPLATES.map((t) => ({
     key: t.key, label: templateLabel(t), kind: t.kind, inputs: t.inputs,
-    budgets: t.beats.map((b) => syllableBudget(b)), was: t.beats.map((b) => b.was),
+    budgets: t.beats.map((b) => lineCeiling(b.end - b.start)), was: t.beats.map((b) => b.was),
   }));
   const closetOptions: ClosetOption[] = closets.map((c) => ({ key: c.key, label: c.label, available: c.available }));
   const footageUrl = new Map(posts.filter((p) => p.video_url).map((p) => [p.clip_id, p.video_url!]));
@@ -173,7 +179,7 @@ export function ContentStudioView({ now, ideas, posts, worker, closets, autopilo
         <div className="space-y-6 lg:col-span-2">
           <Card title={review.length ? `Needs your call (${review.length})` : "Needs your call"}>
             {review.length === 0 ? (
-              <p className="text-sm text-[var(--wo-muted)]">Nothing waiting. Ask for a video above, or I&apos;ll bring new ideas on Monday.</p>
+              <p className="text-sm text-[var(--wo-muted)]">Nothing waiting. Ask for a video above, or I&apos;ll write this week&apos;s slots from the plan on Monday.</p>
             ) : (
               <div className="space-y-4">
                 {review.map((i) => {
@@ -188,6 +194,7 @@ export function ContentStudioView({ now, ideas, posts, worker, closets, autopilo
                       closetLabel={closets.find((c) => c.key === i.closet)?.label ?? i.closet}
                       narrator={voiceFor(i.closet)}
                       beats={t?.beats ?? []}
+                      direction={directionFor(i.inputs)}
                     />
                   );
                 })}
@@ -198,6 +205,8 @@ export function ContentStudioView({ now, ideas, posts, worker, closets, autopilo
               <div className="mt-3"><NewVideo templates={templates} closets={closetOptions} /></div>
             </details>
           </Card>
+
+          <StrategyPanel brand="whichoutfit" plan={plan} provider={provider} endpoint="/api/social/ideas" />
 
           {approved.length || rendering.length ? (
             <Card title="Being made">

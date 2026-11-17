@@ -44,6 +44,8 @@ export type Episode = {
   angle: string;
   /** Only planned inside this window, "MM-DD" to "MM-DD" (may wrap the year). */
   window?: [string, string];
+  /** Only planned while this launch campaign's window is open (rules.ts LAUNCH_CAMPAIGNS), and first in line then. */
+  launch?: string;
 };
 
 export type Series = {
@@ -76,8 +78,8 @@ export type Playbook = {
 
 // --- WhichOutfit ----------------------------------------------------------------
 
-const trip = (key: string, city: string, angle: string, window?: [string, string]): Episode => ({
-  key, label: `Packing for ${city.split(",")[0]}`, template: "flow:trip_packing", inputs: { city }, angle, window,
+const trip = (key: string, city: string, angle: string, window?: [string, string], label?: string): Episode => ({
+  key, label: label ?? `Packing for ${city.split(",")[0]}`, template: "flow:trip_packing", inputs: { city }, angle, window,
 });
 const wear = (key: string, occasion: string, angle: string, window?: [string, string]): Episode => ({
   key, label: `What to wear: ${occasion}`, template: "flow:dress_for_event", inputs: { occasion }, angle, window,
@@ -110,8 +112,8 @@ const WHICHOUTFIT_PLAYBOOK: Playbook = {
         trip("breckenridge", "Breckenridge, CO", SKI_ANGLE, SKI), trip("tulum", "Tulum, Mexico", WARM_ANGLE, WARM),
         trip("jackson", "Jackson, WY", SKI_ANGLE, SKI), trip("scottsdale", "Scottsdale, AZ", WARM_ANGLE, WARM),
         trip("stowe", "Stowe, VT", SKI_ANGLE, SKI), trip("san_juan", "San Juan, Puerto Rico", WARM_ANGLE, WARM),
-        trip("home_for_thanksgiving", "Chicago, IL", "Flying home for Thanksgiving with a carry-on: cold, one nice dinner, a lot of couch.", ["11-08", "11-25"]),
-        trip("home_for_christmas", "Minneapolis, MN", "Home for the holidays: real cold, a party, pajamas that will be in photos.", ["12-05", "12-23"]),
+        trip("home_for_thanksgiving", "Chicago, IL", "Flying home for Thanksgiving with a carry-on: cold, one nice dinner, a lot of couch.", ["11-08", "11-25"], "Packing to fly home for Thanksgiving"),
+        trip("home_for_christmas", "Minneapolis, MN", "Home for the holidays: real cold, a party, pajamas that will be in photos.", ["12-05", "12-23"], "Packing to go home for the holidays"),
         trip("cabo", "Cabo San Lucas, Mexico", "Spring break, carry-on only.", ["02-15", "04-10"]),
         trip("charleston", "Charleston, SC", "A long spring weekend: warm days, cool nights, one dinner worth dressing for.", ["03-01", "05-31"]),
         trip("nashville", "Nashville, TN", "A bachelorette or birthday weekend: two nights out, one brunch.", ["04-01", "09-30"]),
@@ -174,7 +176,7 @@ const WHICHOUTFIT_PLAYBOOK: Playbook = {
       key: "day_one", name: "Day one", pillar: "day_one",
       promise: "What the first day with the app looks like, ending on adding your own pieces.",
       episodes: [
-        { key: "styled_today", label: "Styled on day one, closet next", template: "flow:no_closet", angle: "Too busy to add my closet yet, and it still dressed me for today's weather; next I add my own pieces. Never \"no closet needed\"." },
+        { key: "styled_today", label: "Styled on day one, closet next", template: "flow:no_closet", launch: "closet-optional", angle: "Too busy to add my closet yet, and it still dressed me for today's weather; next I add my own pieces. Never \"no closet needed\"." },
         { key: "the_week", label: "The week, planned", template: "recut:04_plan_week", angle: "Sunday night: every day's outfit already picked for the weather." },
         { key: "one_piece_in", label: "One piece in, three looks out", template: "recut:03_complete_outfit", angle: "The piece you love and never know how to wear, finished three ways." },
         { key: "your_colors", label: "The colours that suit you", template: "recut:09_color_season", angle: "One selfie, the eight colours to reach for and the three to skip." },
@@ -259,6 +261,8 @@ const COMEBACK_PLAYBOOK: Playbook = {
         cb("the_sheet", "The sheet of exercises", "You leave PT with a printed sheet and no plan around it; one photo puts it into your week."),
         cb("kept_out", "What you're not cleared for stays out", "The plan trains everything your clinician has cleared and leaves the rest out until they say so."),
         cb("next_visit", "What to bring to your next visit", "A two-week summary for your PT, so the appointment starts with what actually happened."),
+        cb("discharge_day", "The day PT ends", "Discharged, feeling fine, and no idea how to get from exercises on a sheet back to the sport; the plan picks up from what your clinician cleared."),
+        cb("read_back", "It reads the sheet back to you", "Every exercise from the sheet read back to check before it goes into the week, because the plan follows your care team, not the other way round."),
       ],
     },
     {
@@ -269,6 +273,8 @@ const COMEBACK_PLAYBOOK: Playbook = {
       episodes: [
         cb("bad_night", "After a bad night", "Five hours of sleep and a session on the calendar: the morning call says easy, and why."),
         cb("green_light", "The day it says push", "Everything recovered, and the plan says so; permission to go hard is useful too."),
+        cb("ten_seconds", "The ten-second check-in", "The numbers say fine and your legs say otherwise: a ten-second check-in counts as much as the watch."),
+        cb("steady", "Most days are steady", "Not every day is a test. Most mornings the call is steady, and that is what building looks like."),
         cb("holidays", "Through the holidays", "Travel, late nights, big dinners: the week gets lighter instead of falling apart.", ["11-15", "12-31"]),
       ],
     },
@@ -540,7 +546,7 @@ function pickWeighted<T>(items: T[], weight: (t: T) => number, r: () => number):
 const armLine = (a: Arm | undefined) =>
   !a || a.n === 0 ? "untested" : `${a.wins} of ${a.n} beat the median${evidence(a.n) === "thin" ? ", too few to call" : evidence(a.n) === "lean" ? ", an early lean" : ""}`;
 
-function buildWeek(b: Playbook, monday: string, index: number, inp: PlanInput, L: Learning, taken: Set<string>): PlanWeek {
+function buildWeek(b: Playbook, monday: string, index: number, inp: PlanInput, L: Learning, taken: Map<string, number>): PlanWeek {
   const r = rng(`${b.brand}:${monday}`);
   const arm = (dim: Arm["dim"], key: string) => L.arms.find((a) => a.dim === dim && a.key === key);
   const moments = momentsFor(b, monday);
@@ -548,10 +554,19 @@ function buildWeek(b: Playbook, monday: string, index: number, inp: PlanInput, L
   const mid = addDays(monday, 3).slice(5);
   const used = inp.used ?? [];
 
-  // An episode can be planned if it is in season, makeable, and not already in this plan.
-  const open = (s: Series) =>
+  // An episode can be planned if it is in season, makeable, and not already in
+  // this week. One already elsewhere in the plan can come back (with a different
+  // opening: that is how a small series keeps running), but only when nothing
+  // unused is left, and the one planned longest ago goes first.
+  const open = (s: Series, atBudget = false, unusedOnly = false) =>
     s.episodes.filter(
-      (e) => !taken.has(`${s.key}:${e.key}`) && (!e.window || inWindow(mid, e.window[0], e.window[1])) && (!e.template || !inp.canMake || inp.canMake(e.template))
+      (e) =>
+        taken.get(`${s.key}:${e.key}`) !== index &&
+        !(unusedOnly && taken.has(`${s.key}:${e.key}`)) &&
+        (!e.window || inWindow(mid, e.window[0], e.window[1])) &&
+        (!e.launch || e.launch === launch) &&
+        (!e.template || !inp.canMake || inp.canMake(e.template)) &&
+        !(atBudget && isFilmed(e, b))
     );
   // Freshest first: never-made episodes, then the ones made longest ago.
   const freshness = (s: Series, e: Episode) => {
@@ -571,24 +586,46 @@ function buildWeek(b: Playbook, monday: string, index: number, inp: PlanInput, L
   const pillarCount = new Map<string, number>();
   for (let n = 0; n < b.slotsPerWeek; n++) {
     const job = jobs[n];
-    const pillars = b.pillars.filter((p) => (job ? p.job === job : true) && b.series.some((s) => s.pillar === p.key && open(s).length));
+    // Past the filming budget only re-cuts are on offer (Comeback films everything, so it has no budget).
+    const atBudget = b.brand !== "comeback" && filmed >= b.maxFilmedPerWeek;
+    const has = (p: Pillar, strict: boolean, unused = false) => b.series.some((s) => s.pillar === p.key && open(s, strict && atBudget, unused).length);
+    // In order: an episode not yet in this plan, for this funnel job, within the
+    // filming budget. Give up freshness first, then the job, then the budget.
+    const pillars = [
+      b.pillars.filter((p) => (!job || p.job === job) && has(p, true, true)),
+      b.pillars.filter((p) => (!job || p.job === job) && has(p, true)),
+      b.pillars.filter((p) => has(p, true, true)),
+      b.pillars.filter((p) => has(p, true)),
+      b.pillars.filter((p) => has(p, false)),
+    ].find((x) => x.length) ?? [];
+    const strict = pillars.some((p) => has(p, true));
+    // A moment about to end is worth more than one that has weeks left.
+    const urgency = (p: Pillar) => {
+      const ms = moments.filter((m) => m.pillar === p.key);
+      if (!ms.length) return 1;
+      return ms.some((m) => !inWindow(addDays(monday, 17).slice(5), m.from, m.to)) ? 2.6 : 1.6;
+    };
     const pillar = pickWeighted(
       pillars,
-      (p) => p.share * (moments.some((m) => m.pillar === p.key) ? 1.6 : 1) * (0.5 + thompson(arm("pillar", p.key), r)) / (1 + 2 * (pillarCount.get(p.key) ?? 0)),
+      (p) => p.share * urgency(p) * (0.5 + thompson(arm("pillar", p.key), r)) / (1 + 2 * (pillarCount.get(p.key) ?? 0)),
       r
     );
     if (!pillar) continue;
     pillarCount.set(pillar.key, (pillarCount.get(pillar.key) ?? 0) + 1);
 
-    const cands = b.series.filter((s) => s.pillar === pillar.key).flatMap((s) => open(s).map((e) => ({ s, e })));
-    // Past the filming budget, prefer a re-cut; in season beats evergreen; fresh beats repeated.
-    const rank = ({ s, e }: { s: Series; e: Episode }) =>
-      (filmed >= b.maxFilmedPerWeek && isFilmed(e, b) && b.brand !== "comeback" ? -1000 : 0) + (e.window ? 100 : 0) + Math.min(freshness(s, e), 50);
+    const cands = b.series.filter((s) => s.pillar === pillar.key).flatMap((s) => open(s, strict && atBudget).map((e) => ({ s, e })));
+    // Unused in this plan beats a repeat; in season beats evergreen; fresh beats made-before.
+    const rank = ({ s, e }: { s: Series; e: Episode }) => {
+      const last = taken.get(`${s.key}:${e.key}`);
+      const fresh = freshness(s, e);
+      // A launch's own episode leads its window until it has been made once.
+      return (last === undefined ? 1000 : (index - last) * 10) + (e.launch && fresh === Infinity ? 500 : 0) + (e.window ? 100 : 0) + Math.min(fresh, 50);
+    };
     const best = Math.max(...cands.map(rank));
     const top = cands.filter((c) => rank(c) === best);
     const pick = top[Math.floor(r() * top.length)] ?? cands[0];
     if (!pick) continue;
-    taken.add(`${pick.s.key}:${pick.e.key}`);
+    taken.set(`${pick.s.key}:${pick.e.key}`, index);
     if (isFilmed(pick.e, b)) filmed++;
 
     // Hooks: the last slot of the week goes to the least-tried archetype; the
@@ -611,7 +648,7 @@ function buildWeek(b: Playbook, monday: string, index: number, inp: PlanInput, L
       hook: hook.key, explore, why, status: "planned",
     });
   }
-  const theme = launch ? `Launch: ${launch.replace(/-/g, " ")}` : moments.length ? moments.slice(0, 2).map((m) => m.label).join(" + ") : "Evergreen";
+  const theme = launch ? `Launch (${launch})${moments.length ? ` + ${moments[0].label}` : ""}` : moments.length ? moments.slice(0, 2).map((m) => m.label).join(" + ") : "Evergreen";
   return { weekOf: monday, theme, moments: moments.map((m) => m.key), launch, slots };
 }
 
@@ -624,12 +661,12 @@ export function buildPlan(inp: PlanInput): Plan {
   const b = PLAYBOOKS[inp.brand];
   const L = learn(inp.outcomes ?? []);
   const first = weekOf(inp.now);
-  const taken = new Set<string>();
+  const taken = new Map<string, number>();
   const weeks: PlanWeek[] = [];
   for (let i = 0; i < (inp.weeks ?? PLAN_WEEKS); i++) {
     const monday = addDays(first, 7 * i);
     const kept = inp.prev?.weeks.find((w) => w.weekOf === monday)?.slots.filter((s) => s.status === "drafted") ?? [];
-    for (const s of kept) taken.add(`${s.series}:${s.episode}`);
+    for (const s of kept) taken.set(`${s.series}:${s.episode}`, i);
     const fresh = buildWeek(b, monday, i, inp, L, taken);
     if (kept.length) {
       const keptIds = new Set(kept.map((s) => s.id));
@@ -651,7 +688,7 @@ export function learnings(plan: Pick<Plan, "arms" | "mature" | "brand">): string
   if (plan.mature === 0) return ["Nothing has results yet, so nothing is being favoured: every pillar and every hook gets a turn."];
   const out: string[] = [];
   const name = (a: Arm) =>
-    a.dim === "pillar" ? `"${getPillar(b, a.key)?.label ?? a.key}"` : a.dim === "hook" ? `the ${(getHook(b, a.key)?.label ?? a.key).toLowerCase()} hook` : a.key === "filmed" ? "newly filmed clips" : "re-cuts";
+    a.dim === "pillar" ? `the "${getPillar(b, a.key)?.label ?? a.key}" pillar` : a.dim === "hook" ? `the "${getHook(b, a.key)?.label ?? a.key}" hook` : a.key === "filmed" ? "newly filmed clips" : "re-cuts";
   const strong = plan.arms.filter((a) => a.n >= 5).sort((x, y) => y.wins / y.n - x.wins / x.n);
   const best = strong[0];
   const worst = strong[strong.length - 1];
@@ -674,18 +711,17 @@ export function strategySummary(plan: Plan): string[] {
   const [now, next] = plan.weeks;
   const out: string[] = [];
   if (now?.slots.length) {
-    const what = now.slots.map((s) => `${getSeries(b, s.series)?.name.replace(/ ___$/, "") ?? s.series}: ${s.label.replace(/^(Packing for|What to wear:) /, "")}`);
-    out.push(`This week (${now.theme.toLowerCase() === "evergreen" ? "no holiday in play" : now.theme}): ${list(what)}.`);
+    out.push(`This week (${now.theme === "Evergreen" ? "no holiday in play" : now.theme}): ${list(now.slots.map((s) => `"${s.label}"`))}.`);
     const ex = now.slots.find((s) => s.explore);
-    const others = [...new Set(now.slots.filter((s) => !s.explore).map((s) => (getHook(b, s.hook)?.label ?? s.hook).toLowerCase()))];
-    if (ex) out.push(`Testing: the ${(getHook(b, ex.hook)?.label ?? ex.hook).toLowerCase()} hook, the least-tried opening, against ${list(others)}; and ${list([...new Set(now.slots.map((s) => getPillar(b, s.pillar)?.job ?? ""))].filter(Boolean))} are each covered so the feed isn't all one job.`);
+    const others = [...new Set(now.slots.filter((s) => !s.explore).map((s) => `"${getHook(b, s.hook)?.label ?? s.hook}"`))];
+    if (ex) out.push(`Testing: the "${getHook(b, ex.hook)?.label ?? ex.hook}" hook, the least-tried opening, against ${list(others)}; and ${list([...new Set(now.slots.map((s) => getPillar(b, s.pillar)?.job ?? ""))].filter(Boolean))} are each covered so the feed isn't all one job.`);
   }
   out.push(...learnings(plan));
   if (now?.launch) out.push("A launch window is open: every idea waits for your review before it films, and again before it posts.");
   if (next?.slots.length) {
     const upcoming = plan.weeks.slice(1).flatMap((w) => w.moments).filter((m, i, a) => a.indexOf(m) === i && !now?.moments.includes(m));
     const label = (k: string) => b.moments.find((m) => m.key === k)?.label ?? k;
-    out.push(`Next week: ${next.theme === "Evergreen" ? "evergreen" : next.theme}, starting with ${next.slots[0].label}${upcoming.length ? `; coming up in the six-week plan: ${list(upcoming.slice(0, 3).map(label))}` : ""}.`);
+    out.push(`Next week: ${next.theme === "Evergreen" ? "evergreen" : next.theme}, starting with "${next.slots[0].label}"${upcoming.length ? `; coming up in the six-week plan: ${list(upcoming.slice(0, 3).map(label))}` : ""}.`);
   }
   return out.slice(0, 5);
 }

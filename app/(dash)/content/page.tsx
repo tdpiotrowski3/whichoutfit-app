@@ -1,6 +1,9 @@
 import { getSocialIdeas, getSocialPosts, type SocialIdeaDbRow, type SocialPostDbRow } from "@/lib/data";
 import { Card } from "@/components/ui";
 import { ContentStudioView } from "@/components/studio/ContentStudioView";
+import { loadPlan } from "@/lib/contentEngine/strategyStore";
+import { llmProvider } from "@/lib/contentEngine/llm";
+import type { Plan } from "@/lib/contentEngine/strategy";
 import { workerStatus, closetInfo, getSettings, type WorkerStatus, type ClosetInfo } from "@/lib/contentEngine/studio";
 
 export const dynamic = "force-dynamic";
@@ -14,10 +17,12 @@ export default async function ContentStudioPage() {
   let worker: WorkerStatus = { seenAt: null, online: false, detail: {} };
   let closets: ClosetInfo[] = [];
   let autopilot = false;
+  let plan: Plan | null = null;
   try {
     let settings;
     [ideas, posts, worker, closets, settings] = await Promise.all([getSocialIdeas(80), getSocialPosts(400), workerStatus(now), closetInfo(), getSettings()]);
     autopilot = settings.autopilot;
+    plan = await loadPlan("whichoutfit").catch(() => null);
   } catch {
     return (
       <Card title="Not configured">
@@ -33,5 +38,5 @@ export default async function ContentStudioPage() {
     );
   }
 
-  return <ContentStudioView now={now} ideas={ideas} posts={posts} worker={worker} closets={closets} autopilot={autopilot} />;
+  return <ContentStudioView now={now} ideas={ideas} posts={posts} worker={worker} closets={closets} autopilot={autopilot} plan={plan} provider={llmProvider()} />;
 }
