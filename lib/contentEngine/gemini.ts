@@ -181,8 +181,8 @@ export const DEFAULT_STYLE: SpeechStyle = "even";
  * every comma (measured on the 2026-11-16 day-one cut).
  */
 export const DEFAULT_DIRECTION =
-  "She is showing a friend something on her phone and talking over the screen as she scrolls. " +
-  "Unscripted and low-key, like a voice note: she already knows what she is going to say, so thoughts run on " +
+  "Someone is showing a friend something on their phone and talking over the screen as they scroll. " +
+  "Unscripted and low-key, like a voice note: they already know what they're going to say, so thoughts run on " +
   "and sentences fall at the end. Commas are barely a pause and never a rise. Quick, easy pace, about three words a second. " +
   "The last sentence is a recommendation to that friend, said in the same breath and the same voice, not an advert.";
 
