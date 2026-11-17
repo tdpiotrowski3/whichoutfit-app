@@ -41,6 +41,9 @@ const MAX_PENDING_IDEAS = 6;
 
 const IDEAS_PER_WEEK = 4;
 
+/** Renders before this were made by the old engine and are never re-posted. */
+export const ENGINE_V2_FROM = "2026-11-17";
+
 export type IdeaRow = {
   id: string;
   created_at: string;
@@ -93,8 +96,18 @@ export async function refillRunway(now = new Date()): Promise<RefillResult> {
   const lastIG = new Map<string, PostRow>();
   for (const p of posts) if (p.platform === "instagram" && p.status === "posted") lastIG.set(baseClip(p.clip_id), p);
 
+  // Only clips made by engine v2 are re-posted: the owner retired every older
+  // render on 2026-11-17 ("any new videos should use this"). A clip's age is
+  // when it was first booked.
+  const firstBooked = new Map<string, string>();
+  for (const p of posts) {
+    if (p.platform !== "instagram") continue;
+    const b = baseClip(p.clip_id);
+    if (!firstBooked.has(b) || p.scheduled_for < firstBooked.get(b)!) firstBooked.set(b, p.scheduled_for);
+  }
   const scores = await clipScores(posts);
   const picks = scores
+    .filter((s) => (firstBooked.get(s.clip_id) ?? "") >= ENGINE_V2_FROM)
     .filter((s) => !queuedBase.has(s.clip_id) && s.lastOut && s.lastOut < gapCutoff && lastIG.get(s.clip_id)?.video_url)
     .slice(0, needed);
   if (picks.length === 0) return { runwayBefore, needed, filled: [], short: needed };
