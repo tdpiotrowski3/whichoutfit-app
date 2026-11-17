@@ -169,7 +169,7 @@ export const SCRIPT_SLACK = 1.25;
  * footage kind. Recut masters are mostly stills, which compress for free; filmed
  * flows are mostly scrolling, which can only be sped up.
  */
-export const SPEECH_FLOOR = { recut: 0.35, flow: 0.45 } as const;
+export const SPEECH_FLOOR = { recut: 0.3, flow: 0.45 } as const;
 export type FootageKind = keyof typeof SPEECH_FLOOR;
 
 /** The fewest syllables a whole script (end card excluded) can have over this footage. */
