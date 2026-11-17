@@ -379,8 +379,9 @@ describe("the gold scripts the writer learns from", () => {
   });
 
   it("pairs each usual mistake with a fix that passes, and the lint catches the mistakes itself", () => {
-    const caught = REWRITES.filter((r) => lintSpoken(r.bad.split(" / "), r.brand).length > 0);
-    expect(caught.length).toBeGreaterThanOrEqual(REWRITES.length - 1);
+    const lintable = REWRITES.filter((r) => !r.judgment);
+    const caught = lintable.filter((r) => lintSpoken(r.bad.split(" / "), r.brand).length > 0);
+    expect(caught.length).toBeGreaterThanOrEqual(lintable.length - 1);
     for (const r of REWRITES) expect(lintSpoken(r.good.split(" / "), r.brand), r.good).toEqual([]);
   });
 

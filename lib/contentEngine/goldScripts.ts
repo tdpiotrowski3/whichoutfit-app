@@ -104,7 +104,8 @@ export const GOLD: Gold[] = [
   },
 ];
 
-export type Rewrite = { brand: Brand; bad: string; good: string; why: string };
+/** `judgment`: a taste call no lint can catch (the critic and the examples teach it instead). */
+export type Rewrite = { brand: Brand; bad: string; good: string; why: string; judgment?: true };
 
 /** The ways a draft usually goes wrong, each next to the fix. */
 export const REWRITES: Rewrite[] = [
@@ -114,7 +115,7 @@ export const REWRITES: Rewrite[] = [
   { brand: "whichoutfit", bad: "Now you can plan your whole week of outfits in a single tap.", good: "One tap. The week's done.", why: "\"Now you can\" is an announcer. A person says what happened to them." },
   { brand: "whichoutfit", bad: "It comes back at eighty-eight out of a hundred, plus exactly what to swap.", good: "Eighty-eight. And the one thing to swap.", why: "Let the number stand alone; cut every word that only fills time." },
   { brand: "whichoutfit", bad: "I pick two pieces. / I tap the button. / I get a score. / I see the swap.", good: "Two pieces. / That's all it gets. / Eighty-eight. / Swap the shoes, apparently.", why: "Four lines the same length and shape sound like a list. Vary them: a long one, then a tiny one." },
-  { brand: "whichoutfit", bad: "I've worn the same trousers four days straight.", good: "Four mornings in a row, I've grabbed the same shirt.", why: "The hook has to be a habit the viewer actually has. Nobody admits to re-wearing pants; everyone grabs the same shirt (owner, 2026-11-17)." },
+  { brand: "whichoutfit", bad: "I've worn the same trousers four days straight.", good: "Four mornings in a row, I've grabbed the same shirt.", why: "The hook has to be a habit the viewer actually has. Nobody admits to re-wearing pants; everyone grabs the same shirt (owner, 2026-11-17).", judgment: true },
   { brand: "comeback", bad: "Comeback helps you recover smarter and get back stronger than ever.", good: "Two solid weeks, and the next stage opens.", why: "No promises about the body, ever. Say what the plan does, in its own numbers." },
   { brand: "comeback", bad: "The Morning Brief analyzes your sleep, HRV and resting heart rate to deliver a personalized recommendation.", good: "It read my watch before I was up. Easy today.", why: "That's a feature list. Say what you saw this morning." },
 ];
