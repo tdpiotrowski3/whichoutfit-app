@@ -59,27 +59,50 @@ function textOf(json: Record<string, unknown>): string {
   return (cands?.[0]?.content?.parts ?? []).map((p) => p.text ?? "").join("").trim();
 }
 
-/** One structured-JSON generation, schema-enforced. */
-export async function generateJson<T>(system: string, prompt: string, schema: unknown): Promise<T> {
+export type JsonOptions = {
+  /**
+   * How hard the model thinks before answering. "low" suits extraction and
+   * captions; scripts and their critique use "high" (llm.ts), where judgment is
+   * the whole job. Gemini 2.x has no levels and runs without thinking.
+   */
+  thinking?: "minimal" | "low" | "medium" | "high";
+};
+
+/**
+ * One structured-JSON generation, schema-enforced.
+ *
+ * Sampling is left at Gemini's defaults on purpose (temperature 1.0): Gemini 3
+ * is tuned for it, lower values make it loop and flatten, and the house rule
+ * above is to send no temperature/topP/topK. Variety between a script's drafts
+ * comes from the prompt instead: each draft is assigned a different opening
+ * archetype in code (strategy.ts draftHooks).
+ */
+export async function generateJson<T>(system: string, prompt: string, schema: unknown, opts: JsonOptions = {}): Promise<T> {
   let last: unknown;
+  const want = (process.env.ENGINE_TEXT_THINKING as JsonOptions["thinking"]) || opts.thinking || "low";
   for (const model of TEXT_MODELS) {
-    try {
-      const json = await call(model, {
-        system_instruction: { parts: [{ text: system }] },
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: {
-          responseMimeType: "application/json",
-          responseSchema: schema,
-          thinkingConfig: model.startsWith("gemini-2") ? { thinkingBudget: 0 } : { thinkingLevel: "low" },
-        },
-      });
-      const text = textOf(json).replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
-      if (!text) throw new Error("Gemini returned no content (blocked or truncated).");
-      return JSON.parse(text) as T;
-    } catch (e) {
-      last = e;
-      // Only a retired model or an exhausted day moves on; anything else is a real failure.
-      if (!(e instanceof GeminiError && (e.status === 404 || isDailyQuota(e)))) throw e;
+    // A level this model doesn't take is a 400; fall back to "low" once rather than fail the call.
+    for (const level of want === "low" ? ["low"] : [want, "low"]) {
+      try {
+        const json = await call(model, {
+          system_instruction: { parts: [{ text: system }] },
+          contents: [{ role: "user", parts: [{ text: prompt }] }],
+          generationConfig: {
+            responseMimeType: "application/json",
+            responseSchema: schema,
+            thinkingConfig: model.startsWith("gemini-2") ? { thinkingBudget: 0 } : { thinkingLevel: level },
+          },
+        });
+        const text = textOf(json).replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
+        if (!text) throw new Error("Gemini returned no content (blocked or truncated).");
+        return JSON.parse(text) as T;
+      } catch (e) {
+        last = e;
+        if (e instanceof GeminiError && e.status === 400 && level !== "low" && /thinking/i.test(e.message)) continue;
+        // Only a retired model or an exhausted day moves on; anything else is a real failure.
+        if (!(e instanceof GeminiError && (e.status === 404 || isDailyQuota(e)))) throw e;
+        break;
+      }
     }
   }
   throw last;

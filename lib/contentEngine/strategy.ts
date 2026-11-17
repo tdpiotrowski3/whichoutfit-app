@@ -736,6 +736,21 @@ export function markDrafted(plan: Plan, slotId: string, ideaId: string): Plan {
   return { ...plan, weeks: plan.weeks.map((w) => ({ ...w, slots: w.slots.map((s) => (s.id === slotId ? { ...s, status: "drafted" as const, ideaId } : s)) })) };
 }
 
+/**
+ * The opening archetype each of a clip's drafts must use, so three drafts are
+ * three different scripts and not one script reworded. Chosen in code because
+ * a model asked to "make them different" mostly doesn't. `first` (the hook the
+ * plan is testing) leads when given.
+ */
+export function draftHooks(b: Playbook, seed: string, first?: string, n = 3): HookType[] {
+  const r = rng(seed);
+  const rest = b.hooks.filter((h) => h.key !== first).map((h) => ({ h, x: r() })).sort((a, c) => a.x - c.x).map((v) => v.h);
+  const lead = b.hooks.find((h) => h.key === first);
+  return [...(lead ? [lead] : []), ...rest].slice(0, n);
+}
+
+export const hooksLine = (hooks: HookType[]) => hooks.map((h, i) => `script ${i + 1} opens with "${h.key}" (${h.how})`).join("; ");
+
 /** What the writer is told about one slot. */
 export function slotBriefFor(b: Playbook, s: PlanSlot): string {
   const series = getSeries(b, s.series);
@@ -748,5 +763,6 @@ export function slotBriefFor(b: Playbook, s: PlanSlot): string {
     s.template ? `  template: ${s.template}${s.inputs && Object.keys(s.inputs).length ? ` with ${Object.entries(s.inputs).map(([k, v]) => `${k} = "${v}"`).join(", ")}` : ""}` : null,
     `  job: ${s.job} (${pillar?.label}); people search: "${pillar?.intent}" — the caption should carry a phrase like that`,
     `  hook to test: ${hook?.label} — ${hook?.how} e.g. "${hook?.example}" (never reuse the example's words)`,
+    `  openings: ${hooksLine(draftHooks(b, s.id, s.hook))}`,
   ].filter(Boolean).join("\n");
 }

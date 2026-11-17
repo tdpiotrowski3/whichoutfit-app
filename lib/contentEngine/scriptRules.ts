@@ -1,4 +1,4 @@
-import { scriptFit } from "./templates";
+import { countSyllables, scriptFit } from "./templates";
 
 // The pure half of the script room (scriptRoom.ts does the model calls): the
 // "does this sound like a person" lint, the critic's pass mark, and the pick.
@@ -33,7 +33,19 @@ export type ScriptCase = {
 // --- lint ---------------------------------------------------------------------
 
 /** Words that read as an ad or as a model wrote it. Both brands. */
-const HYPE = /\b(game[- ]?changer|obsessed|insane(ly)?|elevate[sd]?|effortless(ly)?|seamless(ly)?|unlock(s|ed)?|revolutioni[sz]e[sd]?|level[- ]up|say goodbye to|crush(ing)? it|beast mode|next[- ]level|must[- ]have|life[- ]?changing|magic(al)?|stunning|curated|journey|delve|whether you're)\b/i;
+const HYPE = /\b(game[- ]?changer|obsessed|insane(ly)?|elevate[sd]?|effortless(ly)?|seamless(ly)?|unlock(s|ed)?|revolutioni[sz]e[sd]?|level[- ]up|say goodbye to|crush(ing)? it|beast mode|next[- ]level|must[- ]have|life[- ]?changing|magic(al)?|stunning|journey|delve|whether you're)\b/i;
+
+/** Advert adjectives. One is a tell; a stack of them is the whole problem. */
+const AD_ADJ = /\b(perfect(ly)?|flawless(ly)?|ultimate|gorgeous|chic|amazing|incredible|incredibly|fabulous|beautiful(ly)?|stylish|polished|curated|tailored to you|personali[sz]ed)\b/i;
+
+/** Announcer openings: a brand talking, not a person. */
+const ANNOUNCER = /^(introducing|meet\b|say hello|now you can|with (whichoutfit|comeback)|whichoutfit (is|lets|helps|makes)|comeback (health )?(is|lets|helps|makes)|imagine|what if)\b/i;
+
+/** Narrating the taps the viewer can already see. */
+const NAVIGATION = /\b(opened up|open up|I opened (the app|whichoutfit|comeback)|you open (the app|whichoutfit|comeback)|went to the|navigate[sd]? to|head(ed)? (over )?to the|tapped on the|clicked)\b/i;
+
+/** Hooks that could open any video ever made. */
+const GENERIC_HOOK = /^(have you ever|ever (wonder|feel|notice)|do you ever|we all|we've all|everyone knows|let's be honest|let's face it|tired of|struggling (with|to)|getting dressed\b|picking an outfit\b|packing (is|can be)|getting back in(to)? shape\b|here's (how|why)|did you know)\b/i;
 
 /** Padding: words that exist to fill a beat, the fingerprint of the old syllable budget. */
 const PADDING = /\b(go ahead and|simply|absolutely|literally|each and every|every single|the entire|whole entire|in order to|whatsoever|as a matter of fact|at the end of the day|that is the only thing|these days I just)\b/i;
@@ -58,6 +70,7 @@ const WO_RULES: [RegExp, string][] = [
 // and is applied by validatePiece; these are the spoken-word extras.
 const CB_RULES: [RegExp, string][] = [
   [/\b(oura|whoop|garmin|fitbit|polar|coros|strava|myfitnesspal|cronometer|peloton|galaxy watch|pixel watch)\b/i, "names a device or app brand"],
+  [/\b(stronger than ever|recover smarter|bounce back|back to (100|a hundred)|better than (ever|before)|pain[- ]free)\b/i, "promises an outcome for the body"],
 ];
 
 /**
@@ -72,11 +85,20 @@ export function lintSpoken(lines: string[], brand: Brand): string[] {
     let m: RegExpMatchArray | null;
     if ((m = l.match(HYPE))) say(i, "uses an ad word", m);
     if ((m = l.match(PADDING))) say(i, "is padded", m);
+    if ((m = l.match(AD_ADJ))) say(i, "uses an advert adjective (name the thing instead)", m);
+    if ((m = l.trim().match(ANNOUNCER))) say(i, "opens like an announcer", m);
+    if ((m = l.match(NAVIGATION))) say(i, "narrates the taps the screen already shows", m);
     if ((m = l.match(WRITTEN))) say(i, "reads as written English", m);
     if ((m = l.match(UNCONTRACTED))) say(i, "isn't contracted the way people talk", m);
     if (/[!;()—–]|\p{Extended_Pictographic}/u.test(l)) say(i, "has punctuation nobody can say (! ; — or an emoji)");
     for (const [re, why] of brand === "whichoutfit" ? WO_RULES : CB_RULES) if ((m = l.match(re))) say(i, why, m);
   });
+  const generic = (lines[0] ?? "").trim().match(GENERIC_HOOK);
+  if (generic) say(0, "is a generic hook (start inside one specific moment)", generic);
+  // Speech has rhythm: a script whose lines are all the same size reads as a list.
+  const sizes = lines.map(countSyllables);
+  const tiny = lines.some((l) => l.trim().split(/\s+/).length <= 4);
+  if (lines.length >= 4 && !tiny && Math.max(...sizes) - Math.min(...sizes) <= 2) out.push("every line is the same length (make one of them tiny)");
   const last = lines[lines.length - 1] ?? "";
   const ask = last.match(ASK);
   if (ask) say(lines.length - 1, "ends on a call to action (the end card has its own)", ask);

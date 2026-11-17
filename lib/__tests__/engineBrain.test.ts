@@ -11,6 +11,9 @@ import {
   episodeOf, pillarOfFeature, slotBriefFor, learnings, type Outcome,
 } from "../contentEngine/strategy";
 import { toJsonSchema, llmProvider } from "../contentEngine/llm";
+import { GOLD, REWRITES, goldFor, calibrationFor } from "../contentEngine/goldScripts";
+import { draftHooks } from "../contentEngine/strategy";
+import { spokenRules } from "../contentEngine/scriptRoom";
 import { getSlot, seriesSlotKey, validatePiece, slotFromTemplate, claimProblem } from "../comeback/runway";
 
 describe("the voice-first contract", () => {
@@ -339,5 +342,53 @@ describe("the provider layer", () => {
       type: "object", required: ["ideas"], additionalProperties: false,
       properties: { ideas: { type: "array", items: { type: "object", required: ["n", "t"], additionalProperties: false, properties: { n: { type: "integer" }, t: { type: "string" } } } } },
     });
+  });
+});
+
+describe("the gold scripts the writer learns from", () => {
+  it("has enough of them, for both brands, and every one passes the lint it teaches", () => {
+    expect(GOLD.length).toBeGreaterThanOrEqual(8);
+    for (const brand of ["whichoutfit", "comeback"] as const) expect(GOLD.filter((g) => g.brand === brand).length).toBeGreaterThanOrEqual(3);
+    for (const g of GOLD) {
+      expect(g.lines, g.clip).toHaveLength(g.screens.length);
+      expect(lintSpoken(g.lines, g.brand), g.clip).toEqual([]);
+      expect(lintSpoken([g.direction], g.brand).filter((p) => !/call to action/.test(p)), g.clip).toEqual([]);
+      if (g.brand === "comeback") for (const l of g.lines) expect(claimProblem(l), l).toBeNull();
+      // Rhythm: at least one line of five words or fewer.
+      expect(Math.min(...g.lines.map((l) => l.split(/\s+/).length)), g.clip).toBeLessThanOrEqual(5);
+    }
+  });
+
+  it("pairs each usual mistake with a fix that passes, and the lint catches the mistakes itself", () => {
+    const caught = REWRITES.filter((r) => lintSpoken(r.bad.split(" / "), r.brand).length > 0);
+    expect(caught.length).toBeGreaterThanOrEqual(REWRITES.length - 1);
+    for (const r of REWRITES) expect(lintSpoken(r.good.split(" / "), r.brand), r.good).toEqual([]);
+  });
+
+  it("puts the examples in front of the writer and the critic, and no budget to fill", () => {
+    const rules = spokenRules("whichoutfit");
+    expect(rules).toContain(GOLD[0].lines[0]);
+    expect(rules).not.toContain(GOLD.find((g) => g.brand === "comeback")!.lines[0]);
+    expect(rules).not.toMatch(/80.{1,3}100%/);
+    expect(goldFor("comeback")).toContain("Slept five hours. Do I still train?");
+    expect(calibrationFor(["whichoutfit", "comeback"])).toMatch(/would score 5[\s\S]*are a 2/);
+  });
+
+  it("catches the ways a draft usually goes wrong", () => {
+    expect(lintSpoken(["So I opened up WhichOutfit and typed it in."], "whichoutfit")[0]).toMatch(/narrates the taps/);
+    expect(lintSpoken(["It built a chic, cozy look."], "whichoutfit")[0]).toMatch(/advert adjective/);
+    expect(lintSpoken(["Now you can plan your week in one tap."], "whichoutfit")[0]).toMatch(/announcer/);
+    expect(lintSpoken(["Have you ever stood in front of your closet?"], "whichoutfit")[0]).toMatch(/generic hook/);
+    expect(lintSpoken(["I pick two pieces from mine.", "Then I tap the big button.", "It gives me back a score.", "And I see the one swap."], "whichoutfit").join(" ")).toMatch(/same length/);
+    expect(lintSpoken(["Get back stronger than ever."], "comeback")[0]).toMatch(/promises an outcome/);
+  });
+
+  it("assigns each draft a different opening, the plan's hook first", () => {
+    const hooks = draftHooks(PLAYBOOKS.whichoutfit, "2026-11-16:1", "stakes");
+    expect(hooks).toHaveLength(3);
+    expect(hooks[0].key).toBe("stakes");
+    expect(new Set(hooks.map((h) => h.key)).size).toBe(3);
+    expect(draftHooks(PLAYBOOKS.whichoutfit, "2026-11-16:1", "stakes")).toEqual(hooks);
+    expect(draftHooks(PLAYBOOKS.comeback, "a").map((h) => h.key)).not.toEqual(draftHooks(PLAYBOOKS.comeback, "b").map((h) => h.key));
   });
 });
