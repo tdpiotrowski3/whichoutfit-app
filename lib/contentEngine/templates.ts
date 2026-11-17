@@ -134,6 +134,36 @@ flows.push({
     "A brand-new account with an empty closet: the Planner's 'Today's look is ready' card, then a complete outfit for today's real weather built from real products with photos, the pieces laid out together, and one pinned to the wishlist.",
 });
 
+// A trip with plans: the destination plus three events typed into Trips &
+// Packing, filmed on a real closet. The take scrolls until the 2nd and 3rd
+// events' looks are on screen (scrollUntil), so those two beats always show the
+// payoff. Measured 2026-11-17 from the menswear Vegas take after cap_freezes
+// (32.5s). Forecast, piece count and the pieces themselves change every take.
+const TRIP_EVENTS_BEATS: Beat[] = [
+  { start: 0.0, end: 6.0, was: "Opening the app and going into Trips & Packing (plays before anything specific is on screen)." },
+  { start: 6.0, end: 11.5, was: "The destination typed in, then the trip's three events added one by one as chips." },
+  { start: 11.5, end: 14.5, was: "The real forecast for the trip's days at the destination (numbers change every take: name none)." },
+  { start: 14.5, end: 22.0, was: "The packed capsule: one set of the person's own closet pieces, plus a couple of suggested add-ons with product photos (count and pieces change every take: name none)." },
+  { start: 22.0, end: 29.5, was: "Scrolling to the look built for the SECOND event (e.g. a client dinner): own closet pieces plus at most one suggested piece." },
+  { start: 29.5, end: 32.5, was: "The look for the THIRD event (e.g. a pool day), held on screen." },
+];
+
+flows.push({
+  key: "flow:trip_events",
+  kind: "flow",
+  feature: "trip_packing",
+  footage: "trip_events_social",
+  flow: "trip_events_social",
+  inputs: [
+    { name: "city", describe: "Destination as 'City, ST' or 'City, Country', e.g. 'Las Vegas, NV'. A place whose trip has a mix of plans." },
+    { name: "event1", describe: "First event on the trip, 1–3 words, e.g. 'Conference'. Shown only as a chip; its look is not on screen." },
+    { name: "event2", describe: "Second event, 1–3 words, e.g. 'Client dinner'. Its look is the first payoff, so make it a dressy or specific occasion. Start it with a distinctive word (the take scrolls to the look titled with it)." },
+    { name: "event3", describe: "Third event, 1–3 words, e.g. 'Pool day'. Its look closes the clip; a contrast with event2 (dressy then casual) reads best. Start it with a distinctive word." },
+  ],
+  beats: TRIP_EVENTS_BEATS,
+  shows: "A destination and three plans typed into Trips & Packing, the real forecast, a capsule from the closet, then the look for the second plan and the look for the third.",
+});
+
 export const TEMPLATES: Template[] = [...flows, ...recuts];
 
 export function getTemplate(key: string): Template | undefined {
