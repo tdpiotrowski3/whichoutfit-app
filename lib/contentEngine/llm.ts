@@ -3,7 +3,8 @@ import { generateJson as geminiJson } from "./gemini";
 // One door for every piece of writing the content engine asks a model for.
 //
 //   ANTHROPIC_API_KEY set  → Claude (Messages API, raw fetch, JSON-schema output)
-//   otherwise              → Gemini, exactly as before (gemini.ts generateJson)
+//   otherwise              → Gemini (gemini.ts generateJson). This is production
+//                            today, and what the prompts and examples are tuned for.
 //
 // Writing quality is the point of the engine, so the writer, the critic and the
 // planner all come through here; a Claude failure of any kind (bad key, 5xx,
@@ -95,6 +96,8 @@ export type LlmOptions = {
    * default); set ENGINE_CLAUDE_EFFORT to change both. Ignored by Gemini.
    */
   effort?: "low" | "medium" | "high";
+  /** Gemini's thinking level for this call (gemini.ts). Scripts and critique ask for "high". Ignored by Claude. */
+  thinking?: "minimal" | "low" | "medium" | "high";
 };
 
 /** One structured-JSON generation from whichever provider this environment has. */
@@ -108,5 +111,5 @@ export async function generateJson<T>(system: string, prompt: string, schema: un
       console.warn(`content engine: Claude failed, falling back to Gemini — ${e instanceof Error ? e.message : String(e)}`);
     }
   }
-  return geminiJson<T>(system, prompt, schema);
+  return geminiJson<T>(system, prompt, schema, { thinking: opts.thinking });
 }

@@ -1,5 +1,6 @@
 import { generateJson } from "./llm";
 import { lineCeiling } from "./templates";
+import { calibrationFor, goldFor } from "./goldScripts";
 import { candidateProblem, chooseScript, type BeatCue, type Brand, type Chosen, type Review, type ScriptCase } from "./scriptRules";
 
 // The script room: every narration the engine writes goes through here before
@@ -13,21 +14,33 @@ import { candidateProblem, chooseScript, type BeatCue, type Brand, type Chosen, 
 /**
  * How to write for the ear, shared by both brands' writers. This replaces the
  * old "fill 80–100% of the syllable budget" rule, which is what made the
- * narration sound padded.
+ * narration sound padded. Written for Gemini, which is what production runs:
+ * it follows a numbered list of things TO do far better than a list of things
+ * to avoid, and it imitates examples above all, so the rules are stated as
+ * actions and the examples (goldScripts.ts) do most of the teaching.
  */
-export const SPOKEN_RULES = `HOW THE NARRATION WORKS NOW — read this before writing a word.
-The narrator records the whole script as ONE take, like a voice memo, and the edit is cut to the voice: footage is held, trimmed or sped up to follow what is said. So you are not filling time. Nothing needs padding. A line can be three words.
-- One line per beat, in order; the line count must equal the beat count. Line N starts as beat N's picture appears, so the thing on screen in that beat ("on screen:") belongs in the FIRST few words of its line, not the end.
-- Say each thing the way a person says it out loud, as short as it naturally is. "≤N syl" on a beat is a ceiling the footage can't stretch past, never a target; most lines should come in around half of it.
-- Write for the ear. Contractions always (it's, I've, didn't, that's). Fragments are fine. Let lines start with "So", "And", "But", "Okay" the way speech does. One thought per line. If you would not say a sentence to a friend across a table, it is wrong, however good it looks written down.
-- No padding ("go ahead and", "simply", "absolutely", "literally", "every single", "the entire", "that is it"), no written-English joins (however, therefore, not only, as well as, allows you to), no list of features, no adjectives doing a noun's job.
-- The first line is the hook and its first second and a half decide whether anyone stays: open inside a specific moment the viewer has lived (a time, a place, a thing in their hand), not a general truth. It plays before the picture means anything, so it can't depend on the screen.
-- Use at least one exact detail the footage actually shows (the number, the colour, the city, the item). Specific beats clever.
-- The last line lands the payoff that is on screen. Never end on an ask: a spoken end card follows in the same take.
-- Punctuation is breath: a comma is a short one, a full stop a real one. No exclamation marks, semicolons, dashes, brackets or emojis.
-- It is ONE person telling ONE small story: the moment, what they did, the turn, what they got. Each line leads to the next.
+const SPOKEN_HOW = `HOW THIS IS MADE. The narrator records the whole script in ONE take, like a voice memo to a friend, and the video is then cut to fit the voice. You are never filling time. Short is right.
 
-DIRECTION: with each script, one sentence telling a voice actor how to say it: who is talking, to whom, the mood, the pace. e.g. "Telling a friend over coffee about a trip she almost overpacked for, a little amused at herself, easy pace." Describe a person and a moment; never name words to stress, and never ask for slow, dramatic or excited.`;
+WRITE EVERY SCRIPT LIKE THIS:
+1. One line per beat, in order: the line count equals the beat count. Line N begins the moment beat N's picture appears, so put what that picture shows in the first few words of its line.
+2. Each line is one breath, usually three to nine words. "≤N syl" on a beat is the most the footage can stretch to; a good line uses about half of it.
+3. Vary the lengths on purpose. Every script has at least one line of four words or fewer, and neighbouring lines are different sizes.
+4. Talk. Contractions every time (it's, I've, that's, didn't). Fragments are welcome. Lines may start with So, And, But or Okay, as speech does.
+5. Name things. Put a noun where an adjective wants to go: the number, the colour, the item, the city that the screen shows. Use at least one exact detail from "on screen".
+6. Line 1 is the hook: one specific minute of one person's life (a time, a place, something in their hand), understood with the screen off.
+7. Say what you did in the fewest words ("So I asked."). The screen already shows the taps.
+8. The last line is the result on screen, said flat. A spoken end card follows it in the same take, so the script itself asks for nothing.
+9. Punctuation is breath: a comma is a small one, a full stop a real one. Use only . , ? and '.
+10. It is one person telling one small story: the moment, what they did, the turn, what they got.
+
+DIRECTION: with each script, one sentence for the voice actor: who is talking, to whom, where, and the mood. Describe a person in a moment ("Packing the night before a trip, talking to whoever's sitting on the bed, dry, unbothered."), at an easy conversational pace.
+
+LAST STEP, EVERY TIME: say each script out loud in your head. Any line that sounds like an advert, a manual or a list, say again the way you would text it to a friend, and keep that version.`;
+
+/** The writer's craft block for a brand: how to write, then that brand's gold scripts and common fixes. */
+export function spokenRules(brand: Brand): string {
+  return `${SPOKEN_HOW}\n\n${goldFor(brand)}`;
+}
 
 export function cueBrief(beats: BeatCue[]): string {
   return beats.map((b, i) => `  beat ${i + 1} (${b.seconds.toFixed(1)}s on screen, ≤${lineCeiling(b.seconds)} syl) on screen: ${b.shows}`).join("\n");
@@ -42,6 +55,7 @@ const REVIEW_SCHEMA = {
         type: "OBJECT",
         properties: {
           id: { type: "STRING" },
+          weakest: { type: "STRING" },
           pick: { type: "INTEGER" },
           final: { type: "ARRAY", items: { type: "STRING" } },
           spoken: { type: "INTEGER" },
@@ -52,30 +66,32 @@ const REVIEW_SCHEMA = {
           brand: { type: "INTEGER" },
           notes: { type: "STRING" },
         },
-        required: ["id", "pick", "final", "spoken", "hook", "sync", "specific", "payoff", "brand", "notes"],
+        required: ["id", "weakest", "pick", "final", "spoken", "hook", "sync", "specific", "payoff", "brand", "notes"],
       },
     },
   },
   required: ["reviews"],
 };
 
-const CRITIC_SYSTEM = `You are the script editor for short vertical videos (15–30s) with a spoken voiceover over screen footage of an app. You did not write these scripts and you are hard to please. Your one question: would a real person say this, out loud, to a friend, and would a stranger keep watching?
+const CRITIC_SYSTEM = `You are the script editor for short vertical videos (15–30s): one person's voice over screen footage of an app. You did not write these scripts, you are hard to please, and your name goes on whatever you pass. One question decides everything: would a real person say this out loud to a friend, and would a stranger keep watching?
 
-For each CLIP you get what is on screen in each beat, the spoken end-card line that follows the script, and several CANDIDATE scripts (one line per beat). Read every candidate aloud in your head at talking speed.
+For each CLIP you get what is on screen in each beat, the spoken end-card line that follows the script, and several CANDIDATE scripts (one line per beat).
 
-Score the script you end up recommending, 1–5 each. Be honest; 3 means "fine, forgettable", 4 means "good", 5 means "I would believe someone said this unprompted". Most first drafts are a 3.
-- spoken: sounds like speech. Contractions, natural rhythm, lines of different lengths, nothing padded to fill time, no sentence that only exists in writing, no announcer or advert cadence, not a list of features.
-- hook: the first second and a half. A specific, lived moment that makes someone stay, and that works before the picture means anything. A general statement ("Getting dressed is hard") is a 2.
-- sync: line N is about what is on screen in beat N, and names it early in the line, since each line starts as its picture appears. A line that describes a different beat's picture is a 2 however good it sounds.
-- specific: at least one exact detail the footage really shows (a number, a colour, a place, an item), and nothing claimed that the screen doesn't show.
-- payoff: the last line lands what the viewer was promised, and does not ask for anything (the end card does that).
-- brand: follows every BRAND RULE below. Any breach is a 1.
+Work in this order for every clip:
+1. Read each candidate aloud in your head at talking speed.
+2. "weakest": quote the single worst line among the candidates and say in a few words what is wrong with it. Do this before you score anything.
+3. "pick": the index of the best candidate.
+4. "final": the lines to record. Start from the picked candidate and make it better to SAY: cut every word that only fills time, swap an adjective for the thing itself, move what's on screen to the front of its line, make one line tiny if they are all the same size, sharpen line 1 into a specific moment. Edits only ever make it shorter or plainer. Keep exactly one line per beat, keep the facts on screen, keep it one person's story, and end on the result with no ask. If the candidate is already right, return it word for word.
+5. Score "final", 1–5 each. Use the whole scale: 3 is "fine, forgettable" and is where most drafts land; 4 is good; 5 is "I'd believe someone said this unprompted".
+   - spoken: sounds like speech. Contractions, lines of different lengths, nothing padded, no sentence that only exists in writing, no announcer or advert cadence ("Now you can…", stacked adjectives), not a list of features.
+   - hook: line 1 is a specific lived moment that works with the screen off. A general statement ("Getting dressed is hard") or a question anyone could ask is a 2.
+   - sync: line N is about what is on screen in beat N and names it early in the line. A line describing a different beat's picture is a 2 however good it sounds.
+   - specific: at least one exact detail the footage really shows, and nothing claimed that the screen doesn't show.
+   - payoff: the last line lands the result and asks for nothing.
+   - brand: follows every BRAND RULE below. Any breach is a 1.
+6. "notes": one sentence on what you changed or why the others lost.
 
-Then choose:
-- "pick": the index (0-based) of the best candidate.
-- "final": the lines to record. Either the picked candidate word for word, or your edit of it when a cut or a swap makes it clearly better to say: cut padding, fix a line that doesn't match its beat, sharpen the hook. Edits only ever make it shorter or plainer. Keep exactly one line per beat, keep the facts, keep it one person's story, and never add an ask at the end.
-- Scores are for "final". If even your edit is not something you'd put your name to, score it honestly low; a weak script is thrown away, and that is the right outcome.
-- "notes": one sentence: what was wrong with the others or what you changed.`;
+A script you would not put your name to gets honest low scores. It is thrown away and rewritten, which is the right outcome; passing a weak script is the only real mistake you can make here.`;
 
 /**
  * One critic call for a batch of clips. Candidates that already break a hard
@@ -95,19 +111,20 @@ export async function critique(cases: ScriptCase[], brandRules: string): Promise
         cands.map(({ c, i }) => `CANDIDATE ${i}${c.hook ? ` [hook: ${c.hook}]` : ""}\n${c.voiceover.map((l, n) => `  ${n + 1}. ${l.trim()}`).join("\n")}`).join("\n")
     )
     .join("\n\n");
-  const r = await generateJson<{ reviews: (Omit<Review, "scores"> & Review["scores"])[] }>(
-    `${CRITIC_SYSTEM}\n\nBRAND RULES:\n${brandRules}`,
+  const r = await generateJson<{ reviews: (Omit<Review, "scores"> & Review["scores"] & { weakest?: string })[] }>(
+    `${CRITIC_SYSTEM}\n\n${calibrationFor([...new Set(shown.map((x) => x.sc.brand))])}\n\nBRAND RULES:\n${brandRules}`,
     `Review ${shown.length} clip${shown.length === 1 ? "" : "s"}. Return one review per clip, with "id" set to the clip's id.\n\n${prompt}`,
-    REVIEW_SCHEMA
+    REVIEW_SCHEMA,
+    { thinking: "high" }
   );
   for (const v of r.reviews ?? []) {
-    const { id, pick, final, notes, ...scores } = v;
-    out.set(String(id).trim(), { id: String(id).trim(), pick: Number(pick), final: final ?? [], notes: notes ?? "", scores });
+    const { id, pick, final, notes, weakest, ...scores } = v;
+    out.set(String(id).trim(), { id: String(id).trim(), pick: Number(pick), final: final ?? [], notes: [notes, weakest && `Weakest line: ${weakest}`].filter(Boolean).join(" "), scores });
   }
   return out;
 }
 
-export type RoomResult = { chosen: Map<string, Chosen>; dropped: Map<string, string>; reviewed: boolean };
+export type RoomResult = { chosen: Map<string, Chosen>; dropped: Map<string, string>; reviewed: boolean; reviews: Map<string, Review> };
 
 /**
  * Candidates in, the scripts that ship out. Never throws: if the critic can't
@@ -133,7 +150,7 @@ export async function runScriptRoom(cases: ScriptCase[], brandRules: string): Pr
     if (typeof c === "string") dropped.set(sc.id, c);
     else chosen.set(sc.id, c);
   }
-  return { chosen, dropped, reviewed: reviews !== null };
+  return { chosen, dropped, reviewed: reviews !== null, reviews: reviews ?? new Map() };
 }
 
 export type { Brand, ScriptCase, Chosen };

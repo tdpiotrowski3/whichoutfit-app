@@ -1,13 +1,12 @@
 import { admin } from "@/lib/supabase";
-import { generateJson } from "@/lib/contentEngine/llm";
-import { SPOKEN_RULES, runScriptRoom } from "@/lib/contentEngine/scriptRoom";
-import { META, meanScore, type Candidate, type ScriptCase } from "@/lib/contentEngine/scriptRules";
+import { META } from "@/lib/contentEngine/scriptRules";
+import { settle, writePieces, openingsFor } from "./writer";
 import { PLAYBOOKS, markDrafted, openSlots, slotBriefFor, type Plan } from "@/lib/contentEngine/strategy";
 import { refreshPlan, savePlan } from "@/lib/contentEngine/strategyStore";
 import {
-  RUNWAY, PHASES, VOICE_RULES, CAPTION_RULES, HASHTAG_RULES,
-  slotBrief, slotFromTemplate, validatePiece, templateKey, getSlot, ctaFor, seriesSlotKey,
-  type Phase, type PieceFields, type RawPiece, type Slot,
+  RUNWAY, PHASES,
+  slotBrief, slotFromTemplate, templateKey, getSlot, seriesSlotKey,
+  type Phase, type Slot,
 } from "./runway";
 
 // The I/O around runway.ts: Comeback's launch pieces live in social_ideas with
@@ -63,54 +62,6 @@ export async function setLaunchDate(date: string | null): Promise<void> {
 
 // --- drafting --------------------------------------------------------------
 
-const PIECE_SCHEMA = {
-  type: "OBJECT",
-  properties: {
-    pieces: {
-      type: "ARRAY",
-      items: {
-        type: "OBJECT",
-        properties: {
-          slot: { type: "STRING" },
-          title: { type: "STRING" },
-          content: { type: "ARRAY", items: { type: "STRING" } },
-          scripts: {
-            type: "ARRAY",
-            items: {
-              type: "OBJECT",
-              properties: { hook: { type: "STRING" }, direction: { type: "STRING" }, voiceover: { type: "ARRAY", items: { type: "STRING" } } },
-              required: ["hook", "direction", "voiceover"],
-            },
-          },
-          captions: { type: "ARRAY", items: { type: "STRING" } },
-          hashtags: { type: "STRING" },
-          rationale: { type: "STRING" },
-        },
-        required: ["slot", "title", "content", "scripts", "captions", "hashtags", "rationale"],
-      },
-    },
-  },
-  required: ["pieces"],
-};
-
-const SYSTEM = `${VOICE_RULES}
-
-You write Comeback Health's launch runway: a planned sequence of reels, carousels, story sets and waitlist emails, counted in days from launch (T-0). Each SLOT says what its piece must do and its exact shape. Write one piece per slot you are given, with "slot" set to its key.
-
-Reels — a voice over footage (the app's screens, or Tyler to camera).
-${SPOKEN_RULES}
-For every reel, leave "content" empty and write 3 complete candidate scripts in "scripts", genuinely different from each other (a different opening archetype and way into the story, not rewordings); an editor reads them aloud and keeps at most one. "hook" names the opening archetype (${PLAYBOOKS.comeback.hooks.map((h) => h.key).join(", ")}), "direction" is the note for the voice, "voiceover" the lines, one per beat. Pieces Tyler films himself are what he says to camera, in his own first person, with nothing invented about him.
-Everything that is not a reel gets an empty "scripts" list and its text in "content".
-
-Carousels and story sets: concrete, skimmable, one idea per slide or frame. Emails: plain, warm, short paragraphs, signed "Tyler, Comeback Health". The runway should read as one arc: each phase builds on the one before it, and no two pieces open the same way.
-
-Captions (not for emails, which get an empty list): exactly three options — [0] hook/curiosity, [1] plain and useful, [2] personal or POV.
-${CAPTION_RULES}
-${HASHTAG_RULES}
-Emails get an empty hashtags string.
-Title: a short internal name, 3–6 words.
-Rationale: one sentence on what this piece does in the runway.`;
-
 function phasePrompt(phase: Phase, slots: Slot[], written: PieceRow[]): string {
   const p = PHASES.find((x) => x.key === phase)!;
   const arc = PHASES.map((x) => `- ${x.label}: ${x.goal}`).join("\n");
@@ -131,50 +82,6 @@ ${slots.map(slotBrief).join("\n\n")}`;
 
 export type DraftResult = { drafted: number; dropped: string[]; remaining: number };
 
-type WriterPiece = RawPiece & { scripts?: Candidate[] };
-
-/**
- * From what the writer returned to rows that can be stored. Reels go through
- * the script room first (contentEngine/scriptRoom.ts): the critic reads the
- * candidates against each beat's screen and keeps, tightens or fails them.
- * Then every piece is held to its slot's shape and the claims guard.
- */
-async function settle(raws: WriterPiece[], wanted: (slot: string) => boolean): Promise<{ rows: PieceFields[]; misses: string[] }> {
-  const rows: PieceFields[] = [];
-  const misses: string[] = [];
-  const pieces = raws.filter((r) => wanted(r.slot));
-  const cases: ScriptCase[] = [];
-  for (const raw of pieces) {
-    const slot = getSlot(raw.slot);
-    if (slot?.format !== "reel") continue;
-    const candidates = (raw.scripts?.length ? raw.scripts : raw.content?.length ? [{ voiceover: raw.content }] : []).filter((c) => Array.isArray(c.voiceover));
-    cases.push({
-      id: raw.slot, brand: "comeback", about: slot.brief,
-      beats: (slot.beats ?? []).map((seconds, i) => ({ seconds, shows: slot.screens?.[i] ?? "Tyler talking to camera" })),
-      cta: ctaFor(slot.phase), candidates,
-    });
-  }
-  const room = cases.length ? await runScriptRoom(cases, VOICE_RULES) : null;
-  for (const raw of pieces) {
-    const slot = getSlot(raw.slot);
-    let piece: RawPiece = raw;
-    let extra: Record<string, string> = {};
-    if (slot?.format === "reel") {
-      const pick = room?.chosen.get(raw.slot);
-      if (!pick) { misses.push(`${raw.slot}: ${room?.dropped.get(raw.slot) ?? "no script passed"}`); continue; }
-      piece = { ...raw, content: pick.voiceover, direction: pick.direction };
-      if (pick.hook) extra[META.hook] = pick.hook.split(/[\s(]/)[0];
-      if (pick.scores) extra[META.score] = meanScore(pick.scores).toFixed(1);
-      if (!room?.reviewed) piece.rationale = `${raw.rationale ?? ""} (Not checked by the script editor: it was unavailable.)`;
-    }
-    const v = validatePiece(piece);
-    if (typeof v === "string") misses.push(`${raw.slot}: ${v}`);
-    else rows.push({ ...v, inputs: { ...v.inputs, ...extra } });
-    extra = {};
-  }
-  return { rows, misses };
-}
-
 /**
  * Fill every runway slot that has no live piece yet, a phase at a time (one
  * writer call and one critic call each), retrying a phase's misses once with
@@ -193,7 +100,7 @@ export async function draftRunway(only?: Phase): Promise<DraftResult> {
     let todo = RUNWAY.filter((s) => s.phase === phase && !filled.has(templateKey(s)));
     let reasons = "";
     for (let attempt = 0; attempt < 2 && todo.length; attempt++) {
-      const r = await generateJson<{ pieces: WriterPiece[] }>(SYSTEM, phasePrompt(phase, todo, pieces) + reasons, PIECE_SCHEMA);
+      const r = await writePieces(phasePrompt(phase, todo, pieces) + openingsFor(todo.map((x) => x.key)) + reasons);
       const { rows, misses } = await settle(r.pieces ?? [], (k) => todo.some((s) => s.key === k));
       if (rows.length) {
         const { data, error } = await db.from("social_ideas").insert(rows.map((v) => ({ ...v, brand: BRAND, status: "proposed", source: "planner" }))).select("*");
@@ -228,14 +135,14 @@ export async function draftSeriesWeek(now = new Date()): Promise<DraftResult & {
   const slots = openSlots(plan, b.slotsPerWeek).filter((s) => !live.has(`cb:${seriesSlotKey(s.series, s.episode)}`));
   if (!slots.length) return { drafted: 0, dropped: [], remaining: 0, plan };
   const keyOf = new Map(slots.map((s) => [seriesSlotKey(s.series, s.episode), s]));
-  const prompt = `Now writing: this week's episodes of Comeback's always-on series. The launch runway is separate; these are the repeatable formats people follow week to week. Each SLOT says which series and episode it is, what it is for, and which opening to test: open the FIRST script with that hook archetype and the other two with different ones. Set "slot" to the key given.
+  const prompt = `Now writing: this week's episodes of Comeback's always-on series. The launch runway is separate; these are the repeatable formats people follow week to week. Each SLOT says which series and episode it is, what it is for, and the opening each of its three scripts uses. Set "slot" to the key given.
 
 ALREADY WRITTEN — don't repeat an opening:
 ${pieces.slice(0, 20).map((w) => `- "${w.title}" — ${w.voiceover[0] ?? ""}`).join("\n") || "- none yet"}
 
 SLOTS TO WRITE:
 ${[...keyOf.entries()].map(([k, s]) => `${slotBrief(getSlot(k)!)}\n${slotBriefFor(b, s).split("\n").slice(1).join("\n")}`).join("\n\n")}`;
-  const r = await generateJson<{ pieces: WriterPiece[] }>(SYSTEM, prompt, PIECE_SCHEMA);
+  const r = await writePieces(prompt);
   const { rows, misses } = await settle(r.pieces ?? [], (k) => keyOf.has(k));
   let drafted = 0;
   if (rows.length) {
@@ -270,7 +177,7 @@ SLOT:
 ${slotBrief(slot)}`;
   let reason = "";
   for (let attempt = 0; attempt < 2; attempt++) {
-    const r = await generateJson<{ pieces: WriterPiece[] }>(SYSTEM, prompt + (reason ? `\n\nYour last draft was rejected: ${reason}. Fix that.` : ""), PIECE_SCHEMA);
+    const r = await writePieces(prompt + openingsFor([slot.key]) + (reason ? `\n\nYour last draft was rejected: ${reason}. Fix that.` : ""));
     const raw = r.pieces?.[0];
     if (!raw) { reason = "no piece returned"; continue; }
     raw.slot = slot.key;
