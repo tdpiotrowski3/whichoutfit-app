@@ -6,10 +6,12 @@ import { VOICES } from "@/lib/contentEngine/personas";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-// POST {line, voice?, style?, direction?} → {pcm, sampleRate, model, voice}: narration, spoken.
+// POST {line, voice?, style?, direction?} → {pcm, sampleRate, model, voice, directed}: narration, spoken.
 // `direction` is the job's director's note (GET /jobs → job.direction): who is
 // talking, to whom, the mood, the pace. When given, it replaces the fixed
-// `style` wrapper. `line` may be one line or a whole script in one take. The
+// `style` wrapper ("" asks for the default note); `directed` in the reply says
+// whether the take was performed from a note, so the Mac can tell a server that
+// predates this. `line` may be one line or a whole script in one take. The
 // Gemini key stays on the server; the Mac only ever sees audio. One line per
 // request keeps every response far under Vercel's body limit.
 //

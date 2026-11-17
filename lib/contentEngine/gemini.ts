@@ -132,6 +132,8 @@ export type Speech = {
   /** Which model actually spoke — a voice that changes partway through a batch is worth knowing. */
   model: string;
   voice: string;
+  /** True when the take was performed from a director's note; false for the legacy quoted-line read. */
+  directed: boolean;
 };
 
 /**
@@ -149,28 +151,80 @@ export type SpeechStyle = keyof typeof STYLES;
 export const DEFAULT_STYLE: SpeechStyle = "even";
 
 /**
- * Speak one line. The style note goes in the prompt; the line itself is quoted
- * and never last, because a trailing word like "start" or "so" can read as an
- * instruction and make the model answer in text (a 400) instead of speaking.
+ * The director's note a clip gets when its job carries none (`job.direction`).
+ * Written the way Gemini TTS takes direction: who is talking, to whom, in what
+ * mood, at what pace. Not a list of things to avoid: "no dramatic pauses, no
+ * word punched" still produced a read-aloud voice that rose ~9 semitones into
+ * every comma (measured on the 2026-11-16 day-one cut).
  */
-export async function speak(line: string, voice: string = VOICE, style: SpeechStyle = DEFAULT_STYLE, direction?: string): Promise<Speech> {
-  // Pace matters as much as tone: narration is laid onto fixed footage, and the
-  // first live test with "unhurried" in this note ran ~2.8 syllables/sec against
-  // the ~4.4 the beats are budgeted for, so every script overran its clip.
-  // The "friend" note alone made every voice lean hard on the most interesting
-  // word ("a GALLERY opening"), which the owner heard as fake. "even" asks for
-  // ordinary sentence stress; the others stay selectable for A/B listening.
-  //
-  // Engine v2: a script carries its own director's note (job.direction — who is
-  // talking, to whom, the mood, the pace). When the Mac passes one it replaces
-  // the fixed style wrapper: the model is given a person and a moment to speak
-  // as, not an instruction to "read" something, which is what produced the
-  // read-aloud cadence. Pace is no longer forced brisk here because the
-  // renderer now cuts the footage to the voice.
-  const note = (direction ?? "").replace(/["\u201c\u201d\n\r]/g, " ").replace(/\s+/g, " ").trim().slice(0, 240);
-  const prompt = note
-    ? `You are a voice actor recording one natural take for a short video. Who you are and how it sounds: ${note} Speak the way that person actually talks: ordinary sentence stress, no word punched or drawn out, small natural breaths at the commas, no announcer or advert voice. The words: "${line}" (say only the quoted words, exactly as written)`
-    : `${STYLES[style]} "${line}" (read only the quoted words)`;
+export const DEFAULT_DIRECTION =
+  "She is showing a friend something on her phone and talking over the screen as she scrolls. " +
+  "Unscripted and low-key, like a voice note: she already knows what she is going to say, so thoughts run on " +
+  "and sentences fall at the end. Commas are barely a pause and never a rise. Quick, easy pace, about three words a second. " +
+  "The last sentence is a recommendation to that friend, said in the same breath and the same voice, not an advert.";
+
+/** Longest director's note the voice route accepts. */
+export const MAX_DIRECTION = 400;
+
+/**
+ * The prompt for a directed read: scene and notes first, the transcript last
+ * under its own heading (the layout Gemini's TTS guide uses). The whole script
+ * is one performance, so the voice keeps one breath and one pitch range from the
+ * first line to the end card.
+ */
+export function directedPrompt(transcript: string, direction: string = DEFAULT_DIRECTION): string {
+  return [
+    "Perform the transcript below as one natural take. Speak only the transcript's words, exactly as written.",
+    "",
+    "# SCENE",
+    "A short vertical video for Instagram and TikTok: a screen recording of an outfit app, with one person talking over it. " +
+      "The listener is a friend her age, phone in hand, sound on.",
+    "",
+    "# DIRECTOR'S NOTES",
+    direction.trim(),
+    "",
+    "# TRANSCRIPT",
+    transcript,
+  ].join("\n");
+}
+
+/**
+ * Speak narration. Two ways to ask:
+ *
+ *   directed (`direction` given, or "" for the default note) — a whole script in
+ *     one take, performed from a director's note. What the voice-first renderer
+ *     uses.
+ *   legacy (no `direction`) — one quoted line behind a style note. Kept so a
+ *     renderer that predates `direction` gets exactly what it got before. The
+ *     line is quoted and never last, because a trailing word like "start" or
+ *     "so" can read as an instruction and make the model answer in text (a 400).
+ *
+ * A directed take that comes back with no audio (the model answered in text)
+ * falls back to the legacy framing once, so a render never dies on the prompt.
+ */
+export async function speak(
+  line: string,
+  voice: string = VOICE,
+  style: SpeechStyle = DEFAULT_STYLE,
+  direction?: string | null
+): Promise<Speech> {
+  const directed = direction !== undefined && direction !== null;
+  if (directed) {
+    try {
+      return { ...(await generateSpeech(directedPrompt(line, direction.trim() || DEFAULT_DIRECTION), voice)), directed: true };
+    } catch (e) {
+      // Quota and rate limits are not the prompt's fault; only a refusal to speak is.
+      if (!(e instanceof GeminiError && (e.status === 400 || e.status === 502))) throw e;
+    }
+  }
+  // Pace matters as much as tone: the first live test with "unhurried" in this
+  // note ran ~2.8 syllables/sec. The "friend" note alone made every voice lean
+  // hard on the most interesting word ("a GALLERY opening"), which the owner
+  // heard as fake. "even" asks for ordinary sentence stress.
+  return { ...(await generateSpeech(`${STYLES[style]} "${line}" (read only the quoted words)`, voice)), directed: false };
+}
+
+async function generateSpeech(prompt: string, voice: string): Promise<Omit<Speech, "directed">> {
   let last: unknown;
   for (const model of TTS_MODELS) {
     try {
