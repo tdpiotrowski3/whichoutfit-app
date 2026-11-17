@@ -1,4 +1,4 @@
-import { countSyllables, scriptFit } from "./templates";
+import { countSyllables, scriptFit, type FootageKind } from "./templates";
 
 // The pure half of the script room (scriptRoom.ts does the model calls): the
 // "does this sound like a person" lint, the critic's pass mark, and the pick.
@@ -27,6 +27,8 @@ export type ScriptCase = {
   beats: BeatCue[];
   /** The spoken end-card line that follows the script in the same take. */
   cta: string;
+  /** What the footage is (recut master or filmed flow); sets the script's speech floor. Absent = no floor. */
+  kind?: FootageKind;
   candidates: Candidate[];
 };
 
@@ -141,10 +143,10 @@ export function passes(s: Scores): string | null {
 export const meanScore = (s: Scores) => SCORE_KEYS.reduce((a, k) => a + s[k], 0) / SCORE_KEYS.length;
 
 /** A candidate's own problems: shape, fit and lint. Null when it can go to the critic. */
-export function candidateProblem(c: Candidate, sc: Pick<ScriptCase, "beats" | "cta" | "brand">): string | null {
+export function candidateProblem(c: Candidate, sc: Pick<ScriptCase, "beats" | "cta" | "brand" | "kind">): string | null {
   const lines = c.voiceover.map((l) => l.trim()).filter(Boolean);
   if (lines.length !== sc.beats.length) return `${lines.length} lines for ${sc.beats.length} beats`;
-  const fit = scriptFit(lines, sc.beats.map((b) => b.seconds), sc.cta);
+  const fit = scriptFit(lines, sc.beats.map((b) => b.seconds), sc.cta, { kind: sc.kind });
   if (fit) return fit;
   const lint = lintSpoken(lines, sc.brand);
   return lint.length ? lint[0] : null;

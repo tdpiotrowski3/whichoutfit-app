@@ -151,12 +151,33 @@ export function syllableBudget(beat: Pick<Beat, "start" | "end">): number {
 //   - one line may run to LINE_STRETCH x its beat's length in speech time;
 //   - the whole script plus the spoken end card fits the footage + SCRIPT_SLACK.
 //
-// There is no minimum. A three-word line is fine.
+// A single line has no minimum: a three-word line is fine. The SCRIPT as a whole
+// has a floor (SPEECH_FLOOR) once the footage kind is known: the Mac renderer
+// compresses footage to a short script (trims waits, speeds motion to 1.5x, 2x as a
+// last resort, and keeps each beat's payoff on screen 1.2s), and below the floor it
+// can only do that with a visible fast-forward. Measured 2026-11-17 on the engine v2
+// selftest (FitCheck tools/capture-engine/social, `./engine.py --selftest`):
+// 5.2s of speech held a 17.4s recut master (0.30) and only just held a 12s
+// scroll-heavy flow cut (0.43), with one line drifting 0.3s.
 
 /** How far past its beat one line may run, in speech time, before the footage can't hold for it. */
 export const LINE_STRETCH = 1.6;
 /** How much longer than the footage the whole narration (script + end card) may run. */
 export const SCRIPT_SLACK = 1.25;
+/**
+ * The least speech (script lines, end card excluded) per second of footage, by
+ * footage kind. Recut masters are mostly stills, which compress for free; filmed
+ * flows are mostly scrolling, which can only be sped up.
+ */
+export const SPEECH_FLOOR = { recut: 0.35, flow: 0.45 } as const;
+export type FootageKind = keyof typeof SPEECH_FLOOR;
+
+/** The fewest syllables a whole script (end card excluded) can have over this footage. */
+export function scriptFloor(beatSeconds: number[], kind: FootageKind): number {
+  const footage = beatSeconds.reduce((a, b) => a + b, 0);
+  return Math.max(0, Math.ceil(footage * SPEECH_FLOOR[kind] * SYLLABLES_PER_SEC) - COUNT_SLOP);
+}
+
 /** The syllable counter is approximate, so the ceilings forgive this much. */
 const COUNT_SLOP = 2;
 
@@ -175,9 +196,10 @@ export function lineCeiling(beatSeconds: number): number {
 
 /**
  * Does a script fit its footage under the voice-first contract? Returns why
- * not, or null. `beatSeconds[i]` is beat i's length on screen.
+ * not, or null. `beatSeconds[i]` is beat i's length on screen. With `kind`, a
+ * script too short for its footage (under SPEECH_FLOOR) fails too.
  */
-export function scriptFit(lines: string[], beatSeconds: number[], cta = ""): string | null {
+export function scriptFit(lines: string[], beatSeconds: number[], cta = "", opts: { kind?: FootageKind } = {}): string | null {
   for (let i = 0; i < lines.length; i++) {
     const over = countSyllables(lines[i]) - lineCeiling(beatSeconds[i] ?? 4) - COUNT_SLOP;
     if (over > 0) return `line ${i + 1} is ${over} syllables over what its beat can stretch to`;
@@ -186,6 +208,13 @@ export function scriptFit(lines: string[], beatSeconds: number[], cta = ""): str
   const spoken = [...lines, cta].reduce((a, l) => a + speechSeconds(l), 0);
   const most = footage * SCRIPT_SLACK + COUNT_SLOP / SYLLABLES_PER_SEC;
   if (spoken > most) return `the script runs about ${spoken.toFixed(1)}s spoken (with the end card) against ${footage.toFixed(1)}s of footage; cut ${Math.ceil((spoken - most) * SYLLABLES_PER_SEC)} syllables`;
+  if (opts.kind) {
+    const script = lines.reduce((a, l) => a + speechSeconds(l), 0);
+    const least = footage * SPEECH_FLOOR[opts.kind] - COUNT_SLOP / SYLLABLES_PER_SEC;
+    if (script < least) {
+      return `the script is about ${script.toFixed(1)}s spoken over ${footage.toFixed(1)}s of footage, too short for the ${opts.kind} footage to follow without fast-forwarding; add about ${Math.ceil((least - script) * SYLLABLES_PER_SEC)} syllables`;
+    }
+  }
   return null;
 }
 

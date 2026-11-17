@@ -1,7 +1,7 @@
 // Engine v2's brain: the voice-first script contract, the spoken-word lint and
 // critic gate, the strategy plan and its learning, and the job the Mac gets.
 import { describe, expect, it } from "vitest";
-import { TEMPLATES, getTemplate, scriptFit, lineCeiling, speechSeconds, CTA_LINE, LINE_STRETCH, SYLLABLES_PER_SEC } from "../contentEngine/templates";
+import { TEMPLATES, getTemplate, scriptFit, lineCeiling, speechSeconds, CTA_LINE, LINE_STRETCH, SYLLABLES_PER_SEC, SPEECH_FLOOR } from "../contentEngine/templates";
 import {
   lintSpoken, passes, chooseScript, candidateProblem, directionFor, defaultDirection, flowInputs, cleanDirection, META,
   type ScriptCase, type Review, type Scores,
@@ -34,6 +34,25 @@ describe("the voice-first contract", () => {
     const lines = beats.map((s) => Array(lineCeiling(s) - 1).fill("go").join(" "));
     expect(scriptFit(lines, beats, CTA_LINE)).toMatch(/against 17\.4s of footage/);
     expect(speechSeconds(CTA_LINE)).toBeGreaterThan(4);
+  });
+
+  it("has a speech floor per footage kind once the kind is known", () => {
+    const tiny = ["Does this work?", "So I asked.", "Two pieces.", "Eighty-eight."];
+    expect(scriptFit(tiny, beats, CTA_LINE)).toBeNull(); // no kind: no floor (old callers)
+    expect(scriptFit(tiny, beats, CTA_LINE, { kind: "recut" })).toMatch(/too short for the recut footage.*add about \d+ syllables/);
+    // ~7s spoken over the 17.4s master: enough for a recut (mostly stills), too little for a flow (mostly scrolling).
+    const mid = ["I can never tell if an outfit works.", "So I pick two pieces I'm thinking of.", "It scores the look, an 88.", "And it says what to swap."];
+    const secs = mid.reduce((a, l) => a + speechSeconds(l), 0) / 17.4;
+    expect(secs).toBeGreaterThan(SPEECH_FLOOR.recut - 0.03);
+    expect(secs).toBeLessThan(SPEECH_FLOOR.flow);
+    expect(scriptFit(mid, beats, CTA_LINE, { kind: "recut" })).toBeNull();
+    expect(scriptFit(mid, beats, CTA_LINE, { kind: "flow" })).toMatch(/too short for the flow footage/);
+  });
+
+  it("puts every template's original narration above its floor", () => {
+    for (const t of TEMPLATES.filter((x) => x.kind === "recut")) {
+      expect(scriptFit(t.beats.map((b) => b.was), t.beats.map((b) => b.end - b.start), CTA_LINE, { kind: t.kind }), t.key).toBeNull();
+    }
   });
 
   it("still accepts every hand-made master's original narration, so old ideas stay editable", () => {
