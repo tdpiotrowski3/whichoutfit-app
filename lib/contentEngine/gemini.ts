@@ -177,8 +177,8 @@ export function directedPrompt(transcript: string, direction: string = DEFAULT_D
     "Perform the transcript below as one natural take. Speak only the transcript's words, exactly as written.",
     "",
     "# SCENE",
-    "A short vertical video for Instagram and TikTok: a screen recording of an outfit app, with one person talking over it. " +
-      "The listener is a friend her age, phone in hand, sound on.",
+    "A short vertical video for Instagram and TikTok: a phone screen recording of an app, with one person talking over it. " +
+      "The listener is one person, phone in hand, sound on. (Both brands use this: the note below says who is talking.)",
     "",
     "# DIRECTOR'S NOTES",
     direction.trim(),
