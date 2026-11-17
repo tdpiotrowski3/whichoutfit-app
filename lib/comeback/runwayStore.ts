@@ -1,9 +1,12 @@
 import { admin } from "@/lib/supabase";
-import { generateJson } from "@/lib/contentEngine/gemini";
+import { META } from "@/lib/contentEngine/scriptRules";
+import { settle, writePieces, openingsFor } from "./writer";
+import { PLAYBOOKS, markDrafted, openSlots, slotBriefFor, type Plan } from "@/lib/contentEngine/strategy";
+import { refreshPlan, savePlan } from "@/lib/contentEngine/strategyStore";
 import {
-  RUNWAY, PHASES, VOICE_RULES, CAPTION_RULES, HASHTAG_RULES,
-  slotBrief, slotFromTemplate, validatePiece, templateKey,
-  type Phase, type RawPiece, type Slot,
+  RUNWAY, PHASES,
+  slotBrief, slotFromTemplate, templateKey, getSlot, seriesSlotKey,
+  type Phase, type Slot,
 } from "./runway";
 
 // The I/O around runway.ts: Comeback's launch pieces live in social_ideas with
@@ -59,48 +62,6 @@ export async function setLaunchDate(date: string | null): Promise<void> {
 
 // --- drafting --------------------------------------------------------------
 
-const PIECE_SCHEMA = {
-  type: "OBJECT",
-  properties: {
-    pieces: {
-      type: "ARRAY",
-      items: {
-        type: "OBJECT",
-        properties: {
-          slot: { type: "STRING" },
-          title: { type: "STRING" },
-          content: { type: "ARRAY", items: { type: "STRING" } },
-          captions: { type: "ARRAY", items: { type: "STRING" } },
-          hashtags: { type: "STRING" },
-          rationale: { type: "STRING" },
-        },
-        required: ["slot", "title", "content", "captions", "hashtags", "rationale"],
-      },
-    },
-  },
-  required: ["pieces"],
-};
-
-const SYSTEM = `${VOICE_RULES}
-
-You write Comeback Health's launch runway: a planned sequence of reels, carousels, story sets and waitlist emails, counted in days from launch (T-0). Each SLOT says what its piece must do and its exact shape. Write one piece per slot you are given, with "slot" set to its key.
-
-Reels — the narration is synthesized and laid onto fixed beats, so these are hard limits:
-- Exactly one line per beat, in order, each within its beat's syllable budget ("≤N syl") and using most of it (80–100%).
-- One person telling one short story, first person: the problem (beat 1), what happened, the turn, the payoff. Each line leads into the next; never a list of features. Beat 1 is the hook and must work without the picture.
-- "on screen" says what the footage shows during that beat; the line must fit it. Pieces Tyler films himself have no screens; write what he says to camera.
-- Don't end on a call to action; the end card has its own spoken line.
-- Prefer commas to full stops inside a line.
-
-Carousels and story sets: concrete, skimmable, one idea per slide or frame. Emails: plain, warm, short paragraphs, signed "Tyler, Comeback Health". The runway should read as one arc: each phase builds on the one before it, and no two pieces open the same way.
-
-Captions (not for emails, which get an empty list): exactly three options — [0] hook/curiosity, [1] plain and useful, [2] personal or POV.
-${CAPTION_RULES}
-${HASHTAG_RULES}
-Emails get an empty hashtags string.
-Title: a short internal name, 3–6 words.
-Rationale: one sentence on what this piece does in the runway.`;
-
 function phasePrompt(phase: Phase, slots: Slot[], written: PieceRow[]): string {
   const p = PHASES.find((x) => x.key === phase)!;
   const arc = PHASES.map((x) => `- ${x.label}: ${x.goal}`).join("\n");
@@ -123,9 +84,9 @@ export type DraftResult = { drafted: number; dropped: string[]; remaining: numbe
 
 /**
  * Fill every runway slot that has no live piece yet, a phase at a time (one
- * model call each), retrying a phase's misses once with the reasons. Slots
- * already drafted, approved or made are left alone; a rejected piece frees its
- * slot to be drafted again.
+ * writer call and one critic call each), retrying a phase's misses once with
+ * the reasons. Slots already drafted, approved or made are left alone; a
+ * rejected piece frees its slot to be drafted again.
  */
 export async function draftRunway(only?: Phase): Promise<DraftResult> {
   const db = admin();
@@ -139,17 +100,10 @@ export async function draftRunway(only?: Phase): Promise<DraftResult> {
     let todo = RUNWAY.filter((s) => s.phase === phase && !filled.has(templateKey(s)));
     let reasons = "";
     for (let attempt = 0; attempt < 2 && todo.length; attempt++) {
-      const r = await generateJson<{ pieces: RawPiece[] }>(SYSTEM, phasePrompt(phase, todo, pieces) + reasons, PIECE_SCHEMA);
-      const rows: Record<string, unknown>[] = [];
-      const misses: string[] = [];
-      for (const raw of r.pieces ?? []) {
-        if (!todo.some((s) => s.key === raw.slot)) continue;
-        const v = validatePiece(raw);
-        if (typeof v === "string") misses.push(`${raw.slot}: ${v}`);
-        else rows.push({ ...v, brand: BRAND, status: "proposed", source: "planner" });
-      }
+      const r = await writePieces(phasePrompt(phase, todo, pieces) + openingsFor(todo.map((x) => x.key)) + reasons);
+      const { rows, misses } = await settle(r.pieces ?? [], (k) => todo.some((s) => s.key === k));
       if (rows.length) {
-        const { data, error } = await db.from("social_ideas").insert(rows).select("*");
+        const { data, error } = await db.from("social_ideas").insert(rows.map((v) => ({ ...v, brand: BRAND, status: "proposed", source: "planner" }))).select("*");
         if (error) throw error;
         for (const row of (data ?? []) as PieceRow[]) {
           pieces.push(row);
@@ -164,6 +118,45 @@ export async function draftRunway(only?: Phase): Promise<DraftResult> {
   }
   const remaining = RUNWAY.filter((s) => !filled.has(templateKey(s))).length;
   return { drafted, dropped, remaining };
+}
+
+/**
+ * The always-on series, after (or alongside) the launch runway: write this
+ * week's slots from Comeback's rolling plan as reels, each tagged with the
+ * pillar, series and hook it tests. Pieces land as "proposed" for the owner;
+ * nothing here posts or renders. Run from /comeback/runway on request.
+ */
+export async function draftSeriesWeek(now = new Date()): Promise<DraftResult & { plan: Plan }> {
+  const db = admin();
+  let plan = await refreshPlan(BRAND, now);
+  const b = PLAYBOOKS.comeback;
+  const pieces = (await getPieces()) ?? [];
+  const live = new Set(pieces.map((p) => p.template));
+  const slots = openSlots(plan, b.slotsPerWeek).filter((s) => !live.has(`cb:${seriesSlotKey(s.series, s.episode)}`));
+  if (!slots.length) return { drafted: 0, dropped: [], remaining: 0, plan };
+  const keyOf = new Map(slots.map((s) => [seriesSlotKey(s.series, s.episode), s]));
+  const prompt = `Now writing: this week's episodes of Comeback's always-on series. The launch runway is separate; these are the repeatable formats people follow week to week. Each SLOT says which series and episode it is, what it is for, and the opening each of its three scripts uses. Set "slot" to the key given.
+
+ALREADY WRITTEN — don't repeat an opening:
+${pieces.slice(0, 20).map((w) => `- "${w.title}" — ${w.voiceover[0] ?? ""}`).join("\n") || "- none yet"}
+
+SLOTS TO WRITE:
+${[...keyOf.entries()].map(([k, s]) => `${slotBrief(getSlot(k)!)}\n${slotBriefFor(b, s).split("\n").slice(1).join("\n")}`).join("\n\n")}`;
+  const r = await writePieces(prompt);
+  const { rows, misses } = await settle(r.pieces ?? [], (k) => keyOf.has(k));
+  let drafted = 0;
+  if (rows.length) {
+    const tagged = rows.map((v) => {
+      const s = keyOf.get(v.template.slice(3))!;
+      return { ...v, inputs: { ...v.inputs, [META.pillar]: s.pillar, [META.series]: s.series, [META.episode]: s.episode, [META.slot]: s.id, [META.hook]: v.inputs[META.hook] ?? s.hook }, brand: BRAND, status: "proposed", source: "planner" };
+    });
+    const { data, error } = await db.from("social_ideas").insert(tagged).select("id,inputs");
+    if (error) throw error;
+    for (const row of (data ?? []) as { id: string; inputs: Record<string, string> }[]) plan = markDrafted(plan, row.inputs[META.slot], row.id);
+    await savePlan(plan).catch(() => undefined);
+    drafted = rows.length;
+  }
+  return { drafted, dropped: misses, remaining: slots.length - drafted, plan };
 }
 
 /** Redo one piece from a note ("open on the injury", "shorter"), same slot. */
@@ -184,15 +177,17 @@ SLOT:
 ${slotBrief(slot)}`;
   let reason = "";
   for (let attempt = 0; attempt < 2; attempt++) {
-    const r = await generateJson<{ pieces: RawPiece[] }>(SYSTEM, prompt + (reason ? `\n\nYour last draft was rejected: ${reason}. Fix that.` : ""), PIECE_SCHEMA);
+    const r = await writePieces(prompt + openingsFor([slot.key]) + (reason ? `\n\nYour last draft was rejected: ${reason}. Fix that.` : ""));
     const raw = r.pieces?.[0];
     if (!raw) { reason = "no piece returned"; continue; }
     raw.slot = slot.key;
-    const v = validatePiece(raw);
-    if (typeof v === "string") { reason = v; continue; }
+    const { rows, misses } = await settle([raw], () => true);
+    const v = rows[0];
+    if (!v) { reason = misses[0] ?? "no piece passed"; continue; }
     const { data: saved, error: upErr } = await db
       .from("social_ideas")
-      .update({ title: v.title, voiceover: v.voiceover, captions: v.captions, caption_pick: 0, hashtags: v.hashtags, status: "proposed", error: null })
+      // The new script brings its own direction and hook; what the piece was testing stays.
+      .update({ title: v.title, voiceover: v.voiceover, captions: v.captions, caption_pick: 0, hashtags: v.hashtags, inputs: { ...piece.inputs, ...v.inputs }, status: "proposed", error: null })
       .eq("id", id)
       .eq("brand", BRAND)
       .select("*")
@@ -200,7 +195,7 @@ ${slotBrief(slot)}`;
     if (upErr) throw upErr;
     return saved as PieceRow;
   }
-  throw new Error(`The rewrite didn't fit the slot (${reason}). Try a different note.`);
+  throw new Error(`The rewrite wasn't good enough to use (${reason}). Try a different note.`);
 }
 
 /** Approve (optionally choosing a caption), reject, or send back to review. */

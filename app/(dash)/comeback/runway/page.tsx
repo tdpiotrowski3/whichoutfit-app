@@ -1,6 +1,9 @@
 import { Card } from "@/components/ui";
 import { RunwayView } from "@/components/comeback/RunwayView";
 import { getLaunchDate, getPieces, type PieceRow } from "@/lib/comeback/runwayStore";
+import { loadPlan } from "@/lib/contentEngine/strategyStore";
+import { llmProvider } from "@/lib/contentEngine/llm";
+import type { Plan } from "@/lib/contentEngine/strategy";
 
 export const dynamic = "force-dynamic";
 
@@ -8,8 +11,9 @@ export const dynamic = "force-dynamic";
 export default async function ComebackRunwayPage() {
   let pieces: PieceRow[] | null = null;
   let launch: string | null = null;
+  let plan: Plan | null = null;
   try {
-    [pieces, launch] = await Promise.all([getPieces(), getLaunchDate()]);
+    [pieces, launch, plan] = await Promise.all([getPieces(), getLaunchDate(), loadPlan("comeback").catch(() => null)]);
   } catch {
     return (
       <Card title="Not configured">
@@ -26,5 +30,5 @@ export default async function ComebackRunwayPage() {
       </Card>
     );
   }
-  return <RunwayView pieces={pieces} launch={launch} now={new Date()} />;
+  return <RunwayView pieces={pieces} launch={launch} now={new Date()} plan={plan} provider={llmProvider()} />;
 }

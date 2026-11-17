@@ -3,11 +3,14 @@ import { isAuthed } from "@/lib/session";
 import { admin } from "@/lib/supabase";
 import { WHICHOUTFIT } from "@/lib/brand";
 import { errorMessage } from "@/lib/contentEngine/auth";
-import { draftIdeas } from "@/lib/contentEngine/planner";
+import { draftIdeas, availableClosets } from "@/lib/contentEngine/planner";
+import { refreshPlan } from "@/lib/contentEngine/strategyStore";
+import { TEMPLATES } from "@/lib/contentEngine/templates";
 import { editIdea, requestVideo, briefToIdea, rewriteIdea, setSetting, type IdeaEdit, type VideoRequest } from "@/lib/contentEngine/studio";
 
 export const runtime = "nodejs";
-export const maxDuration = 90;
+// A writer call, then a critic call, and a second round if the first is thrown out.
+export const maxDuration = 300;
 
 // The Content Studio's idea controls, gated by the admin session cookie:
 //   {action: "approve" | "reject", id, pick?}  — decide on an idea; `pick` chooses the caption
@@ -18,6 +21,7 @@ export const maxDuration = 90;
 //   {action: "rewrite", id, note}              — redo a script from a note
 //   {action: "autopilot", on}                  — weekly ideas skip review
 //   {action: "draft"}                          — draft a fresh batch now
+//   {action: "replan"}                         — rebuild the six-week plan from results
 export async function POST(req: Request) {
   if (!(await isAuthed())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = (await req.json().catch(() => ({}))) as {
@@ -27,6 +31,11 @@ export async function POST(req: Request) {
 
   try {
     if (body.action === "draft") return NextResponse.json(await draftIdeas());
+    if (body.action === "replan") {
+      const closets = await availableClosets();
+      const plan = await refreshPlan("whichoutfit", new Date(), { canMake: (k) => TEMPLATES.some((t) => t.key === k && (!t.closet || closets.includes(t.closet))) });
+      return NextResponse.json({ ok: true, summary: plan.summary });
+    }
     if (body.action === "request" && body.request) return NextResponse.json({ idea: await requestVideo(body.request) });
     if (body.action === "brief" && body.brief) return NextResponse.json(await briefToIdea(body.brief));
     if (body.action === "rewrite" && body.id) return NextResponse.json({ idea: await rewriteIdea(body.id, body.note ?? "") });

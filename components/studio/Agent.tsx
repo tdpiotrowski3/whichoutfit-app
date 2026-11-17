@@ -138,7 +138,7 @@ const REWRITE_NOTES = ["Funnier", "Stronger hook", "More relatable", "Lead with 
 
 /** One idea waiting for the owner: storyboard, then approve / rewrite / edit / reject. */
 export function IdeaCard({
-  idea, template, closets, footageUrl, closetLabel, narrator, beats,
+  idea, template, closets, footageUrl, closetLabel, narrator, beats, direction,
 }: {
   idea: EditableIdea;
   template?: TemplateOption;
@@ -147,6 +147,8 @@ export function IdeaCard({
   closetLabel: string;
   narrator: string;
   beats: { start: number; end: number }[];
+  /** The note the narrator gets for this script. */
+  direction?: string;
 }) {
   const router = useRouter();
   const [mode, setMode] = useState<"view" | "rewrite" | "edit">("view");
@@ -191,7 +193,7 @@ export function IdeaCard({
           </div>
           <div className="flex flex-wrap gap-1.5 text-xs">
             <span className="rounded-full bg-[var(--wo-bg)] px-2 py-0.5">{template?.label ?? idea.template}</span>
-            {Object.values(idea.inputs ?? {}).map((v) => <span key={v} className="rounded-full bg-[var(--wo-bg)] px-2 py-0.5">“{v}”</span>)}
+            {Object.entries(idea.inputs ?? {}).filter(([k]) => !k.startsWith("_")).map(([k, v]) => <span key={k} className="rounded-full bg-[var(--wo-bg)] px-2 py-0.5">“{v}”</span>)}
             <span className="rounded-full bg-[var(--wo-bg)] px-2 py-0.5">{closetLabel}</span>
             <span className="rounded-full bg-[var(--wo-bg)] px-2 py-0.5">narrator {narrator}</span>
           </div>
@@ -201,12 +203,13 @@ export function IdeaCard({
             {idea.voiceover.map((l, i) => (
               <li key={i} className="flex gap-3 text-sm">
                 <span className="w-14 shrink-0 pt-0.5 text-right font-mono text-[11px] text-[var(--wo-muted)]">
-                  {beats[i] ? `${Math.round(beats[i].start)}–${Math.round(beats[i].end)}s` : `#${i + 1}`}
+                  {beats[i] ? `shot ${i + 1}` : `#${i + 1}`}
                 </span>
                 <span>{l}</span>
               </li>
             ))}
           </ol>
+          {direction ? <p className="text-xs text-[var(--wo-muted)]">How it&apos;s said: {direction}</p> : null}
           <p className="border-l-2 border-[var(--wo-border)] pl-3 text-xs text-[var(--wo-muted)]">Caption: {caption}</p>
           {idea.rationale ? <p className="text-xs text-[var(--wo-muted)]">Why: {idea.rationale}</p> : null}
 

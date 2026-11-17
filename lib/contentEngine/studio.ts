@@ -1,11 +1,11 @@
 import { admin } from "@/lib/supabase";
 import { WHICHOUTFIT } from "@/lib/brand";
-import { generateJson } from "./gemini";
 import { getTemplate, TEMPLATES } from "./templates";
 import { validateIdea, type RawIdea } from "./rules";
+import { flowInputs } from "./scriptRules";
 import { PERSONAS, voiceFor } from "./personas";
 import { closetSize } from "./personaAccounts";
-import { availableClosets, templateBrief, IDEA_SCHEMA, IDEA_SYSTEM, type IdeaRow } from "./planner";
+import { availableClosets, templateBrief, writeIdeas, IDEA_SCHEMA, type IdeaRow } from "./planner";
 
 // The dashboard's Content Studio (app/(dash)/content): everything the owner does
 // by hand — ask for a specific video, edit a script before approving it, see
@@ -65,7 +65,8 @@ export type IdeaEdit = {
 
 /**
  * Apply the owner's edits, held to the same rules as a drafted idea (one line
- * per beat, within budget, a stocked closet). Only an idea nothing is working on
+ * per beat, nothing longer than the footage can stretch to, a stocked closet).
+ * The owner's own words are not put through the script editor. Only an idea nothing is working on
  * can change: proposed, approved (not yet picked up) or failed.
  */
 export async function editIdea(id: string, edit: IdeaEdit): Promise<IdeaRow> {
@@ -132,19 +133,20 @@ Closet: ${closet}${persona ? ` — ${persona.describe}` : ""}${req.note?.trim() 
 TEMPLATE:
 ${templateBrief(t)}`;
 
-  // The model gets two tries: a line over its beat is the usual miss, and a
-  // second draft almost always fits.
+  // Two tries: the script editor throws out weak drafts, and a second batch
+  // written with its reasons in hand usually passes.
   let reason = "";
   for (let attempt = 0; attempt < 2; attempt++) {
-    const r = await generateJson<{ ideas: RawIdea[] }>(IDEA_SYSTEM, prompt + (reason ? `\n\nYour last draft was rejected: ${reason}. Fix that.` : ""), IDEA_SCHEMA);
-    const raw = r.ideas?.[0];
-    if (!raw) { reason = "no idea returned"; continue; }
-    // Hold the request to what was asked, whatever the model echoed back.
-    raw.template = t.key;
-    raw.closet = closet;
-    raw.inputs = Object.entries(req.inputs ?? {}).map(([name, value]) => ({ name, value }));
-    const v = validateIdea(raw, closets);
-    if (typeof v === "string") { reason = v; continue; }
+    const { written, dropped } = await writeIdeas(prompt + (reason ? `\n\nYour last draft was rejected: ${reason}. Fix that.` : ""), closets, {
+      // Hold the request to what was asked, whatever the model echoed back.
+      pin: (raw) => {
+        raw.template = t.key;
+        raw.closet = closet;
+        raw.inputs = Object.entries(req.inputs ?? {}).map(([name, value]) => ({ name, value }));
+      },
+    });
+    const v = written[0]?.fields;
+    if (!v) { reason = dropped[0] ?? "no idea returned"; continue; }
     const { data, error } = await admin()
       .from("social_ideas")
       .insert({ ...v, status: "proposed", source: "manual" })
@@ -153,7 +155,7 @@ ${templateBrief(t)}`;
     if (error) throw error;
     return data as IdeaRow;
   }
-  throw new Error(`Couldn't write a script that fits (${reason}). Try again, or loosen the note.`);
+  throw new Error(`Couldn't write a script good enough to film (${reason}). Try again, or loosen the note.`);
 }
 
 // --- the agent: briefs, rewrites, autopilot, activity ----------------------
@@ -191,24 +193,18 @@ ${catalog}`;
 
   let reason = "";
   for (let attempt = 0; attempt < 2; attempt++) {
-    const r = await generateJson<{ reply: string; ideas: RawIdea[] }>(
-      IDEA_SYSTEM,
-      prompt + (reason ? `\n\nYour last draft was rejected: ${reason}. Fix that.` : ""),
-      BRIEF_SCHEMA
-    );
-    const raw = r.ideas?.[0];
-    if (!raw) { reason = "no idea returned"; continue; }
-    const v = validateIdea(raw, closets);
-    if (typeof v === "string") { reason = v; continue; }
+    const { written, dropped, reply } = await writeIdeas(prompt + (reason ? `\n\nYour last draft was rejected: ${reason}. Fix that.` : ""), closets, { schema: BRIEF_SCHEMA });
+    const v = written[0]?.fields;
+    if (!v) { reason = dropped[0] ?? "no idea returned"; continue; }
     const { data, error } = await admin()
       .from("social_ideas")
       .insert({ ...v, rationale: `Asked for: “${text}”`, status: "proposed", source: "agent" })
       .select("*")
       .single();
     if (error) throw error;
-    return { idea: data as IdeaRow, reply: r.reply?.trim() || `Made “${v.title}”.` };
+    return { idea: data as IdeaRow, reply: reply?.trim() || `Made “${v.title}”.` };
   }
-  throw new Error(`I couldn't make that fit a video (${reason}). Try naming the feature or occasion.`);
+  throw new Error(`I couldn't make that into a video worth filming (${reason}). Try naming the feature or occasion.`);
 }
 
 /** Redo an idea's script from a note ("funnier", "open on the price"), same footage, input and closet. */
@@ -221,8 +217,8 @@ export async function rewriteIdea(id: string, note: string): Promise<IdeaRow> {
   const t = getTemplate(idea.template);
   if (!t) throw new Error("Unknown template.");
   const closets = await availableClosets();
-  const inputs = Object.entries(idea.inputs ?? {}).map(([k, v]) => `${k} = "${v}"`).join(", ");
-  const prompt = `Rewrite this clip idea. Keep the template, inputs and closet exactly; write a new script, title and captions.
+  const inputs = Object.entries(flowInputs(idea.inputs)).map(([k, v]) => `${k} = "${v}"`).join(", ");
+  const prompt = `Rewrite this clip idea. Keep the template, inputs and closet exactly; write new candidate scripts, a title and captions.
 Owner's note: "${note.trim().slice(0, 300) || "make it better"}"
 Template: ${t.key}${inputs ? `\nInputs: ${inputs}` : ""}
 Closet: ${idea.closet}
@@ -233,24 +229,26 @@ TEMPLATE:
 ${templateBrief(t)}`;
   let reason = "";
   for (let attempt = 0; attempt < 2; attempt++) {
-    const r = await generateJson<{ ideas: RawIdea[] }>(IDEA_SYSTEM, prompt + (reason ? `\n\nYour last draft was rejected: ${reason}. Fix that.` : ""), IDEA_SCHEMA);
-    const raw = r.ideas?.[0];
-    if (!raw) { reason = "no idea returned"; continue; }
-    raw.template = t.key;
-    raw.closet = idea.closet;
-    raw.inputs = Object.entries(idea.inputs ?? {}).map(([name, value]) => ({ name, value }));
-    const v = validateIdea(raw, closets);
-    if (typeof v === "string") { reason = v; continue; }
+    const { written, dropped } = await writeIdeas(prompt + (reason ? `\n\nYour last draft was rejected: ${reason}. Fix that.` : ""), closets, {
+      pin: (raw) => {
+        raw.template = t.key;
+        raw.closet = idea.closet;
+        raw.inputs = Object.entries(flowInputs(idea.inputs)).map(([name, value]) => ({ name, value }));
+      },
+    });
+    const v = written[0]?.fields;
+    if (!v) { reason = dropped[0] ?? "no idea returned"; continue; }
     const { data: saved, error: upErr } = await db
       .from("social_ideas")
-      .update({ title: v.title, voiceover: v.voiceover, captions: v.captions, caption_pick: 0, hashtags: v.hashtags, status: "proposed", error: null })
+      // The new script brings its own direction and hook; what the idea was testing (pillar, series, slot) stays.
+      .update({ title: v.title, voiceover: v.voiceover, captions: v.captions, caption_pick: 0, hashtags: v.hashtags, inputs: { ...idea.inputs, ...v.inputs }, status: "proposed", error: null })
       .eq("id", id)
       .select("*")
       .single();
     if (upErr) throw upErr;
     return saved as IdeaRow;
   }
-  throw new Error(`The rewrite didn't fit the video (${reason}). Try a different note.`);
+  throw new Error(`The rewrite wasn't good enough to film (${reason}). Try a different note.`);
 }
 
 export type StudioSettings = { autopilot: boolean };

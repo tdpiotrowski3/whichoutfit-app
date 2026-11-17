@@ -1,6 +1,7 @@
 import { FOOTAGE } from "./footage";
-import { getTemplate, syllableBudget, countSyllables } from "./templates";
+import { getTemplate, scriptFit, CTA_LINE } from "./templates";
 import { cleanHashtags } from "./hashtags";
+import { META, cleanDirection, isMetaKey } from "./scriptRules";
 
 // The content engine's pure rules — no database, no network — so they are
 // unit-tested directly (lib/__tests__/contentEngine.test.ts). planner.ts
@@ -47,25 +48,33 @@ export type RawIdea = {
   captions: string[];
   hashtags: string;
   rationale: string;
+  /** How the narrator should say it: one sentence for the voice (stored in inputs._direction). */
+  direction?: string;
 };
 
 /**
  * Hold the model to the template. Returns the row to insert, or why it was
- * dropped. A line may run TWO syllables over its budget — the counter is
- * approximate and the Mac re-measures the real audio — but no more.
+ * dropped. Voice-first contract (templates.ts): one line per beat, each
+ * anchored to its beat, no line longer than its beat can stretch to, and the
+ * whole script plus the end card within the footage + 25%. There is no
+ * minimum length.
+ *
+ * `inputs` keeps the flow's real inputs plus the engine's own "_"-prefixed
+ * notes (direction, pillar, series, hook, slot); the Mac never sees those as
+ * inputs (planner.ts approvedJobs strips them).
  */
 export function validateIdea(raw: RawIdea, closets: string[] = ["original"]): IdeaFields | string {
   const t = getTemplate(raw.template);
   if (!t) return `unknown template ${raw.template}`;
   const inputs: Record<string, string> = {};
-  for (const i of raw.inputs ?? []) if (i.value?.trim()) inputs[i.name] = i.value.trim().slice(0, 60);
+  for (const i of raw.inputs ?? []) if (i.value?.trim()) inputs[i.name] = i.value.trim().slice(0, isMetaKey(i.name) ? 240 : 60);
+  const direction = cleanDirection(raw.direction);
+  if (direction) inputs[META.direction] = direction;
   for (const need of t.inputs) if (!inputs[need.name]) return `missing input ${need.name}`;
   const lines = (raw.voiceover ?? []).map((l) => l.trim()).filter(Boolean);
   if (lines.length !== t.beats.length) return `${lines.length} lines for ${t.beats.length} beats`;
-  for (let i = 0; i < lines.length; i++) {
-    const over = countSyllables(lines[i]) - syllableBudget(t.beats[i]);
-    if (over > 2) return `line ${i + 1} is ${over} syllables over its beat`;
-  }
+  const fit = scriptFit(lines, t.beats.map((b) => b.end - b.start), CTA_LINE);
+  if (fit) return fit;
   // Re-cuts are existing footage, so they are on the closet they were shot on.
   // A flow is filmed fresh, on any closet that is actually stocked.
   // A template that names its closet (flow:no_closet → fresh) is always filmed there.

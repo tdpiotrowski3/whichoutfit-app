@@ -1,10 +1,14 @@
 import { Card } from "@/components/ui";
 import { DraftRunwayButton, LaunchDateForm, PieceActions } from "@/components/comeback/RunwayClient";
 import {
-  RUNWAY, PHASES, FORMATS, dayLabel, beatBudget, ctaFor, templateKey, DISCLAIMER,
+  RUNWAY, PHASES, FORMATS, dayLabel, ctaFor, templateKey, DISCLAIMER, slotFromTemplate,
   scheduleRunway, fullRunwayLaunch, todayLocal,
   type Slot, type Scheduled,
 } from "@/lib/comeback/runway";
+import { StrategyPanel } from "@/components/studio/StrategyPanel";
+import { ReplanButton } from "@/components/studio/ReplanButton";
+import type { Plan } from "@/lib/contentEngine/strategy";
+import type { Provider } from "@/lib/contentEngine/llm";
 import type { PieceRow } from "@/lib/comeback/runwayStore";
 
 // Comeback's launch runway, top to bottom: every slot of the plan in order,
@@ -48,7 +52,7 @@ function Content({ slot, piece }: { slot: Slot; piece: PieceRow }) {
         <li key={i} className="flex gap-3">
           <span className="w-14 shrink-0 text-xs leading-5 text-[var(--wo-muted)]">
             {unit} {i + 1}
-            {slot.format === "reel" && slot.beats ? <span className="block">{slot.beats[i]}s · ≤{beatBudget(slot.beats[i])}</span> : null}
+            
           </span>
           <span className="min-w-0">
             {line}
@@ -56,6 +60,12 @@ function Content({ slot, piece }: { slot: Slot; piece: PieceRow }) {
           </span>
         </li>
       ))}
+      {slot.format === "reel" && piece.inputs?._direction ? (
+        <li className="flex gap-3 text-[var(--wo-muted)]">
+          <span className="w-14 shrink-0 text-xs leading-5">Said</span>
+          <span className="min-w-0 text-xs leading-5">{piece.inputs._direction}</span>
+        </li>
+      ) : null}
       {slot.format === "reel" ? (
         <li className="flex gap-3 text-[var(--wo-muted)]">
           <span className="w-14 shrink-0 text-xs leading-5">End card</span>
@@ -70,7 +80,7 @@ function SlotRow({ slot, piece, sched }: { slot: Slot; piece?: PieceRow; sched?:
   return (
     <li className="rounded-xl border border-[var(--wo-border)] bg-white p-4">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-sm font-semibold tabular-nums">{dayLabel(sched?.day ?? slot.day)}</span>
+        <span className="text-sm font-semibold tabular-nums">{slot.key.startsWith("s:") ? "Series" : dayLabel(sched?.day ?? slot.day)}</span>
         {sched ? <span className="text-sm text-[var(--wo-muted)]">{dateText(sched.date)}</span> : null}
         {sched?.moved ? <span className="text-xs text-[var(--wo-muted)]">moved from {dayLabel(slot.day)}</span> : null}
         <Chip>{FORMATS[slot.format]}</Chip>
@@ -100,7 +110,7 @@ function SlotRow({ slot, piece, sched }: { slot: Slot; piece?: PieceRow; sched?:
   );
 }
 
-export function RunwayView({ pieces, launch, now }: { pieces: PieceRow[]; launch: string | null; now: Date }) {
+export function RunwayView({ pieces, launch, now, plan, provider }: { pieces: PieceRow[]; launch: string | null; now: Date; plan: Plan | null; provider: Provider }) {
   const bySlot = new Map<string, PieceRow>();
   // Newest first from the query, so the first seen per slot is the live one.
   for (const p of pieces) if (!bySlot.has(p.template)) bySlot.set(p.template, p);
@@ -111,6 +121,11 @@ export function RunwayView({ pieces, launch, now }: { pieces: PieceRow[]; launch
     approved: live.filter((p) => p && ["approved", "rendering", "rendered"].includes(p.status)).length,
     yours: RUNWAY.filter((s) => s.source === "you").length,
   };
+  // Series episodes (template "cb:s:<series>:<episode>") live outside the fixed runway.
+  const series = pieces.flatMap((piece) => {
+    const slot = piece.template.startsWith("cb:s:") ? slotFromTemplate(piece.template) : undefined;
+    return slot ? [{ slot, piece }] : [];
+  });
   const today = todayLocal(now);
   const sched = launch ? scheduleRunway(launch, today) : null;
   const daysOut = launch ? Math.round((new Date(`${launch}T12:00:00Z`).getTime() - new Date(`${today}T12:00:00Z`).getTime()) / 86_400_000) : null;
@@ -153,6 +168,25 @@ export function RunwayView({ pieces, launch, now }: { pieces: PieceRow[]; launch
           </p>
         ) : null}
       </Card>
+
+      <StrategyPanel brand="comeback" plan={plan} provider={provider} endpoint="/api/comeback/runway" />
+
+      <section className="space-y-3">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold">Always-on series</h2>
+            <p className="text-sm text-[var(--wo-muted)]">This week&apos;s episodes from the plan above, written on request. They sit beside the launch runway and nothing posts on its own.</p>
+          </div>
+          <ReplanButton endpoint="/api/comeback/runway" action="draft_week" label="Write this week's episodes" busyLabel="Writing…" />
+        </div>
+        {series.length ? (
+          <ul className="space-y-3">
+            {series.map(({ slot, piece }) => <SlotRow key={piece.id} slot={slot} piece={piece} />)}
+          </ul>
+        ) : (
+          <p className="text-sm text-[var(--wo-muted)]">No series episodes written yet.</p>
+        )}
+      </section>
 
       {PHASES.map((phase) => (
         <section key={phase.key} className="space-y-3">

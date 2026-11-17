@@ -59,27 +59,50 @@ function textOf(json: Record<string, unknown>): string {
   return (cands?.[0]?.content?.parts ?? []).map((p) => p.text ?? "").join("").trim();
 }
 
-/** One structured-JSON generation, schema-enforced. */
-export async function generateJson<T>(system: string, prompt: string, schema: unknown): Promise<T> {
+export type JsonOptions = {
+  /**
+   * How hard the model thinks before answering. "low" suits extraction and
+   * captions; scripts and their critique use "high" (llm.ts), where judgment is
+   * the whole job. Gemini 2.x has no levels and runs without thinking.
+   */
+  thinking?: "minimal" | "low" | "medium" | "high";
+};
+
+/**
+ * One structured-JSON generation, schema-enforced.
+ *
+ * Sampling is left at Gemini's defaults on purpose (temperature 1.0): Gemini 3
+ * is tuned for it, lower values make it loop and flatten, and the house rule
+ * above is to send no temperature/topP/topK. Variety between a script's drafts
+ * comes from the prompt instead: each draft is assigned a different opening
+ * archetype in code (strategy.ts draftHooks).
+ */
+export async function generateJson<T>(system: string, prompt: string, schema: unknown, opts: JsonOptions = {}): Promise<T> {
   let last: unknown;
+  const want = (process.env.ENGINE_TEXT_THINKING as JsonOptions["thinking"]) || opts.thinking || "low";
   for (const model of TEXT_MODELS) {
-    try {
-      const json = await call(model, {
-        system_instruction: { parts: [{ text: system }] },
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: {
-          responseMimeType: "application/json",
-          responseSchema: schema,
-          thinkingConfig: model.startsWith("gemini-2") ? { thinkingBudget: 0 } : { thinkingLevel: "low" },
-        },
-      });
-      const text = textOf(json).replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
-      if (!text) throw new Error("Gemini returned no content (blocked or truncated).");
-      return JSON.parse(text) as T;
-    } catch (e) {
-      last = e;
-      // Only a retired model or an exhausted day moves on; anything else is a real failure.
-      if (!(e instanceof GeminiError && (e.status === 404 || isDailyQuota(e)))) throw e;
+    // A level this model doesn't take is a 400; fall back to "low" once rather than fail the call.
+    for (const level of want === "low" ? ["low"] : [want, "low"]) {
+      try {
+        const json = await call(model, {
+          system_instruction: { parts: [{ text: system }] },
+          contents: [{ role: "user", parts: [{ text: prompt }] }],
+          generationConfig: {
+            responseMimeType: "application/json",
+            responseSchema: schema,
+            thinkingConfig: model.startsWith("gemini-2") ? { thinkingBudget: 0 } : { thinkingLevel: level },
+          },
+        });
+        const text = textOf(json).replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
+        if (!text) throw new Error("Gemini returned no content (blocked or truncated).");
+        return JSON.parse(text) as T;
+      } catch (e) {
+        last = e;
+        if (e instanceof GeminiError && e.status === 400 && level !== "low" && /thinking/i.test(e.message)) continue;
+        // Only a retired model or an exhausted day moves on; anything else is a real failure.
+        if (!(e instanceof GeminiError && (e.status === 404 || isDailyQuota(e)))) throw e;
+        break;
+      }
     }
   }
   throw last;
@@ -153,14 +176,24 @@ export const DEFAULT_STYLE: SpeechStyle = "even";
  * and never last, because a trailing word like "start" or "so" can read as an
  * instruction and make the model answer in text (a 400) instead of speaking.
  */
-export async function speak(line: string, voice: string = VOICE, style: SpeechStyle = DEFAULT_STYLE): Promise<Speech> {
+export async function speak(line: string, voice: string = VOICE, style: SpeechStyle = DEFAULT_STYLE, direction?: string): Promise<Speech> {
   // Pace matters as much as tone: narration is laid onto fixed footage, and the
   // first live test with "unhurried" in this note ran ~2.8 syllables/sec against
   // the ~4.4 the beats are budgeted for, so every script overran its clip.
   // The "friend" note alone made every voice lean hard on the most interesting
   // word ("a GALLERY opening"), which the owner heard as fake. "even" asks for
   // ordinary sentence stress; the others stay selectable for A/B listening.
-  const prompt = `${STYLES[style]} "${line}" (read only the quoted words)`;
+  //
+  // Engine v2: a script carries its own director's note (job.direction — who is
+  // talking, to whom, the mood, the pace). When the Mac passes one it replaces
+  // the fixed style wrapper: the model is given a person and a moment to speak
+  // as, not an instruction to "read" something, which is what produced the
+  // read-aloud cadence. Pace is no longer forced brisk here because the
+  // renderer now cuts the footage to the voice.
+  const note = (direction ?? "").replace(/["\u201c\u201d\n\r]/g, " ").replace(/\s+/g, " ").trim().slice(0, 240);
+  const prompt = note
+    ? `You are a voice actor recording one natural take for a short video. Who you are and how it sounds: ${note} Speak the way that person actually talks: ordinary sentence stress, no word punched or drawn out, small natural breaths at the commas, no announcer or advert voice. The words: "${line}" (say only the quoted words, exactly as written)`
+    : `${STYLES[style]} "${line}" (read only the quoted words)`;
   let last: unknown;
   for (const model of TTS_MODELS) {
     try {

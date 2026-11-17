@@ -101,10 +101,22 @@ describe("validateIdea", () => {
     expect(validateIdea({ ...good, voiceover: good.voiceover.slice(0, 4) })).toMatch(/4 lines for 5 beats/);
   });
 
-  it("rejects a line that overruns its beat", () => {
+  it("rejects a line longer than its beat can stretch to", () => {
     const long = [...good.voiceover];
-    long[0] = "The invitation arrived several weeks ago and somehow you still have absolutely nothing whatsoever to wear tonight";
+    long[0] = "The invitation arrived several weeks ago and somehow you still have absolutely nothing whatsoever to wear tonight, not one single thing in this entire closet of mine";
     expect(validateIdea({ ...good, voiceover: long })).toMatch(/line 1 is \d+ syllables over/);
+  });
+
+  it("has no minimum: a three-word line is a line", () => {
+    const short = ["Date tonight.", "So I asked.", "Wine bar, first date.", "All mine.", "Plus one thing."];
+    expect(typeof validateIdea({ ...good, voiceover: short })).toBe("object");
+  });
+
+  it("keeps the narrator's direction beside the inputs, and still accepts ideas written without one", () => {
+    const v = validateIdea({ ...good, direction: 'Telling a friend\nover "coffee", a little amused.' });
+    expect(typeof v === "object" && v.inputs).toEqual({ occasion: "first date at a wine bar", _direction: "Telling a friend over coffee , a little amused." });
+    const old = validateIdea(good);
+    expect(typeof old === "object" && "_direction" in old.inputs).toBe(false);
   });
 
   it("rejects missing inputs and unknown templates", () => {
@@ -181,7 +193,7 @@ describe("persona closets", () => {
     expect(launchSteer(now, {})).toBe("");
     expect(needsReview(now, {})).toBe(false);
     const live = { LAUNCH_CLOSET_OPTIONAL_LIVE_FROM: "2026-11-30" };
-    expect(launchSteer(now, live)).toMatch(/empty closet[\s\S]*first idea is the announcement/);
+    expect(launchSteer(now, live)).toMatch(/styled from day one[\s\S]*first idea is the announcement/i);
     expect(needsReview(now, live)).toBe(true);
     expect(launchSteer(new Date("2026-12-25T18:00:00Z"), live)).toBe("");
     expect(launchSteer(now, { LAUNCH_CLOSET_OPTIONAL_LIVE_FROM: "soon" })).toBe("");
