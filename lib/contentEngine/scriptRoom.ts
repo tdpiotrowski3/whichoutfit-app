@@ -26,14 +26,15 @@ WRITE EVERY SCRIPT LIKE THIS:
 2. Each line is one breath, usually three to nine words. "≤N syl" on a beat is the most the footage can stretch to; a good line uses about half of it.
 3. Vary the lengths on purpose. Every script has at least one line of four words or fewer, and neighbouring lines are different sizes.
 4. Talk. Contractions every time (it's, I've, that's, didn't). Fragments are welcome. Lines may start with So, And, But or Okay, as speech does.
-5. Name things. Put a noun where an adjective wants to go: the number, the colour, the item, the city that the screen shows. Use at least one exact detail from "on screen".
+5. Name things, but only true things. Put a noun where an adjective wants to go, and take every number, colour, item, price, date and place ONLY from the "on screen" text or the clip's inputs. Never invent one: flow clips are filmed live after you write, so you cannot know which pieces, prices or dates will appear. When "on screen" says "full outfits" without naming them, say what's true ("Three looks. All from my closet."), not a dress you imagined.
+5b. Say things the way a person says them, not the way the app labels them: no screen or feature names as nouns ("Setup screen", "Morning Brief"), no jargon a friend wouldn't use (HRV, capsule logic, metrics). One thought per line; never join two unrelated thoughts with a full stop.
 6. Line 1 is the hook: one specific minute of one person's life (a time, a place, something in their hand), understood with the screen off.
 7. Say what you did in the fewest words ("So I asked."). The screen already shows the taps.
 8. The last line is the result on screen, said flat. A spoken end card follows it in the same take, so the script itself asks for nothing.
 9. Punctuation is breath: a comma is a small one, a full stop a real one. Use only . , ? and '.
 10. It is one person telling one small story: the moment, what they did, the turn, what they got.
 
-DIRECTION: with each script, one sentence for the voice actor: who is talking, to whom, where, and the mood. Describe a person in a moment ("Packing the night before a trip, talking to whoever's sitting on the bed, dry, unbothered."), at an easy conversational pace.
+DIRECTION: with each script, one sentence for the voice actor: who is talking, to whom, where, and the mood. Describe a person in a moment ("Packing the night before a trip, talking to whoever's sitting on the bed, dry, unbothered."), at an easy conversational pace. Never give the speaker or listener a gender: no she/he/her/his, no sister/boyfriend; say "a friend", "a roommate", "whoever's on the couch".
 
 LAST STEP, EVERY TIME: say each script out loud in your head. Any line that sounds like an advert, a manual or a list, say again the way you would text it to a friend, and keep that version.`;
 
@@ -82,13 +83,13 @@ Work in this order for every clip:
 2. "weakest": quote the single worst line among the candidates and say in a few words what is wrong with it. Do this before you score anything.
 3. "pick": the index of the best candidate.
 4. "final": the lines to record. Start from the picked candidate and make it better to SAY: cut every word that only fills time, swap an adjective for the thing itself, move what's on screen to the front of its line, make one line tiny if they are all the same size, sharpen line 1 into a specific moment. Edits only ever make it shorter or plainer. Keep exactly one line per beat, keep the facts on screen, keep it one person's story, and end on the result with no ask. If the candidate is already right, return it word for word.
-5. Score "final", 1–5 each. Use the whole scale: 3 is "fine, forgettable" and is where most drafts land; 4 is good; 5 is "I'd believe someone said this unprompted".
+5. Score "final", 1–5 each. Use the whole scale: 3 is "fine, forgettable" and is where most drafts land; 4 is good; 5 is rare, "I'd believe someone said this unprompted, and every detail is checkable on screen". If you are giving a 5 on every axis, re-read it once more looking for the line a real editor would still cut.
    - spoken: sounds like speech. Contractions, lines of different lengths, nothing padded, no sentence that only exists in writing, no announcer or advert cadence ("Now you can…", stacked adjectives), not a list of features.
    - hook: line 1 is a specific lived moment that works with the screen off. A general statement ("Getting dressed is hard") or a question anyone could ask is a 2.
    - sync: line N is about what is on screen in beat N and names it early in the line. A line describing a different beat's picture is a 2 however good it sounds.
-   - specific: at least one exact detail the footage really shows, and nothing claimed that the screen doesn't show.
+   - specific: at least one exact detail that appears in the beat's "on screen" text or the inputs. Check EVERY number, colour, item, price, date and place in "final" against that text: any detail that isn't there (an invented "satin slip dress", "sixty bucks", "November tenth") is a 1, because the footage will contradict it. Remove invented details in your edit rather than scoring them.
    - payoff: the last line lands the result and asks for nothing.
-   - brand: follows every BRAND RULE below. Any breach is a 1.
+   - brand: follows every BRAND RULE below. Any breach is a 1. Jargon or app screen names used as speech ("Setup screen.", "low HRV") cap "spoken" at 3.
 6. "notes": one sentence on what you changed or why the others lost.
 
 A script you would not put your name to gets honest low scores. It is thrown away and rewritten, which is the right outcome; passing a weak script is the only real mistake you can make here.`;

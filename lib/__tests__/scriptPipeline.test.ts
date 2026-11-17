@@ -48,7 +48,7 @@ describe("writeIdeas", () => {
     expect(r.written).toHaveLength(1);
     const f = r.written[0].fields;
     expect(f.voiceover).toEqual(spoken.voiceover);
-    expect(f.inputs).toEqual({ _hook: "confession", _score: "4.5", _direction: spoken.direction });
+    expect(f.inputs).toEqual({ _hook: "confession", _score: "4.5", _direction: "Telling a friend over coffee, a little amused at themselves, easy pace." });
     expect(f.hashtags).toBe("#outfitideas #ratemyoutfit");
     expect(r.written[0].slot).toBe("2026-11-16:2");
     // Two calls, both Gemini; the critic's prompt carries the screen cues and only the clean candidate.
