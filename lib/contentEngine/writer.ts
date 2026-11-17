@@ -1,6 +1,6 @@
 import { generateJson } from "./llm";
 import { FOOTAGE } from "./footage";
-import { getTemplate, lineCeiling, CTA_LINE, type Template } from "./templates";
+import { getTemplate, lineCeiling, scriptFloor, CTA_LINE, type Template } from "./templates";
 import { validateIdea, type IdeaFields, type RawIdea } from "./rules";
 import { spokenRules, runScriptRoom } from "./scriptRoom";
 import { META, meanScore, type Candidate, type Scores, type ScriptCase } from "./scriptRules";
@@ -154,7 +154,7 @@ export async function writeIdeas(
     const id = `c${n + 1}`;
     const inputs = Object.fromEntries((raw.inputs ?? []).filter((i) => !i.name.startsWith("_")).map((i) => [i.name, i.value]));
     raws.set(id, raw);
-    cases.push({ id, brand: "whichoutfit", about: `${t.key}: ${t.shows}`, beats: cuesFor(t, inputs), cta: CTA_LINE, candidates });
+    cases.push({ id, brand: "whichoutfit", about: `${t.key}: ${t.shows}`, beats: cuesFor(t, inputs), cta: CTA_LINE, kind: t.kind, candidates });
   });
 
   const room = await runScriptRoom(cases, VOICE_RULES);
@@ -184,6 +184,7 @@ export function templateBrief(t: Template): string {
     .map((b, i) => `  beat ${i + 1} (${(b.end - b.start).toFixed(1)}s on screen, ≤${lineCeiling(b.end - b.start)} syl) on screen: ${screenCue(t, b.was)}`)
     .join("\n");
   const inputs = t.inputs.length ? `\n  inputs: ${t.inputs.map((i) => `${i.name} — ${i.describe}`).join("; ")}` : "";
-  return `${t.key} [${t.kind}] — ${t.shows}${inputs}\n${beats}`;
+  const floor = scriptFloor(t.beats.map((b) => b.end - b.start), t.kind);
+  return `${t.key} [${t.kind}] — ${t.shows}${inputs}\n${beats}\n  whole script: at least ${floor} syllables across all lines (the footage can only shrink so far)`;
 }
 
