@@ -252,3 +252,14 @@ describe("cleanHashtags", () => {
     expect(captionWithTags("Same photo.", "#whichoutfit #capsulewardrobe")).toBe("Same photo.\n\n#capsulewardrobe");
   });
 });
+
+import { cleanDirection } from "@/lib/contentEngine/scriptRules";
+describe("director's note stays gender-neutral", () => {
+  it("rewrites gendered words", () => {
+    expect(cleanDirection("Showing her phone to her sister, she's laughing")).toBe("Showing their phone to their sibling, they're laughing");
+    expect(cleanDirection("He is talking to his girlfriend")).toBe("They are talking to their partner");
+  });
+  it("leaves neutral notes alone", () => {
+    expect(cleanDirection("Talking to a roommate, dry, unbothered.")).toBe("Talking to a roommate, dry, unbothered.");
+  });
+});

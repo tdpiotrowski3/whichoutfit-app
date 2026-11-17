@@ -61,6 +61,19 @@ const recuts: Template[] = Object.entries(FOOTAGE).map(([stem, f]) => ({
   shows: RECUT_SHOWS[stem] ?? stem,
 }));
 
+/**
+ * A flow re-films an old take with a new input, so its beat text (borrowed from
+ * that old take) names an old occasion, city, forecast and pieces. Tell the
+ * writer those specifics are stale; otherwise it copies their shape and invents
+ * new ones ("nineteen degrees") the live footage then contradicts.
+ */
+function liveBeats(beats: Beat[]): Beat[] {
+  return beats.map((b) => ({
+    ...b,
+    was: `${b.was} [Filmed live with the new input: any occasion, city, number, temperature, price or named piece above is from an old take and WILL differ. Say only the input and what is always true of this screen.]`,
+  }));
+}
+
 const flows: Template[] = [
   {
     key: "flow:dress_for_event",
@@ -75,7 +88,7 @@ const flows: Template[] = [
           "What gets typed into Dress for an Event, 2–5 words, lowercase, e.g. 'first date at a wine bar'. Pick moments people actually search for this season.",
       },
     ],
-    beats: FOOTAGE["02_dress_for_event"].beats,
+    beats: liveBeats(FOOTAGE["02_dress_for_event"].beats),
     shows: "The occasion typed into Dress for an Event, then full outfits from the closet.",
   },
   {
@@ -91,7 +104,7 @@ const flows: Template[] = [
           "Destination typed into Trips & Packing as 'City, ST' or 'City, Country', e.g. 'Chicago, IL'. Pick places with weather worth packing for: in winter, ski towns ('Park City, UT') and warm escapes ('Miami Beach, FL') — the app reads the destination and packs ski gear or swim accordingly.",
       },
     ],
-    beats: FOOTAGE["05_trip_packing"].beats,
+    beats: liveBeats(FOOTAGE["05_trip_packing"].beats),
     shows: "A destination typed in, the real forecast, a packed capsule and outfits per day.",
   },
 ];
@@ -102,9 +115,9 @@ const flows: Template[] = [
 const NO_CLOSET_BEATS: Beat[] = [
   // Measured 2026-11-13 from the polished take (16.9s; the engine trims the
   // teardown and the CTA J-cuts in after the last beat).
-  { start: 0.0, end: 3.0, was: "A brand-new account's Planner: 'Today's look is ready' card, 40° and clear; tapping in, the look loads." },
-  { start: 3.0, end: 6.5, was: "'See it together': the whole outfit as product photos in a row, then the first piece, an ivory crewneck sweater." },
-  { start: 6.5, end: 10.5, was: "Scrolling the suggested pieces: chinos, a camel long coat, burgundy loafers, a leather tote, each a real product with a photo and price." },
+  { start: 0.0, end: 3.0, was: "A brand-new account's Planner: 'Today's look is ready' card with today's real weather (it changes every take, so never name a temperature); tapping in, the look loads." },
+  { start: 3.0, end: 6.5, was: "'See it together': the whole outfit as product photos in a row, then the first piece (the pieces change every take: name none)." },
+  { start: 6.5, end: 10.5, was: "Scrolling the suggested pieces, each a real product with a photo and price (a top, bottoms, a coat, shoes, a bag; which ones changes every take, so name none)." },
   { start: 10.5, end: 14.5, was: "Filled hearts on the pinned pieces, scrolling back up through the look." },
 ];
 

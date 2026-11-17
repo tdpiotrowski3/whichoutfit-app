@@ -189,7 +189,7 @@ const WHICHOUTFIT_PLAYBOOK: Playbook = {
     { key: "result_first", label: "Result first", how: "Say the outcome before anything else, then go back to how.", example: "Eighty-eight out of a hundred. For an outfit I nearly didn't wear." },
     { key: "question", label: "Their question", how: "Ask, word for word, the question they'd type into search.", example: "What do you even wear to a wedding in November?" },
     { key: "stakes", label: "What goes wrong", how: "Name the small disaster this avoids, as it usually happens.", example: "Every trip, I pack six tops and wear two." },
-    { key: "contrarian", label: "Disagree", how: "Push back on the advice everyone gives.", example: "You don't need more clothes. You need to see the ones you've got." },
+    { key: "contrarian", label: "Disagree", how: "Push back on shopping advice everyone gives (buy more, follow trends). Never push back on adding your own closet: that is the product.", example: "You don't need more clothes. You need to see the ones you've got." },
     { key: "pov", label: "POV", how: "Put the viewer in the situation in second person.", example: "The invite says festive cocktail, and you have no idea what that means." },
     { key: "test", label: "I tried it", how: "Set up a small test and let the screen answer it.", example: "I gave it one sentence and my actual closet. That's all." },
   ],

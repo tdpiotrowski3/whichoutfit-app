@@ -198,7 +198,30 @@ export function flowInputs(inputs: Record<string, string> | null | undefined): R
 
 /** A director's note is one plain sentence; anything that could read as a script or an instruction is trimmed out. */
 export function cleanDirection(raw: string | null | undefined): string {
-  return (raw ?? "").replace(/["“”\n\r]/g, " ").replace(/\s+/g, " ").trim().slice(0, 240);
+  return neutralize((raw ?? "").replace(/["“”\n\r]/g, " ").replace(/\s+/g, " ").trim()).slice(0, 240);
+}
+
+// Clips never imply gender, and the narrator can be male (Schedar, menswear) or
+// female, so a note that says "her sister" would fight the voice. The writer is
+// told to stay neutral; this makes sure of it.
+const NEUTRAL: [RegExp, string][] = [
+  [/\b(she|he) is\b/gi, "they are"],
+  [/\b(she|he) was\b/gi, "they were"],
+  [/\b(she|he) has\b/gi, "they have"],
+  [/\b(she|he)'s\b/gi, "they're"],
+  [/\b(she|he)\b/gi, "they"],
+  [/\b(herself|himself)\b/gi, "themselves"],
+  [/\bhim\b/gi, "them"],
+  [/\b(her|his)\b/gi, "their"],
+  [/\b(sister|brother)\b/gi, "sibling"],
+  [/\b(girlfriend|boyfriend|wife|husband)\b/gi, "partner"],
+  [/\b(mom|mum|dad|mother|father)\b/gi, "parent"],
+  [/\b(woman|man|girl|guy|lady|dude)\b/gi, "person"],
+  [/\b(women|men|girls|guys|ladies)\b/gi, "people"],
+];
+
+export function neutralize(text: string): string {
+  return NEUTRAL.reduce((t, [re, to]) => t.replace(re, (m) => (m[0] === m[0].toUpperCase() ? to[0].toUpperCase() + to.slice(1) : to)), text);
 }
 
 /** What the narrator is told when a script carries no note of its own (every idea written before engine v2). */
