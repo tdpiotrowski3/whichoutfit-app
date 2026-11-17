@@ -10,10 +10,9 @@ import { FOOTAGE, type Beat } from "./footage";
 //           a different city). The Mac swaps the input into the flow and runs
 //           capture.sh, so the footage itself is new.
 //
-// Each template carries its beats: the windows the narration has to land in.
-// Calm Host was measured at ~4.4 syllables/sec and lines were written to land
-// 0.3–0.9s short of their window (FitCheck social-clips skill); the planner gets
-// the same budget per beat.
+// Each template carries its beats: the moments on screen each narration line
+// is anchored to. Since engine v2 the voice leads and the footage is retimed to
+// it, so a beat is where a line STARTS, not a window to fill (see scriptFit).
 
 export type TemplateInput = { name: string; describe: string };
 
@@ -128,12 +127,66 @@ export function getTemplate(key: string): Template | undefined {
   return TEMPLATES.find((t) => t.key === key);
 }
 
-/** Calm Host's measured rate. Lines are budgeted against it, not a word count. */
+/** Calm Host's measured rate. Used to ESTIMATE how long a line takes to say, not to fill time. */
 export const SYLLABLES_PER_SEC = 4.4;
 
-/** The most syllables a line can carry and still land 0.5s short of its beat. */
+/**
+ * LEGACY (engine v1): the most syllables a line could carry and still land 0.5s
+ * short of its beat, back when narration was laid onto fixed footage and every
+ * line was written to fill its window. Nothing budgets against it any more;
+ * kept for the hand-made masters' notes and old tests.
+ */
 export function syllableBudget(beat: Pick<Beat, "start" | "end">): number {
   return Math.max(4, Math.floor((beat.end - beat.start - 0.5) * SYLLABLES_PER_SEC));
+}
+
+// --- the voice-first contract (engine v2) ------------------------------------
+//
+// The renderer now records ONE natural take of the whole script and retimes the
+// footage to the voice (holds, trims, speed ramps, within limits). So a beat is
+// an ANCHOR, not a duration to fill: voiceover[i]'s first words land as beat i's
+// picture appears, and the line is as short as a person would naturally say it.
+// Only two soft ceilings remain, both about how far footage can stretch:
+//
+//   - one line may run to LINE_STRETCH x its beat's length in speech time;
+//   - the whole script plus the spoken end card fits the footage + SCRIPT_SLACK.
+//
+// There is no minimum. A three-word line is fine.
+
+/** How far past its beat one line may run, in speech time, before the footage can't hold for it. */
+export const LINE_STRETCH = 1.6;
+/** How much longer than the footage the whole narration (script + end card) may run. */
+export const SCRIPT_SLACK = 1.25;
+/** The syllable counter is approximate, so the ceilings forgive this much. */
+const COUNT_SLOP = 2;
+
+/** The line spoken over WhichOutfit's end card; it is voiced in the same take as the script. */
+export const CTA_LINE = "Download WhichOutfit on the App Store or Google Play, and never have nothing to wear again.";
+
+/** Roughly how long a line takes to say at the narrator's ordinary pace. */
+export function speechSeconds(text: string): number {
+  return countSyllables(text) / SYLLABLES_PER_SEC;
+}
+
+/** The most syllables a line can run before its beat can't stretch to cover it. A ceiling, never a target. */
+export function lineCeiling(beatSeconds: number): number {
+  return Math.max(8, Math.floor(beatSeconds * LINE_STRETCH * SYLLABLES_PER_SEC));
+}
+
+/**
+ * Does a script fit its footage under the voice-first contract? Returns why
+ * not, or null. `beatSeconds[i]` is beat i's length on screen.
+ */
+export function scriptFit(lines: string[], beatSeconds: number[], cta = ""): string | null {
+  for (let i = 0; i < lines.length; i++) {
+    const over = countSyllables(lines[i]) - lineCeiling(beatSeconds[i] ?? 4) - COUNT_SLOP;
+    if (over > 0) return `line ${i + 1} is ${over} syllables over what its beat can stretch to`;
+  }
+  const footage = beatSeconds.reduce((a, b) => a + b, 0);
+  const spoken = [...lines, cta].reduce((a, l) => a + speechSeconds(l), 0);
+  const most = footage * SCRIPT_SLACK + COUNT_SLOP / SYLLABLES_PER_SEC;
+  if (spoken > most) return `the script runs about ${spoken.toFixed(1)}s spoken (with the end card) against ${footage.toFixed(1)}s of footage; cut ${Math.ceil((spoken - most) * SYLLABLES_PER_SEC)} syllables`;
+  return null;
 }
 
 /** Rough English syllable count — good to a syllable or two, which is all a budget needs. */
