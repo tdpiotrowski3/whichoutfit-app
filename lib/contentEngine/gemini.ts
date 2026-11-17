@@ -153,14 +153,24 @@ export const DEFAULT_STYLE: SpeechStyle = "even";
  * and never last, because a trailing word like "start" or "so" can read as an
  * instruction and make the model answer in text (a 400) instead of speaking.
  */
-export async function speak(line: string, voice: string = VOICE, style: SpeechStyle = DEFAULT_STYLE): Promise<Speech> {
+export async function speak(line: string, voice: string = VOICE, style: SpeechStyle = DEFAULT_STYLE, direction?: string): Promise<Speech> {
   // Pace matters as much as tone: narration is laid onto fixed footage, and the
   // first live test with "unhurried" in this note ran ~2.8 syllables/sec against
   // the ~4.4 the beats are budgeted for, so every script overran its clip.
   // The "friend" note alone made every voice lean hard on the most interesting
   // word ("a GALLERY opening"), which the owner heard as fake. "even" asks for
   // ordinary sentence stress; the others stay selectable for A/B listening.
-  const prompt = `${STYLES[style]} "${line}" (read only the quoted words)`;
+  //
+  // Engine v2: a script carries its own director's note (job.direction — who is
+  // talking, to whom, the mood, the pace). When the Mac passes one it replaces
+  // the fixed style wrapper: the model is given a person and a moment to speak
+  // as, not an instruction to "read" something, which is what produced the
+  // read-aloud cadence. Pace is no longer forced brisk here because the
+  // renderer now cuts the footage to the voice.
+  const note = (direction ?? "").replace(/["\u201c\u201d\n\r]/g, " ").replace(/\s+/g, " ").trim().slice(0, 240);
+  const prompt = note
+    ? `You are a voice actor recording one natural take for a short video. Who you are and how it sounds: ${note} Speak the way that person actually talks: ordinary sentence stress, no word punched or drawn out, small natural breaths at the commas, no announcer or advert voice. The words: "${line}" (say only the quoted words, exactly as written)`
+    : `${STYLES[style]} "${line}" (read only the quoted words)`;
   let last: unknown;
   for (const model of TTS_MODELS) {
     try {
