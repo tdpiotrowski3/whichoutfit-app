@@ -163,6 +163,9 @@ function showsFor(clipId: string): string {
 
 // --- 2. draft new ideas ---------------------------------------------------
 
+/** How long a posted feature's footage is kept out of new re-cuts. */
+export const RECUT_REPEAT_DAYS = 90;
+
 export type DraftResult = { drafted: number; skipped?: string; dropped: string[] };
 
 export async function draftIdeas(count = IDEAS_PER_WEEK, now = new Date()): Promise<DraftResult> {
@@ -180,7 +183,16 @@ export async function draftIdeas(count = IDEAS_PER_WEEK, now = new Date()): Prom
 
   const closets = await availableClosets();
   // A template tied to a closet (flow:no_closet → fresh) is only offered while that closet is.
-  const offered = TEMPLATES.filter((t) => !t.closet || closets.includes(t.closet));
+  // A re-cut is old footage with a new voice: once that feature's video has been
+  // posted (or a re-cut of it was turned down), a new script over the same screens
+  // still reads as a repeat to followers. Flows film fresh, so they stay offered.
+  const posts = await loadPosts().catch(() => [] as PostRow[]);
+  const cutoff = new Date(now.getTime() - RECUT_REPEAT_DAYS * 86_400_000).toISOString();
+  const seen = new Set([
+    ...posts.filter((p) => p.posted_at && p.posted_at >= cutoff).map((p) => featureOf(p.clip_id)),
+    ...ideas.filter((i) => i.status === "rejected" && i.template.startsWith("recut:")).map((i) => featureOf(i.template.slice(6))),
+  ]);
+  const offered = TEMPLATES.filter((t) => (!t.closet || closets.includes(t.closet)) && !(t.kind === "recut" && seen.has(featureOf(t.footage))));
   const canMake = (key: string) => offered.some((t) => t.key === key);
 
   // The plan decides WHAT this week is for; the writer decides how to say it.
