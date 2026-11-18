@@ -164,6 +164,29 @@ flows.push({
   shows: "A destination and three plans typed into Trips & Packing, the real forecast, a capsule from the closet, then the look for the second plan and the look for the third.",
 });
 
+// Plan my week, filmed live on a real closet: the old 04_plan_week master is a
+// September take on a closet whose looks were bottoms and shoes only. Estimated
+// 2026-11-18 from the flow's waits (the engine scales beats to the real take, and
+// the voice-first edit retimes footage to the voice). Days, forecast and pieces
+// change every take.
+const PLAN_WEEK_LIVE_BEATS: Beat[] = [
+  { start: 0.0, end: 4.0, was: "Opening the Planner (plays before anything specific is on screen)." },
+  { start: 4.0, end: 8.0, was: "Tapping 'Plan my outfits for the week' and the week loading." },
+  { start: 8.0, end: 12.0, was: "The first day's look: the day, its real forecast, and a whole outfit of the person's own closet pieces with photos (name no piece or temperature)." },
+  { start: 12.0, end: 18.0, was: "Scrolling down through the next days, a different outfit for each (name no piece or day)." },
+];
+
+flows.push({
+  key: "flow:plan_week",
+  kind: "flow",
+  feature: "plan_week",
+  footage: "plan_week_live_social",
+  flow: "plan_week_live_social",
+  inputs: [],
+  beats: PLAN_WEEK_LIVE_BEATS,
+  shows: "The Planner's 'Plan my outfits for the week': a whole outfit from the closet for each day of the week, matched to that day's real forecast, scrolling through the days.",
+});
+
 export const TEMPLATES: Template[] = [...flows, ...recuts];
 
 export function getTemplate(key: string): Template | undefined {
