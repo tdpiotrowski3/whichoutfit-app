@@ -434,3 +434,26 @@ body{text-rendering:optimizeLegibility}
   .fade-up{opacity:1;transform:none;transition:none}
   .phone-float,.chip-1,.chip-2,.chip-3,.orb,.badge-blue::before,.step-num::after{animation:none!important}
 }
+
+/* ── Shopping: only the gaps (how-it-works#shop) ── */
+.shop-grid{display:grid;grid-template-columns:1fr 1.1fr;gap:48px;align-items:center;margin-bottom:56px}
+.shop-steps{list-style:none;counter-reset:s;display:grid;gap:22px;padding:0;margin:0}
+.shop-steps li{counter-increment:s;position:relative;padding-left:52px;color:var(--text2);line-height:1.6}
+.shop-steps li strong{display:block;color:var(--text);font-size:1.05rem;margin-bottom:4px}
+.shop-steps li::before{content:counter(s);position:absolute;left:0;top:0;width:36px;height:36px;border-radius:50%;background:var(--grad);color:#fff;font-weight:800;display:grid;place-items:center}
+.shop-demo{margin:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-xl);box-shadow:var(--shadow-card);padding:22px}
+.shop-look{background:var(--muted);border-radius:var(--r-md);padding:16px 18px;margin-bottom:12px}
+.shop-chip{display:inline-block;font-size:.75rem;font-weight:700;color:var(--teal);background:var(--tint-teal);border-radius:var(--r-pill);padding:4px 10px;margin-bottom:8px}
+.shop-have{font-size:.88rem;color:var(--text2);margin:0 0 8px}
+.shop-need{font-weight:700;color:var(--text);margin:0}
+.shop-need span{display:block;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--blue);margin-bottom:2px}
+.shop-disc{font-size:.78rem;color:#7A4A00;background:var(--tint-warm);border-radius:var(--r-sm);padding:8px 12px;margin:0 0 12px}
+.shop-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.shop-card{display:flex;flex-direction:column;gap:2px;font-size:.82rem;min-width:0}
+.shop-card b{color:var(--text);font-weight:600;line-height:1.3;margin-top:6px}
+.shop-img{aspect-ratio:4/5;border-radius:var(--r-sm);display:grid;place-items:center}
+.shop-img svg{width:58%;height:auto}
+.shop-price{font-weight:800;color:var(--text)}
+.shop-store{color:var(--text2);font-size:.76rem}
+.shop-demo figcaption{font-size:.75rem;color:var(--text2);margin-top:14px;text-align:center}
+@media (max-width:860px){.shop-grid{grid-template-columns:1fr;gap:32px}.shop-demo{padding:16px}}
