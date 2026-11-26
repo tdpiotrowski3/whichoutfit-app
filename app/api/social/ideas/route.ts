@@ -20,6 +20,7 @@ export const maxDuration = 300;
 //   {action: "brief", brief}                   — the agent: plain words in, one idea out
 //   {action: "rewrite", id, note}              — redo a script from a note
 //   {action: "autopilot", on}                  — weekly ideas skip review
+//   {action: "veo", on}                        — allow one Veo shot per clip (off: Omni only)
 //   {action: "draft"}                          — draft a fresh batch now
 //   {action: "replan"}                         — rebuild the six-week plan from results
 export async function POST(req: Request) {
@@ -41,6 +42,10 @@ export async function POST(req: Request) {
     if (body.action === "rewrite" && body.id) return NextResponse.json({ idea: await rewriteIdea(body.id, body.note ?? "") });
     if (body.action === "autopilot") {
       await setSetting("autopilot", body.on === true);
+      return NextResponse.json({ ok: true });
+    }
+    if (body.action === "veo") {
+      await setSetting("veo", body.on === true);
       return NextResponse.json({ ok: true });
     }
     if (body.action === "edit" && body.id && body.edit) return NextResponse.json({ idea: await editIdea(body.id, body.edit) });

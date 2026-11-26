@@ -435,7 +435,7 @@ export type EngineJob = Omit<IdeaRow, "inputs"> & {
   /** The spoken end-card line, voiced in the same take as the script. */
   cta: string;
   /** What the clip is testing, for logs; the renderer can ignore it. */
-  meta: { pillar: string | null; series: string | null; episode: string | null; hook: string | null; slot: string | null; shot_quality: ShotQuality };
+  meta: { pillar: string | null; series: string | null; episode: string | null; hook: string | null; slot: string | null; shot_quality: ShotQuality; allow_veo?: boolean };
 };
 
 /**

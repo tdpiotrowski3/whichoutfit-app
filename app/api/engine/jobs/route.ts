@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { admin } from "@/lib/supabase";
 import { approvedJobs } from "@/lib/contentEngine/planner";
 import { engineAuthorized } from "@/lib/contentEngine/auth";
-import { beat } from "@/lib/contentEngine/studio";
+import { beat, getSettings } from "@/lib/contentEngine/studio";
 
 export const runtime = "nodejs";
 
@@ -12,7 +12,9 @@ export const runtime = "nodejs";
 //        shows what the Mac is doing, and a failure says why on the Social tab.
 export async function GET(req: Request) {
   if (!engineAuthorized(req)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const jobs = await approvedJobs();
+  const [jobs, settings] = await Promise.all([approvedJobs(), getSettings()]);
+  // The studio's Veo switch rides on every job: off (default) = the Mac makes every generated shot with Omni.
+  for (const j of jobs) j.meta.allow_veo = settings.veo;
   // Every poll is the worker's heartbeat: the Content Studio shows it online.
   await beat({ waiting: jobs.length });
   return NextResponse.json({ jobs });
