@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { countSyllables } from "@/lib/contentEngine/templates";
+import { META, SHOT_QUALITIES, shotQuality } from "@/lib/contentEngine/scriptRules";
 
 // The Content Studio's interactive pieces (app/(dash)/content). Every action
 // goes through /api/social/ideas or /api/social/closets, gated by the admin
@@ -147,6 +148,19 @@ export function IdeaReview({ idea, template, closets }: { idea: EditableIdea; te
           ) : null}
         </div>
       ) : null}
+
+      <label className="block max-w-sm space-y-1 text-xs font-medium text-[var(--wo-muted)]">
+        <span>Generated shots (live-action intro, cutaway or outro around the app footage)</span>
+        <select
+          value={shotQuality(inputs[META.shotQuality])}
+          onChange={(e) => setInputs({ ...inputs, [META.shotQuality]: e.target.value })}
+          className={field}
+        >
+          {SHOT_QUALITIES.map((q) => (
+            <option key={q.key} value={q.key}>{q.label}</option>
+          ))}
+        </select>
+      </label>
 
       <div className="space-y-2">
         <div className="text-xs font-medium uppercase tracking-wide text-[var(--wo-muted)]">Narration, line by line</div>

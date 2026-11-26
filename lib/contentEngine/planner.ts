@@ -11,7 +11,7 @@ import { seededSlots, closetSize } from "./personaAccounts";
 import { nextSlots, runwayDays, slotsToFill, RUNWAY_DAYS } from "./schedule";
 import { baseClip, clipScores, loadPosts, type ClipScore, type PostRow } from "./performance";
 import { CAPTION_SYSTEM, IDEA_SCHEMA, IDEA_SYSTEM, CANDIDATES, writeIdeas, templateBrief, cuesFor, type Written } from "./writer";
-import { META, directionFor, flowInputs } from "./scriptRules";
+import { META, directionFor, flowInputs, shotQuality, type ShotQuality } from "./scriptRules";
 import { PLAYBOOKS, RECYCLE_GAP_DAYS, episodeOf, markDrafted, openSlots, pillarOfFeature, slotBriefFor, type Plan, type PlanSlot } from "./strategy";
 import { loadPlan, refreshPlan, savePlan } from "./strategyStore";
 
@@ -435,7 +435,7 @@ export type EngineJob = Omit<IdeaRow, "inputs"> & {
   /** The spoken end-card line, voiced in the same take as the script. */
   cta: string;
   /** What the clip is testing, for logs; the renderer can ignore it. */
-  meta: { pillar: string | null; series: string | null; episode: string | null; hook: string | null; slot: string | null };
+  meta: { pillar: string | null; series: string | null; episode: string | null; hook: string | null; slot: string | null; shot_quality: ShotQuality };
 };
 
 /**
@@ -468,6 +468,6 @@ export function toJob(i: IdeaRow, t: Template): EngineJob {
     voice: voiceFor(i.closet),
     direction: directionFor(m, "whichoutfit"),
     cta: CTA_LINE,
-    meta: { pillar: m[META.pillar] ?? null, series: m[META.series] ?? null, episode: m[META.episode] ?? null, hook: m[META.hook] ?? null, slot: m[META.slot] ?? null },
+    meta: { pillar: m[META.pillar] ?? null, series: m[META.series] ?? null, episode: m[META.episode] ?? null, hook: m[META.hook] ?? null, slot: m[META.slot] ?? null, shot_quality: shotQuality(m[META.shotQuality]) },
   };
 }

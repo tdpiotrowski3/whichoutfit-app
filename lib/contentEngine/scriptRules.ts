@@ -187,7 +187,23 @@ export function chooseScript(sc: ScriptCase, review: Review | undefined): Chosen
 // --- delivery direction -----------------------------------------------------------
 
 /** Keys the engine tucks into social_ideas.inputs (jsonb) beside the flow's real inputs. Never sent to the Mac as inputs. */
-export const META = { direction: "_direction", pillar: "_pillar", series: "_series", episode: "_episode", hook: "_hook", slot: "_slot", score: "_score" } as const;
+export const META = { direction: "_direction", pillar: "_pillar", series: "_series", episode: "_episode", hook: "_hook", slot: "_slot", score: "_score", shotQuality: "_shot_quality" } as const;
+
+/**
+ * Generated live-action shots the Mac worker cuts around the real app footage
+ * (FitCheck tools/capture-engine/social/shots.py). Per idea, chosen in the Content Studio:
+ * auto = the engine picks Veo or Omni per shot by how demanding it is.
+ */
+export const SHOT_QUALITIES = [
+  { key: "auto", label: "Auto: best model per shot" },
+  { key: "veo", label: "Veo: best quality, every shot" },
+  { key: "omni", label: "Omni: cheaper, every shot" },
+  { key: "none", label: "None: app footage only" },
+] as const;
+export type ShotQuality = (typeof SHOT_QUALITIES)[number]["key"];
+export function shotQuality(raw: string | null | undefined): ShotQuality {
+  return SHOT_QUALITIES.some((q) => q.key === raw) ? (raw as ShotQuality) : "auto";
+}
 
 export const isMetaKey = (k: string) => k.startsWith("_");
 
