@@ -108,7 +108,10 @@ describe("what the Mac gets", () => {
     expect(job.voice).toBe("Schedar");
     expect(job.closet).toBe("menswear");
     expect(job.voiceover).toHaveLength(job.job.beats.length);
-    expect(job.meta).toEqual({ pillar: "trips", series: null, episode: null, hook: "stakes", slot: "2026-11-16:4" });
+    expect(job.meta).toEqual({ pillar: "trips", series: null, episode: null, hook: "stakes", slot: "2026-11-16:4", shot_quality: "auto" });
+    // the Content Studio's per-idea shot setting reaches the Mac; anything unknown falls back to auto
+    expect(toJob(row({ city: "Aspen, CO", _shot_quality: "veo" }), t).meta.shot_quality).toBe("veo");
+    expect(toJob(row({ city: "Aspen, CO", _shot_quality: "4k please" }), t).meta.shot_quality).toBe("auto");
   });
 
   it("gives an idea written before engine v2 a default direction", () => {
