@@ -192,13 +192,12 @@ export const META = { direction: "_direction", pillar: "_pillar", series: "_seri
 /**
  * Generated live-action shots the Mac worker cuts around the real app footage
  * (FitCheck tools/capture-engine/social/shots.py). Per idea, chosen in the Content Studio:
- * auto = the engine picks Veo or Omni per shot by how demanding it is.
+ * auto = shots on (every shot is made by Gemini Omni; Veo was turned off for cost, 2026-11-25), none = app footage only.
+ * An old "veo" or "omni" value reads as auto.
  */
 export const SHOT_QUALITIES = [
-  { key: "auto", label: "Auto: best model per shot" },
-  { key: "veo", label: "Veo: best quality, every shot" },
-  { key: "omni", label: "Omni: cheaper, every shot" },
-  { key: "none", label: "None: app footage only" },
+  { key: "auto", label: "On: live-action shots (Gemini Omni)" },
+  { key: "none", label: "Off: app footage only" },
 ] as const;
 export type ShotQuality = (typeof SHOT_QUALITIES)[number]["key"];
 export function shotQuality(raw: string | null | undefined): ShotQuality {
