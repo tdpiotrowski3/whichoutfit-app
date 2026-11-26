@@ -101,12 +101,13 @@ export type ContentStudioData = {
   worker: WorkerStatus;
   closets: ClosetInfo[];
   autopilot: boolean;
+  veo: boolean;
   plan: Plan | null;
   provider: Provider;
 };
 
 /** The whole page, from its data — the route loads it (app/(dash)/content/page.tsx). */
-export function ContentStudioView({ now, ideas, posts, worker, closets, autopilot, plan, provider }: ContentStudioData) {
+export function ContentStudioView({ now, ideas, posts, worker, closets, autopilot, veo, plan, provider }: ContentStudioData) {
   const templates: TemplateOption[] = TEMPLATES.map((t) => ({
     key: t.key, label: templateLabel(t), kind: t.kind, inputs: t.inputs,
     budgets: t.beats.map((b) => lineCeiling(b.end - b.start)), was: t.beats.map((b) => b.was),
@@ -163,7 +164,7 @@ export function ContentStudioView({ now, ideas, posts, worker, closets, autopilo
         <DraftIdeasButton />
       </div>
 
-      <AgentConsole state={state} headline={headline} detail={detailParts.join(" ")} autopilot={autopilot} />
+      <AgentConsole state={state} headline={headline} detail={detailParts.join(" ")} autopilot={autopilot} veo={veo} />
 
       <Pipeline
         stages={[

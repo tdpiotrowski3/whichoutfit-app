@@ -17,11 +17,13 @@ export default async function ContentStudioPage() {
   let worker: WorkerStatus = { seenAt: null, online: false, detail: {} };
   let closets: ClosetInfo[] = [];
   let autopilot = false;
+  let veo = false;
   let plan: Plan | null = null;
   try {
     let settings;
     [ideas, posts, worker, closets, settings] = await Promise.all([getSocialIdeas(80), getSocialPosts(400), workerStatus(now), closetInfo(), getSettings()]);
     autopilot = settings.autopilot;
+    veo = settings.veo;
     plan = await loadPlan("whichoutfit").catch(() => null);
   } catch {
     return (
@@ -38,5 +40,5 @@ export default async function ContentStudioPage() {
     );
   }
 
-  return <ContentStudioView now={now} ideas={ideas} posts={posts} worker={worker} closets={closets} autopilot={autopilot} plan={plan} provider={llmProvider()} />;
+  return <ContentStudioView now={now} ideas={ideas} posts={posts} worker={worker} closets={closets} autopilot={autopilot} veo={veo} plan={plan} provider={llmProvider()} />;
 }

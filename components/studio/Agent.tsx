@@ -33,17 +33,32 @@ function Sparkle({ className = "" }: { className?: string }) {
   );
 }
 
+function Switch({ on, onClick, title, note }: { on: boolean; onClick: () => void; title: string; note: string }) {
+  return (
+    <button onClick={onClick} className="flex items-center gap-3 rounded-xl border border-[var(--wo-border)] bg-white px-3 py-2 text-left" aria-pressed={on}>
+      <span className={`relative inline-flex h-5 w-9 shrink-0 rounded-full transition-colors ${on ? "bg-[var(--wo-blue)]" : "bg-[var(--wo-border)]"}`}>
+        <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all ${on ? "left-[18px]" : "left-0.5"}`} />
+      </span>
+      <span>
+        <span className="block text-sm font-medium">{title}</span>
+        <span className="block text-xs text-[var(--wo-muted)]">{note}</span>
+      </span>
+    </button>
+  );
+}
+
 export type AgentState = "working" | "needs-you" | "blocked" | "idle";
 
 /** The top of the studio: what the agent is doing, in a sentence, and the box to ask it for something. */
 export function AgentConsole({
-  state, headline, detail, autopilot,
-}: { state: AgentState; headline: string; detail: string; autopilot: boolean }) {
+  state, headline, detail, autopilot, veo,
+}: { state: AgentState; headline: string; detail: string; autopilot: boolean; veo: boolean }) {
   const router = useRouter();
   const [brief, setBrief] = useState("");
   const [busy, setBusy] = useState(false);
   const [reply, setReply] = useState<{ text: string; ok: boolean } | null>(null);
   const [auto, setAuto] = useState(autopilot);
+  const [useVeo, setUseVeo] = useState(veo);
 
   async function send(text: string) {
     if (!text.trim() || busy) return;
@@ -62,6 +77,14 @@ export function AgentConsole({
     setAuto(next);
     const r = await call({ action: "autopilot", on: next });
     if (!r.ok) setAuto(!next);
+    router.refresh();
+  }
+
+  async function toggleVeo() {
+    const next = !useVeo;
+    setUseVeo(next);
+    const r = await call({ action: "veo", on: next });
+    if (!r.ok) setUseVeo(!next);
     router.refresh();
   }
 
@@ -85,15 +108,12 @@ export function AgentConsole({
             <p className="text-sm text-[var(--wo-muted)]">{detail}</p>
           </div>
         </div>
-        <button onClick={toggle} className="flex items-center gap-3 rounded-xl border border-[var(--wo-border)] bg-white px-3 py-2 text-left" aria-pressed={auto}>
-          <span className={`relative inline-flex h-5 w-9 shrink-0 rounded-full transition-colors ${auto ? "bg-[var(--wo-blue)]" : "bg-[var(--wo-border)]"}`}>
-            <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all ${auto ? "left-[18px]" : "left-0.5"}`} />
-          </span>
-          <span>
-            <span className="block text-sm font-medium">Autopilot {auto ? "on" : "off"}</span>
-            <span className="block text-xs text-[var(--wo-muted)]">{auto ? "Weekly ideas get made without asking" : "I ask before making anything"}</span>
-          </span>
-        </button>
+        <div className="flex flex-col gap-2">
+          <Switch on={auto} onClick={toggle} title={`Autopilot ${auto ? "on" : "off"}`}
+            note={auto ? "Weekly ideas get made without asking" : "I ask before making anything"} />
+          <Switch on={useVeo} onClick={toggleVeo} title={`Veo shots ${useVeo ? "on" : "off"}`}
+            note={useVeo ? "One Veo shot per video, ~$1.60+ each" : "Every live-action shot uses Omni, ~$0.40"} />
+        </div>
       </div>
 
       <div className="space-y-3 border-t border-[var(--wo-border)] p-5">

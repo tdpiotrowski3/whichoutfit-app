@@ -251,12 +251,13 @@ ${templateBrief(t)}`;
   throw new Error(`The rewrite wasn't good enough to film (${reason}). Try a different note.`);
 }
 
-export type StudioSettings = { autopilot: boolean };
+/** veo: the owner allows one Veo shot (Vertex, ~$1.60+) per clip; off = every generated shot is Gemini Omni (~$0.40). */
+export type StudioSettings = { autopilot: boolean; veo: boolean };
 
 export async function getSettings(): Promise<StudioSettings> {
   const { data } = await admin().from("studio_settings").select("key,value");
   const map = new Map((data ?? []).map((r) => [r.key as string, r.value]));
-  return { autopilot: map.get("autopilot") === true };
+  return { autopilot: map.get("autopilot") === true, veo: map.get("veo") === true };
 }
 
 export async function setSetting(key: keyof StudioSettings, value: boolean): Promise<void> {
